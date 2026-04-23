@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 // ---- Mock Redis before importing any service --------------------------------
 // Vitest's vi.mock factory runs in a special CJS context; require() works here

@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { requireAuth } from '../../middlewares/authenticate.js';
 import { findById, updateUser, updatePasswordHash } from './user.repository.js';
 import { AuditLogModel } from '../audit/auditLog.model.js';

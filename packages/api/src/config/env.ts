@@ -37,7 +37,7 @@ try {
     // Using console here is acceptable — the logger depends on a valid env
     // and we are exiting immediately afterwards.
     console.error('Invalid environment variables:');
-    error.errors.forEach((err) => {
+    error.issues.forEach((err) => {
       console.error(`  ${err.path.join('.')}: ${err.message}`);
     });
     process.exit(1);

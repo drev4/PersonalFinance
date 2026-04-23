@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "lsof -ti:3001,5173 | xargs kill -9 2>/dev/null; pnpm --filter=api --filter=web --parallel run dev",
+    "dev:win": "powershell -Command \"@(3001,5173) | ForEach-Object { $p = (Get-NetTCPConnection -LocalPort $_ -ErrorAction SilentlyContinue).OwningProcess; if($p) { Stop-Process -Id $p -Force } }; pnpm --filter=api --filter=web --parallel run dev\"",
     "build": "pnpm --filter=./packages run build",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
