@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router';
+import React from 'react';
 
 export default function ModalsLayout(): React.JSX.Element {
   return (
@@ -10,6 +11,15 @@ export default function ModalsLayout(): React.JSX.Element {
       }}
     >
       <Stack.Screen name="unlock" />
+      <Stack.Screen
+        name="quick-add"
+        options={{
+          presentation: 'modal',
+          gestureEnabled: true,
+          // Allow swipe-down to dismiss on iOS
+          gestureDirection: 'vertical',
+        }}
+      />
     </Stack>
   );
 }

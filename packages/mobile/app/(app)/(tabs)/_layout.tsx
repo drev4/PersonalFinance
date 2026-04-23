@@ -5,7 +5,7 @@
  */
 
 import * as Haptics from 'expo-haptics';
-import { Tabs } from 'expo-router';
+import { router, Tabs } from 'expo-router';
 import { Home, List, PieChart, Settings } from 'lucide-react-native';
 import React, { useCallback } from 'react';
 import { Platform, View } from 'react-native';
@@ -65,7 +65,7 @@ function TabBarWithFAB({ onFABPress }: { onFABPress: () => void }): React.JSX.El
 export default function TabLayout(): React.JSX.Element {
   const handleFABPress = useCallback(() => {
     void Haptics.selectionAsync();
-    // Fase 3: open quick-add modal
+    router.push('/(modals)/quick-add');
   }, []);
 
   return (
