@@ -7,9 +7,9 @@ import {
   updateAccount,
   adjustBalance,
   archiveAccount,
-  getNetWorth,
   AccountError,
 } from './account.service.js';
+import { getNetWorth } from '../dashboard/dashboard.service.js';
 
 const AccountTypeEnum = z.enum([
   'checking',
