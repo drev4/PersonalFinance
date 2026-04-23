@@ -184,7 +184,7 @@ export default function HoldingFormDialog({
     resolver: zodResolver(holdingSchema),
     defaultValues: {
       accountId: editing?.accountId ?? '',
-      currency: editing?.currency ?? baseCurrency,
+      currency: editing?.currency ?? baseCurrency ?? 'EUR',
       quantity: editing?.quantity ?? '',
       averageBuyPrice: editing ? editing.averageBuyPrice / 100 : ('' as unknown as number),
       currentPrice: editing?.currentPrice ? editing.currentPrice / 100 : ('' as unknown as number),
@@ -208,7 +208,7 @@ export default function HoldingFormDialog({
     if (open) {
       reset({
         accountId: editing?.accountId ?? '',
-        currency: editing?.currency ?? baseCurrency,
+        currency: editing?.currency ?? baseCurrency ?? 'EUR',
         quantity: editing?.quantity ?? '',
         averageBuyPrice: editing ? editing.averageBuyPrice / 100 : ('' as unknown as number),
         currentPrice: editing?.currentPrice ? editing.currentPrice / 100 : ('' as unknown as number),
