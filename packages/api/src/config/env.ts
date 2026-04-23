@@ -6,11 +6,11 @@ dotenv.config();
 const EnvSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3001),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  MONGO_URI: z.string().min(1, 'MONGO_URI is required').url('Invalid MongoDB URI').optional().or(z.string().min(1)),
-  REDIS_URL: z.string().min(1, 'REDIS_URL is required').url('Invalid Redis URL').optional().or(z.string().min(1)),
-  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters').optional().or(z.string().min(1)),
-  JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters').optional().or(z.string().min(1)),
-  ENCRYPTION_KEY: z.string().min(64, 'ENCRYPTION_KEY must be at least 64 characters (32 bytes hex)').optional().or(z.string().min(1)),
+  MONGO_URI: z.string().min(1, 'MONGO_URI is required'),
+  REDIS_URL: z.string().min(1, 'REDIS_URL is required'),
+  JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
+  JWT_REFRESH_SECRET: z.string().min(1, 'JWT_REFRESH_SECRET is required'),
+  ENCRYPTION_KEY: z.string().min(1, 'ENCRYPTION_KEY is required'),
   // Optional in development (CORS whitelist falls back to localhost dev servers).
   // Required in production — enforced in the post-parse guard below.
   FRONTEND_URL: z
