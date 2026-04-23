@@ -1,0 +1,232 @@
+FINANZAS APP - ESTRUCTURA COMPLETA DEL MONOREPO pnpm
+=====================================================
+
+finanzas-app/
+│
+├── ARCHIVOS DE CONFIGURACIÓN ROOT
+├── .eslintrc.cjs                 ESLint: no-any, react-hooks, import-order
+├── .prettierrc                   Prettier: semicolons, single quotes, trailing commas
+├── .gitignore                    Ignora: node_modules, .env, dist, logs, .DS_Store
+├── tsconfig.base.json            TypeScript estricto (strict: true, noImplicitAny)
+├── pnpm-workspace.yaml           Define los 3 packages del workspace
+├── package.json                  Scripts globales (dev, build, lint, test)
+├── vitest.config.ts              Configuración de tests
+│
+├── DOCUMENTACIÓN
+├── README.md                      Visión general y overview del proyecto
+├── QUICKSTART.md                  Guía rápida (5 min instalación, desarrollo inmediato)
+├── DEVELOPMENT.md                 Guía completa (workflows, debugging, buenas prácticas)
+├── SETUP_VERIFICATION.md          Verificación paso a paso de la instalación
+├── ESTRUCTURA.txt                 Este archivo
+│
+├── GIT HOOKS
+├── .husky/
+│   ├── .gitignore                 Ignora directorio _
+│   └── pre-commit                 Ejecuta: ESLint, Prettier, TypeScript
+│
+└── PACKAGES
+    │
+    ├── SHARED (@finanzas/shared) - TIPOS Y SCHEMAS COMPARTIDOS
+    ├── packages/shared/
+    │   ├── package.json
+    │   ├── tsconfig.json (extiende ../../tsconfig.base.json)
+    │   │
+    │   └── src/
+    │       ├── index.ts            Re-exporta schemas, tipos y constantes
+    │       │
+    │       ├── schemas/ (ZODB SCHEMAS - 11 ENTIDADES)
+    │       │   ├── user.schema.ts               Usuarios (email, password, idioma, timezone)
+    │       │   ├── account.schema.ts            Cuentas (checking, savings, crypto, mortgage)
+    │       │   ├── transaction.schema.ts        Transacciones (con recurrencia: daily/weekly/monthly)
+    │       │   ├── category.schema.ts           Categorías (income/expense, colores, iconos)
+    │       │   ├── categoryRule.schema.ts       Reglas (auto-categorizar por descripción/monto)
+    │       │   ├── budget.schema.ts             Presupuestos (alertas, periodo: monthly/quarterly)
+    │       │   ├── holding.schema.ts            Inversiones (stocks, ETFs, crypto, bonds)
+    │       │   ├── integrationCredentials.schema.ts  APIs (Binance, Plaid, Finnhub)
+    │       │   ├── simulation.schema.ts         Simulaciones (4 tipos: ahorros, inversiones, créditos)
+    │       │   ├── priceSnapshot.schema.ts      Snapshots de precios (timestamp, source)
+    │       │   └── netWorthSnapshot.schema.ts   Patrimonio neto (assets, liabilities, cambios)
+    │       │
+    │       └── constants/
+    │           └── index.ts
+    │               ├── CURRENCIES (20 monedas: USD, EUR, GBP, JPY, AUD, etc)
+    │               ├── SUPPORTED_EXCHANGES (16 bolsas: NYSE, NASDAQ, LSE, TSE, etc)
+    │               └── DEFAULT_CATEGORIES (17 predefinidas: Alimentación, Transporte, etc)
+    │
+    │
+    ├── API (@finanzas/api) - BACKEND FASTIFY
+    ├── packages/api/
+    │   ├── package.json           Fastify, Mongoose, Redis, JWT, bcrypt, Zod
+    │   ├── tsconfig.json
+    │   ├── .env.example           Variables de entorno documentadas
+    │   │
+    │   └── src/
+    │       ├── server.ts
+    │       │   • Fastify 4 con plugins:
+    │       │     - helmet (seguridad)
+    │       │     - cors (CORS)
+    │       │     - rate-limit (100/15min)
+    │       │     - cookie (cookies)
+    │       │   • Logger: pino
+    │       │   • Routes: GET / (info), GET /health, ejemplo POST
+    │       │   • Puerto: 3001
+    │       │
+    │       ├── config/
+    │       │   └── env.ts         Validación Zod de variables de entorno
+    │       │       - PORT, NODE_ENV, MONGO_URI, REDIS_URL
+    │       │       - JWT_SECRET, JWT_REFRESH_SECRET, ENCRYPTION_KEY
+    │       │       - APIs opcionales: BINANCE, CMC, FINNHUB, PLAID
+    │       │
+    │       ├── middleware/
+    │       │   └── auth.ts         Middleware de autenticación (Bearer token)
+    │       │
+    │       ├── routes/
+    │       │   └── example.routes.ts  Ejemplo: GET /example, POST /example
+    │       │
+    │       └── services/
+    │           └── example.service.ts  Ejemplo: validación con Zod, lógica negocio
+    │
+    │
+    └── WEB (@finanzas/web) - FRONTEND REACT + VITE
+        packages/web/
+        ├── package.json          React 18, Vite 5, Tailwind, React Query, Zustand
+        ├── tsconfig.json
+        ├── vite.config.ts        Proxy: /api -> http://localhost:3001
+        ├── tailwind.config.ts
+        ├── postcss.config.cjs
+        ├── index.html            Root HTML, carga main.tsx
+        │
+        └── src/
+            ├── main.tsx           Punto de entrada, renderiza <App />
+            ├── App.tsx            Componente raíz con React Router
+            ├── App.test.tsx       Test ejemplo (Vitest)
+            ├── index.css          Tailwind directives
+            │
+            ├── components/
+            │   └── TransactionCard.tsx  Componente tipado ejemplo
+            │
+            ├── hooks/
+            │   └── useApi.ts       Axios instance con interceptores
+            │
+            ├── stores/
+            │   └── authStore.ts    Zustand store (token, user, logout)
+            │
+            ├── utils/
+            │   └── formatters.ts   Helpers (currency, date, percent, large numbers)
+            │
+            └── pages/             (directorio para rutas futuras)
+
+
+DEPENDENCIAS PRINCIPALES POR PACKAGE
+====================================
+
+@finanzas/shared:
+  - zod@^3
+
+@finanzas/api:
+  - fastify@^4
+  - @fastify/cors, @fastify/helmet, @fastify/rate-limit, @fastify/cookie
+  - mongoose@^8
+  - redis@^4
+  - jsonwebtoken, bcrypt
+  - pino
+  - dotenv
+
+@finanzas/web:
+  - react@^18, react-dom@^18
+  - vite@^5, @vitejs/plugin-react
+  - react-router-dom@^6
+  - @tanstack/react-query@^5
+  - zustand@^4
+  - react-hook-form@^7
+  - tailwindcss@^3, autoprefixer, postcss
+  - recharts (gráficos)
+  - lucide-react (iconos)
+  - i18next, react-i18next (internacionalización)
+  - axios
+  - zod
+
+
+SCRIPTS DISPONIBLES
+===================
+
+ROOT:
+  pnpm dev           Ejecutar API + Web en paralelo
+  pnpm build         Compilar todos los packages
+  pnpm lint          Ejecutar ESLint
+  pnpm lint:fix      ESLint con --fix
+  pnpm typecheck     Verificar tipos TypeScript
+  pnpm test          Ejecutar tests Vitest
+
+ESPECÍFICOS:
+  pnpm --filter @finanzas/api dev        Backend solo
+  pnpm --filter @finanzas/web dev        Frontend solo
+  pnpm --filter @finanzas/shared build   Compilar shared
+
+
+VALIDACIONES PRE-COMMIT (Husky + lint-staged)
+==============================================
+Los commits ejecutan automáticamente:
+  1. ESLint --fix
+  2. Prettier --write
+  3. TypeScript --noEmit
+
+Requisitos para commits exitosos:
+  ✓ Sin errores ESLint
+  ✓ Código formateado Prettier
+  ✓ Sin errores TypeScript
+  ✓ Sin uso de `any`
+
+
+VARIABLES DE ENTORNO (packages/api/.env)
+========================================
+REQUERIDAS:
+  PORT=3001
+  NODE_ENV=development
+  MONGO_URI=mongodb://...
+  REDIS_URL=redis://...
+  JWT_SECRET=<32+ caracteres>
+  JWT_REFRESH_SECRET=<32+ caracteres>
+  ENCRYPTION_KEY=<64+ caracteres hex>
+
+OPCIONALES (APIs de mercado):
+  BINANCE_API_KEY, BINANCE_API_SECRET
+  CMC_API_KEY
+  FINNHUB_API_KEY
+
+
+PUERTOS
+=======
+API:        3001
+Web:        5173
+MongoDB:    27017 (local)
+Redis:      6379 (local)
+
+
+INICIAR DESARROLLO INMEDIATO
+=============================
+1. cd /Users/diego/Documents/Fintech/finanzas-app
+2. pnpm install
+3. cp packages/api/.env.example packages/api/.env
+4. Editar .env con tus valores
+5. pnpm dev
+6. Abrir http://localhost:5173
+
+
+CARACTERÍSTICAS
+===============
+✓ TypeScript Estricto (noImplicitAny, noAny prohibido)
+✓ ESLint + Prettier (formateo automático)
+✓ Husky Hooks (validación pre-commit)
+✓ Zod para Validación de Datos
+✓ Monorepo con pnpm
+✓ React con Vite (HMR instantáneo)
+✓ Tailwind CSS (estilos)
+✓ State Management (Zustand)
+✓ Data Fetching (React Query)
+✓ Forms (React Hook Form)
+✓ Internationalization (i18n)
+✓ Charts (Recharts)
+✓ Icons (Lucide React)
+✓ Testing (Vitest)
+✓ API Security (Helmet, Rate Limiting, CORS)

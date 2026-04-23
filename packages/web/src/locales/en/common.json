@@ -1,0 +1,105 @@
+{
+  "appName": "Finanzas App",
+  "nav": {
+    "dashboard": "Dashboard",
+    "accounts": "Accounts",
+    "transactions": "Transactions",
+    "budgets": "Budgets",
+    "goals": "Goals",
+    "holdings": "Investments",
+    "simulators": "Simulators",
+    "reports": "Reports",
+    "notifications": "Notifications",
+    "integrations": "Integrations",
+    "profile": "Profile",
+    "settings": "Settings",
+    "logout": "Log out"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "close": "Close",
+    "confirm": "Confirm",
+    "loading": "Loading...",
+    "export": "Export",
+    "download": "Download",
+    "import": "Import",
+    "search": "Search",
+    "filter": "Filter",
+    "clearFilters": "Clear filters",
+    "viewAll": "View all",
+    "back": "Back",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "sync": "Sync"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "pending": "Pending",
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "comingSoon": "Coming soon"
+  },
+  "errors": {
+    "generic": "An error occurred. Please try again.",
+    "network": "Connection error. Check your internet.",
+    "notFound": "Not found.",
+    "unauthorized": "Session expired. Please log in again.",
+    "validation": "Please review the form fields."
+  },
+  "empty": {
+    "noData": "No data",
+    "noResults": "No results"
+  },
+  "pagination": {
+    "page": "Page {{current}} of {{total}}",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "currency": {
+    "eur": "Euro",
+    "usd": "US Dollar",
+    "gbp": "British Pound",
+    "chf": "Swiss Franc"
+  },
+  "months": {
+    "1": "January",
+    "2": "February",
+    "3": "March",
+    "4": "April",
+    "5": "May",
+    "6": "June",
+    "7": "July",
+    "8": "August",
+    "9": "September",
+    "10": "October",
+    "11": "November",
+    "12": "December"
+  },
+  "monthsShort": {
+    "1": "Jan",
+    "2": "Feb",
+    "3": "Mar",
+    "4": "Apr",
+    "5": "May",
+    "6": "Jun",
+    "7": "Jul",
+    "8": "Aug",
+    "9": "Sep",
+    "10": "Oct",
+    "11": "Nov",
+    "12": "Dec"
+  },
+  "language": {
+    "es": "Español",
+    "en": "English",
+    "select": "Language"
+  }
+}

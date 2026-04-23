@@ -1,0 +1,19 @@
+{
+  "name": "@finanzas/shared",
+  "version": "0.1.0",
+  "description": "Shared types and schemas for Finanzas app",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

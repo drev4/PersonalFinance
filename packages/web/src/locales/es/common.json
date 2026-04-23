@@ -1,0 +1,105 @@
+{
+  "appName": "Finanzas App",
+  "nav": {
+    "dashboard": "Dashboard",
+    "accounts": "Cuentas",
+    "transactions": "Transacciones",
+    "budgets": "Presupuestos",
+    "goals": "Metas",
+    "holdings": "Inversiones",
+    "simulators": "Simuladores",
+    "reports": "Reportes",
+    "notifications": "Notificaciones",
+    "integrations": "Integraciones",
+    "profile": "Perfil",
+    "settings": "Configuración",
+    "logout": "Cerrar sesión"
+  },
+  "actions": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Crear",
+    "close": "Cerrar",
+    "confirm": "Confirmar",
+    "loading": "Cargando...",
+    "export": "Exportar",
+    "download": "Descargar",
+    "import": "Importar",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "clearFilters": "Limpiar filtros",
+    "viewAll": "Ver todo",
+    "back": "Volver",
+    "connect": "Conectar",
+    "disconnect": "Desconectar",
+    "sync": "Sincronizar"
+  },
+  "status": {
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "connected": "Conectado",
+    "disconnected": "Desconectado",
+    "pending": "Pendiente",
+    "success": "Éxito",
+    "error": "Error",
+    "warning": "Aviso",
+    "comingSoon": "Próximamente"
+  },
+  "errors": {
+    "generic": "Ha ocurrido un error. Por favor, inténtalo de nuevo.",
+    "network": "Error de conexión. Comprueba tu internet.",
+    "notFound": "No encontrado.",
+    "unauthorized": "Sesión expirada. Por favor, inicia sesión de nuevo.",
+    "validation": "Por favor, revisa los campos del formulario."
+  },
+  "empty": {
+    "noData": "No hay datos",
+    "noResults": "Sin resultados"
+  },
+  "pagination": {
+    "page": "Página {{current}} de {{total}}",
+    "previous": "Anterior",
+    "next": "Siguiente"
+  },
+  "currency": {
+    "eur": "Euro",
+    "usd": "Dólar estadounidense",
+    "gbp": "Libra esterlina",
+    "chf": "Franco suizo"
+  },
+  "months": {
+    "1": "Enero",
+    "2": "Febrero",
+    "3": "Marzo",
+    "4": "Abril",
+    "5": "Mayo",
+    "6": "Junio",
+    "7": "Julio",
+    "8": "Agosto",
+    "9": "Septiembre",
+    "10": "Octubre",
+    "11": "Noviembre",
+    "12": "Diciembre"
+  },
+  "monthsShort": {
+    "1": "Ene",
+    "2": "Feb",
+    "3": "Mar",
+    "4": "Abr",
+    "5": "May",
+    "6": "Jun",
+    "7": "Jul",
+    "8": "Ago",
+    "9": "Sep",
+    "10": "Oct",
+    "11": "Nov",
+    "12": "Dic"
+  },
+  "language": {
+    "es": "Español",
+    "en": "English",
+    "select": "Idioma"
+  }
+}

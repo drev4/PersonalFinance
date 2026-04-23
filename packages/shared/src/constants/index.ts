@@ -1,0 +1,65 @@
+export const CURRENCIES = [
+  'USD',
+  'EUR',
+  'GBP',
+  'JPY',
+  'AUD',
+  'CAD',
+  'CHF',
+  'CNY',
+  'SEK',
+  'NZD',
+  'MXN',
+  'SGD',
+  'HKD',
+  'NOK',
+  'KRW',
+  'TRY',
+  'RUB',
+  'INR',
+  'BRL',
+  'ZAR',
+] as const;
+
+export type Currency = (typeof CURRENCIES)[number];
+
+export const SUPPORTED_EXCHANGES = [
+  'NYSE',
+  'NASDAQ',
+  'LSE',
+  'TSE',
+  'ASX',
+  'TSX',
+  'SIX',
+  'SSE',
+  'HKEX',
+  'SEHK',
+  'MOEX',
+  'NSE',
+  'B3',
+  'BINANCE',
+  'COINBASE',
+  'KRAKEN',
+] as const;
+
+export type SupportedExchange = (typeof SUPPORTED_EXCHANGES)[number];
+
+export const DEFAULT_CATEGORIES = [
+  { name: 'Alimentación', type: 'expense' as const, icon: 'apple', color: '#F97316' },
+  { name: 'Transporte', type: 'expense' as const, icon: 'car', color: '#3B82F6' },
+  { name: 'Ocio', type: 'expense' as const, icon: 'gamepad2', color: '#8B5CF6' },
+  { name: 'Salud', type: 'expense' as const, icon: 'activity', color: '#EF4444' },
+  { name: 'Hogar', type: 'expense' as const, icon: 'home', color: '#14B8A6' },
+  { name: 'Ropa', type: 'expense' as const, icon: 'shopping-bag', color: '#EC4899' },
+  { name: 'Educación', type: 'expense' as const, icon: 'book', color: '#06B6D4' },
+  { name: 'Restaurantes', type: 'expense' as const, icon: 'utensils', color: '#F59E0B' },
+  { name: 'Utilidades', type: 'expense' as const, icon: 'zap', color: '#FBBF24' },
+  { name: 'Entretenimiento', type: 'expense' as const, icon: 'film', color: '#A78BFA' },
+  { name: 'Seguros', type: 'expense' as const, icon: 'shield', color: '#10B981' },
+  { name: 'Servicios Financieros', type: 'expense' as const, icon: 'credit-card', color: '#0EA5E9' },
+  { name: 'Salario', type: 'income' as const, icon: 'briefcase', color: '#22C55E' },
+  { name: 'Inversiones', type: 'income' as const, icon: 'trending-up', color: '#16A34A' },
+  { name: 'Bonificación', type: 'income' as const, icon: 'gift', color: '#84CC16' },
+  { name: 'Freelance', type: 'income' as const, icon: 'code', color: '#65A30D' },
+  { name: 'Otros Ingresos', type: 'income' as const, icon: 'plus-circle', color: '#6366F1' },
+] as const;

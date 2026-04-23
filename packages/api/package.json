@@ -1,0 +1,53 @@
+{
+  "name": "@finanzas/api",
+  "version": "0.1.0",
+  "description": "Fastify backend for Finanzas app",
+  "type": "module",
+  "main": "src/server.ts",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^9.4.0",
+    "@fastify/cors": "^9.0.0",
+    "@fastify/helmet": "^11.0.0",
+    "@fastify/rate-limit": "^9.0.0",
+    "@finanzas/shared": "workspace:*",
+    "axios": "^1.6.0",
+    "bcrypt": "^5.1.0",
+    "bullmq": "^5.0.0",
+    "csv-parse": "^5.5.0",
+    "csv-stringify": "^6.5.0",
+    "dotenv": "^16.3.0",
+    "fastify": "^4.25.0",
+    "fastify-plugin": "^5.1.0",
+    "ioredis": "^5.3.2",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.0.0",
+    "node-cron": "^3.0.3",
+    "pdfkit": "^0.15.0",
+    "pino": "^8.17.0",
+    "pino-pretty": "^10.3.0",
+    "resend": "^2.0.0",
+    "uuid": "^9.0.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20.0.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/pdfkit": "^0.13.6",
+    "@types/uuid": "^9.0.7",
+    "ioredis-mock": "^8.9.0",
+    "mongodb-memory-server": "^9.1.6",
+    "tsx": "^4.7.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.2.0"
+  }
+}
