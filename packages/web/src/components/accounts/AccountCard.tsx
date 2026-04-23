@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useCurrencyConverter } from '../../hooks/useCurrency';
 import {
   MoreVertical,
   Pencil,
@@ -77,12 +78,20 @@ const ICON_BY_TYPE: Record<string, string> = {
 export function AccountCard({ account }: AccountCardProps): React.ReactElement {
   const navigate = useNavigate();
   const archiveAccount = useArchiveAccount();
+  const { convert, baseCurrency } = useCurrencyConverter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState(false);
 
   const iconName = ICON_BY_TYPE[account.type] ?? 'Wallet';
   const isLiability = ['loan', 'mortgage', 'credit_card'].includes(account.type);
+
+  const showConversion =
+    account.currency.toUpperCase() !== baseCurrency.toUpperCase();
+
+  const convertedBalance = showConversion
+    ? convert(account.currentBalance / 100, account.currency, baseCurrency)
+    : null;
 
   function handleCardClick(e: React.MouseEvent): void {
     // Prevent navigation when clicking the menu
@@ -202,6 +211,13 @@ export function AccountCard({ account }: AccountCardProps): React.ReactElement {
           >
             {formatCurrency(account.currentBalance, account.currency)}
           </p>
+          {showConversion && (
+            <p className="text-xs text-gray-500 mt-1">
+              {convertedBalance !== null
+                ? `≈ ${convertedBalance.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${baseCurrency}`
+                : 'Calculando conversión...'}
+            </p>
+          )}
         </div>
 
         {/* Badge */}

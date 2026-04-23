@@ -5,9 +5,10 @@ import mongoose from 'mongoose';
 import { AccountModel } from '../accounts/account.model.js';
 import * as holdingRepository from './holding.repository.js';
 import type { CreateHoldingDTO, UpdateHoldingDTO } from './holding.repository.js';
-import type { IHolding, AssetType } from './holding.model.js';
+import { HoldingModel, type IHolding, type AssetType } from './holding.model.js';
 import { getLatestQuotes, searchCrypto } from './integrations/coinmarketcap.client.js';
 import { getQuote, searchSymbol } from './integrations/finnhub.client.js';
+import { getRates, convertWithRates, type ExchangeRates } from '../../services/currency.service.js';
 
 const logger = pino({ name: 'holding.service' });
 
@@ -150,6 +151,44 @@ async function fetchCryptoPrice(symbol: string): Promise<number | undefined> {
     const eurPrice = priceRes.data[coin.id]?.eur;
     if (eurPrice !== undefined) {
       return Math.round(eurPrice * 100);
+    }
+    return undefined;
+  } catch (err) {
+    logger.warn({ err, symbol }, '[HoldingService] Failed to fetch crypto price from any source');
+    return undefined;
+  }
+}
+
+/** Fetches crypto price and returns both price (in cents) and source currency. */
+async function fetchCryptoPriceWithCurrency(
+  symbol: string,
+): Promise<{ price: number; currency: string } | undefined> {
+  const normalised = symbol.toUpperCase();
+  try {
+    const quotes = await getLatestQuotes([normalised]);
+    const quote = quotes[normalised];
+    if (quote !== undefined) {
+      return { price: Math.round(quote.price * 100), currency: 'USD' };
+    }
+
+    const searchRes = await axios.get<{
+      coins: Array<{ id: string; symbol: string }>;
+    }>('https://api.coingecko.com/api/v3/search', {
+      params: { query: normalised },
+    });
+
+    const coin = searchRes.data.coins.find((c) => c.symbol.toUpperCase() === normalised);
+    if (!coin) return undefined;
+
+    const priceRes = await axios.get<{
+      [key: string]: { eur: number; usd: number };
+    }>('https://api.coingecko.com/api/v3/simple/price', {
+      params: { ids: coin.id, vs_currencies: 'eur' },
+    });
+
+    const eurPrice = priceRes.data[coin.id]?.eur;
+    if (eurPrice !== undefined) {
+      return { price: Math.round(eurPrice * 100), currency: 'EUR' };
     }
     return undefined;
   } catch (err) {
@@ -316,19 +355,46 @@ export async function createHolding(
 
   let currentPrice: number | undefined;
   let priceUpdatedAt: Date | undefined;
+  let priceSourceCurrency = 'USD'; // Default
 
   if (dto.assetType === 'crypto') {
-    currentPrice = await fetchCryptoPrice(dto.symbol);
-    if (currentPrice !== undefined) priceUpdatedAt = new Date();
+    const priceWithCurrency = await fetchCryptoPriceWithCurrency(dto.symbol);
+    if (priceWithCurrency !== undefined) {
+      currentPrice = priceWithCurrency.price;
+      priceSourceCurrency = priceWithCurrency.currency;
+      priceUpdatedAt = new Date();
+    }
   } else {
+    // Stocks: Finnhub returns in native market currency (mostly USD)
     currentPrice = await fetchStockPrice(dto.symbol);
+    priceSourceCurrency = 'USD';
     if (currentPrice !== undefined) priceUpdatedAt = new Date();
+  }
+
+  // Convert price from source currency to holding currency if needed
+  let priceInHoldingCurrency = currentPrice;
+  if (currentPrice !== undefined && priceSourceCurrency.toUpperCase() !== dto.currency.toUpperCase()) {
+    try {
+      const rates = await getRates(priceSourceCurrency.toUpperCase());
+      priceInHoldingCurrency = convertWithRates(
+        currentPrice,
+        priceSourceCurrency,
+        dto.currency,
+        rates,
+      );
+    } catch (err) {
+      logger.warn(
+        { err, from: priceSourceCurrency, to: dto.currency, symbol: dto.symbol },
+        'Failed to convert price to holding currency; using unconverted price',
+      );
+      // Fallback: use unconverted price (not ideal but better than failing)
+    }
   }
 
   const holding = await holdingRepository.create({
     ...dto,
     userId,
-    currentPrice: currentPrice ?? dto.currentPrice,
+    currentPrice: priceInHoldingCurrency ?? dto.currentPrice,
     priceUpdatedAt: priceUpdatedAt ?? dto.priceUpdatedAt,
     source: dto.source ?? 'manual',
   });
@@ -496,6 +562,60 @@ function inferAssetType(symbol: string): AssetType {
   if (etfPatterns.test(symbol)) return 'etf';
 
   return 'stock';
+}
+
+/**
+ * Updates the current price for all holdings with a given symbol, converting
+ * from the source currency to each holding's currency. Used by price-update jobs.
+ */
+export async function updatePriceForSymbol(
+  symbol: string,
+  priceInSourceCurrency: number,
+  sourceCurrency: string,
+): Promise<void> {
+  const holdings = await HoldingModel.find({
+    symbol: symbol.toUpperCase(),
+  })
+    .select('_id currency')
+    .lean()
+    .exec();
+
+  if (holdings.length === 0) return;
+
+  // Fetch rates once from the source currency
+  let rates: ExchangeRates = { [sourceCurrency.toUpperCase()]: 1 };
+  try {
+    rates = await getRates(sourceCurrency.toUpperCase());
+  } catch (err) {
+    logger.warn(
+      { err, symbol, sourceCurrency },
+      'Failed to fetch exchange rates for price update; using unconverted price',
+    );
+  }
+
+  const now = new Date();
+
+  // Update each holding with its converted price
+  for (const holding of holdings) {
+    const holdingCurrency = holding.currency.toUpperCase();
+    const priceInHoldingCurrency = convertWithRates(
+      priceInSourceCurrency,
+      sourceCurrency,
+      holdingCurrency,
+      rates,
+    );
+
+    await HoldingModel.findByIdAndUpdate(
+      holding._id,
+      {
+        $set: {
+          currentPrice: priceInHoldingCurrency,
+          priceUpdatedAt: now,
+        },
+      },
+      { runValidators: true },
+    ).exec();
+  }
 }
 
 export async function getPortfolioSummary(userId: string): Promise<PortfolioSummary> {

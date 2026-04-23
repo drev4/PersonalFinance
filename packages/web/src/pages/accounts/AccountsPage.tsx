@@ -55,17 +55,21 @@ export default function AccountsPage(): React.ReactElement {
 
   const activeAccounts = accounts?.filter((a) => a.isActive) ?? [];
 
-  // Compute assets and liabilities from accounts if netWorth is unavailable
-  const assetsTotal = activeAccounts
-    .filter((a) => ASSET_TYPES.includes(a.type))
-    .reduce((sum, a) => sum + a.currentBalance, 0);
+  // Use netWorth data which already has proper currency conversion from backend
+  // Falls back to calculating locally if netWorth is unavailable
+  const assetsTotal = netWorth?.assets ?? 0;
+  const liabilitiesTotal = netWorth?.liabilities ?? 0;
+  const netWorthTotal = netWorth?.total ?? 0;
+  const baseCurrency = netWorth?.currency ?? 'EUR';
 
-  const liabilitiesTotal = activeAccounts
-    .filter((a) => LIABILITY_TYPES.includes(a.type))
-    .reduce((sum, a) => sum + a.currentBalance, 0);
-
-  // Group accounts by type for the breakdown
-  const byType = netWorth?.byType ?? {};
+  // Breakdown by account category (cash, investments, realEstate, vehicles, debts)
+  const breakdown = netWorth?.breakdown ?? {
+    cash: 0,
+    investments: 0,
+    realEstate: 0,
+    vehicles: 0,
+    debts: 0,
+  };
 
   return (
     <div className="p-6">
@@ -92,10 +96,7 @@ export default function AccountsPage(): React.ReactElement {
             <CardContent className="pt-6">
               <p className="text-sm font-medium text-gray-500 mb-1">Patrimonio neto</p>
               <p className="text-3xl font-bold text-gray-900 mb-4">
-                {formatCurrency(
-                  netWorth?.totalBalance ?? assetsTotal - liabilitiesTotal,
-                  'EUR',
-                )}
+                {formatCurrency(netWorthTotal, baseCurrency)}
               </p>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -105,7 +106,7 @@ export default function AccountsPage(): React.ReactElement {
                     Activos
                   </p>
                   <p className="text-xl font-bold text-green-700">
-                    {formatCurrency(assetsTotal, 'EUR')}
+                    {formatCurrency(assetsTotal, baseCurrency)}
                   </p>
                 </div>
 
@@ -115,22 +116,24 @@ export default function AccountsPage(): React.ReactElement {
                     Pasivos
                   </p>
                   <p className="text-xl font-bold text-red-700">
-                    {formatCurrency(liabilitiesTotal, 'EUR')}
+                    {formatCurrency(liabilitiesTotal, baseCurrency)}
                   </p>
                 </div>
               </div>
 
-              {/* Breakdown by type */}
-              {Object.keys(byType).length > 0 && (
+              {/* Breakdown by category */}
+              {netWorth && (
                 <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {Object.entries(byType).map(([type, total]) => (
-                    <div key={type} className="rounded-md bg-gray-50 px-3 py-2">
-                      <p className="text-xs text-gray-500">{getAccountTypeLabel(type as AccountType)}</p>
-                      <p className="text-sm font-semibold text-gray-700">
-                        {formatCurrency(total, 'EUR')}
-                      </p>
-                    </div>
-                  ))}
+                  {Object.entries(breakdown)
+                    .filter(([_, total]) => total !== 0)
+                    .map(([category, total]) => (
+                      <div key={category} className="rounded-md bg-gray-50 px-3 py-2">
+                        <p className="text-xs text-gray-500 capitalize">{category}</p>
+                        <p className="text-sm font-semibold text-gray-700">
+                          {formatCurrency(total, baseCurrency)}
+                        </p>
+                      </div>
+                    ))}
                 </div>
               )}
             </CardContent>

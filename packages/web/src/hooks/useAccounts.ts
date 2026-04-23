@@ -9,6 +9,7 @@ import {
   archiveAccount,
   getNetWorth,
 } from '../api/accounts.api';
+import { dashboardKeys } from './useDashboard';
 import type {
   Account,
   CreateAccountDTO,
@@ -49,6 +50,7 @@ export function useCreateAccount(): UseMutationResult<Account, Error, CreateAcco
     mutationFn: createAccount,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
     },
   });
 }
@@ -63,6 +65,7 @@ export function useUpdateAccount(): UseMutationResult<
     mutationFn: ({ id, data }) => updateAccount(id, data),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
       queryClient.setQueryData(accountKeys.detail(updated._id), updated);
     },
   });
@@ -79,6 +82,7 @@ export function useAdjustBalance(): UseMutationResult<
     onSuccess: ({ account }) => {
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
       void queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
       queryClient.setQueryData(accountKeys.detail(account._id), account);
     },
   });
@@ -90,6 +94,7 @@ export function useArchiveAccount(): UseMutationResult<void, Error, string> {
     mutationFn: archiveAccount,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
     },
   });
 }

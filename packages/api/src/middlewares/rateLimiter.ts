@@ -1,4 +1,5 @@
 import type { FastifyRequest } from 'fastify';
+import env from '../config/env.js';
 
 /**
  * Reusable rate-limit configurations.
@@ -38,14 +39,14 @@ export interface RateLimitConfig {
  * Tight budget to slow down credential stuffing; ban an IP after 3 bursts.
  */
 export const authRateLimit: RateLimitConfig = {
-  max: 10,
+  max: env.NODE_ENV === 'development' ? 100 : 10,
   timeWindow: '15 minutes',
   ban: 3,
 };
 
 /** General API budget — applied globally. */
 export const apiRateLimit: RateLimitConfig = {
-  max: 100,
+  max: env.NODE_ENV === 'development' ? 1000 : 100,
   timeWindow: '15 minutes',
 };
 

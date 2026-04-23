@@ -182,8 +182,11 @@ export interface CashflowData {
 }
 
 export interface NetWorthData {
-  totalBalance: number;
-  byType: Record<string, number>;
+  total: number;
+  assets: number;
+  liabilities: number;
+  breakdown: NetWorthBreakdown;
+  currency: string;
 }
 
 // ─── Dashboard v1 ─────────────────────────────────────────────────────────────
@@ -381,12 +384,15 @@ export interface CreateHoldingDTO {
   quantity: string;
   averageBuyPrice: number;
   currency: string;
+  currentPrice?: number;
 }
 
 export interface UpdateHoldingDTO {
   accountId?: string;
+  currency?: string;
   quantity?: string;
   averageBuyPrice?: number;
+  currentPrice?: number;
 }
 
 // ─── Simulators — Inputs ──────────────────────────────────────────────────────
