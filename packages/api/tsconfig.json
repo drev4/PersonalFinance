@@ -3,9 +3,9 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "moduleResolution": "node",
+    "moduleResolution": "NodeNext",
     "exactOptionalPropertyTypes": false,
-    "skipLibCheck": true,
+    "skipLibCheck": true
   },
   "include": [
     "src"
