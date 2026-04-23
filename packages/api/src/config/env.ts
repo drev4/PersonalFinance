@@ -6,11 +6,11 @@ dotenv.config();
 const EnvSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3001),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  MONGO_URI: z.string().url('Invalid MongoDB URI'),
-  REDIS_URL: z.string().url('Invalid Redis URL'),
-  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
-  JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
-  ENCRYPTION_KEY: z.string().min(64, 'ENCRYPTION_KEY must be at least 64 characters (32 bytes hex)'),
+  MONGO_URI: z.string().min(1, 'MONGO_URI is required').url('Invalid MongoDB URI').optional().or(z.string().min(1)),
+  REDIS_URL: z.string().min(1, 'REDIS_URL is required').url('Invalid Redis URL').optional().or(z.string().min(1)),
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters').optional().or(z.string().min(1)),
+  JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters').optional().or(z.string().min(1)),
+  ENCRYPTION_KEY: z.string().min(64, 'ENCRYPTION_KEY must be at least 64 characters (32 bytes hex)').optional().or(z.string().min(1)),
   // Optional in development (CORS whitelist falls back to localhost dev servers).
   // Required in production — enforced in the post-parse guard below.
   FRONTEND_URL: z
@@ -28,21 +28,28 @@ const EnvSchema = z.object({
 
 export type Env = z.infer<typeof EnvSchema>;
 
-let env: Env;
+// Lazy load and validate env on first access
+let env: Env | null = null;
 
-try {
-  env = EnvSchema.parse(process.env);
-} catch (error) {
-  if (error instanceof z.ZodError) {
-    // Using console here is acceptable — the logger depends on a valid env
-    // and we are exiting immediately afterwards.
-    console.error('Invalid environment variables:');
-    error.issues.forEach((err) => {
-      console.error(`  ${err.path.join('.')}: ${err.message}`);
-    });
-    process.exit(1);
+function loadEnv(): Env {
+  if (env) return env;
+
+  try {
+    env = EnvSchema.parse(process.env);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      // Using console here is acceptable — the logger depends on a valid env
+      // and we are exiting immediately afterwards.
+      console.error('Invalid environment variables:');
+      error.issues.forEach((err) => {
+        console.error(`  ${err.path.join('.')}: ${err.message}`);
+      });
+      process.exit(1);
+    }
+    throw error;
   }
-  throw error;
+
+  return env;
 }
 
 // ---------------------------------------------------------------------------
@@ -51,31 +58,40 @@ try {
 // still work, but production boots MUST ship with long, high-entropy secrets.
 // ---------------------------------------------------------------------------
 
-if (env.NODE_ENV === 'production') {
-  const errors: string[] = [];
+function validateProduction(parsedEnv: Env): void {
+  if (parsedEnv.NODE_ENV === 'production') {
+    const errors: string[] = [];
 
-  if (env.JWT_SECRET.length < 64) {
-    errors.push('JWT_SECRET must be at least 64 chars in production');
-  }
-  if (env.JWT_REFRESH_SECRET.length < 64) {
-    errors.push('JWT_REFRESH_SECRET must be at least 64 chars in production');
-  }
-  // ENCRYPTION_KEY is a hex-encoded 32-byte key — 64 hex chars is the minimum.
-  if (env.ENCRYPTION_KEY.length < 64) {
-    errors.push('ENCRYPTION_KEY must be at least 64 chars (32 bytes hex) in production');
-  }
-  if (env.JWT_SECRET === env.JWT_REFRESH_SECRET) {
-    errors.push('JWT_SECRET and JWT_REFRESH_SECRET must be different in production');
-  }
-  if (env.FRONTEND_URL === undefined || env.FRONTEND_URL === '') {
-    errors.push('FRONTEND_URL must be set in production (used for CORS whitelist)');
-  }
+    if (parsedEnv.JWT_SECRET.length < 64) {
+      errors.push('JWT_SECRET must be at least 64 chars in production');
+    }
+    if (parsedEnv.JWT_REFRESH_SECRET.length < 64) {
+      errors.push('JWT_REFRESH_SECRET must be at least 64 chars in production');
+    }
+    // ENCRYPTION_KEY is a hex-encoded 32-byte key — 64 hex chars is the minimum.
+    if (parsedEnv.ENCRYPTION_KEY.length < 64) {
+      errors.push('ENCRYPTION_KEY must be at least 64 chars (32 bytes hex) in production');
+    }
+    if (parsedEnv.JWT_SECRET === parsedEnv.JWT_REFRESH_SECRET) {
+      errors.push('JWT_SECRET and JWT_REFRESH_SECRET must be different in production');
+    }
+    if (parsedEnv.FRONTEND_URL === undefined || parsedEnv.FRONTEND_URL === '') {
+      errors.push('FRONTEND_URL must be set in production (used for CORS whitelist)');
+    }
 
-  if (errors.length > 0) {
-    console.error('Production environment validation failed:');
-    for (const msg of errors) console.error(`  - ${msg}`);
-    process.exit(1);
+    if (errors.length > 0) {
+      console.error('Production environment validation failed:');
+      for (const msg of errors) console.error(`  - ${msg}`);
+      process.exit(1);
+    }
   }
 }
 
-export default env;
+// Export a proxy that lazy-loads and validates env on first access
+export default new Proxy({} as Env, {
+  get(target, prop) {
+    const loaded = loadEnv();
+    validateProduction(loaded);
+    return (loaded as any)[prop];
+  },
+});
