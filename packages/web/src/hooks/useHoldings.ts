@@ -9,6 +9,8 @@ import {
   searchTicker,
   importFromCsv,
 } from '../api/holdings.api';
+import { dashboardKeys } from './useDashboard';
+import { accountKeys } from './useAccounts';
 import type {
   Holding,
   HoldingWithValue,
@@ -65,6 +67,8 @@ export function useCreateHolding(): UseMutationResult<Holding, Error, CreateHold
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: holdingKeys.all });
       void queryClient.invalidateQueries({ queryKey: holdingKeys.portfolio() });
+      void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
+      void queryClient.invalidateQueries({ queryKey: accountKeys.all });
     },
   });
 }
@@ -80,6 +84,8 @@ export function useUpdateHolding(): UseMutationResult<
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: holdingKeys.all });
       void queryClient.invalidateQueries({ queryKey: holdingKeys.portfolio() });
+      void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
+      void queryClient.invalidateQueries({ queryKey: accountKeys.all });
     },
   });
 }
@@ -91,6 +97,8 @@ export function useDeleteHolding(): UseMutationResult<void, Error, string> {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: holdingKeys.all });
       void queryClient.invalidateQueries({ queryKey: holdingKeys.portfolio() });
+      void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
+      void queryClient.invalidateQueries({ queryKey: accountKeys.all });
     },
   });
 }
@@ -106,6 +114,8 @@ export function useImportCsv(): UseMutationResult<
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: holdingKeys.all });
       void queryClient.invalidateQueries({ queryKey: holdingKeys.portfolio() });
+      void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
+      void queryClient.invalidateQueries({ queryKey: accountKeys.all });
     },
   });
 }

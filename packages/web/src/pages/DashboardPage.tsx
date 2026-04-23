@@ -25,7 +25,6 @@ function formatTodayLong(): string {
 
 export default function DashboardPage(): React.ReactElement {
   const user = useAuthStore((state) => state.user);
-  console.log(user);
 
   const displayName = user?.name || user?.email || 'Usuario';
   const firstName = user?.name?.split(' ')[0]?.trim() || displayName;

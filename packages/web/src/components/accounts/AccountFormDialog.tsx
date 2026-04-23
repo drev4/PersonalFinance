@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
 import type React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { CURRENCIES } from '@finanzas/shared';
+import { useCurrencyConverter } from '../../hooks/useCurrency';
 import {
   Dialog,
   DialogContent,
@@ -91,6 +92,7 @@ export function AccountFormDialog({
   const isEdit = Boolean(account);
   const createAccount = useCreateAccount();
   const updateAccount = useUpdateAccount();
+  const { convert, baseCurrency } = useCurrencyConverter();
 
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
@@ -132,6 +134,18 @@ export function AccountFormDialog({
       });
     }
   }, [open, account, form]);
+
+  const watchedCurrency = useWatch({ control: form.control, name: 'currency' });
+  const watchedBalance = useWatch({ control: form.control, name: 'initialBalance' });
+
+  const showConversion =
+    watchedCurrency &&
+    watchedCurrency.toUpperCase() !== baseCurrency.toUpperCase() &&
+    watchedBalance > 0;
+
+  const convertedBalance = showConversion
+    ? convert(watchedBalance, watchedCurrency, baseCurrency)
+    : null;
 
   const isPending = createAccount.isPending || updateAccount.isPending;
 
@@ -237,6 +251,13 @@ export function AccountFormDialog({
                       onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                     />
                   </FormControl>
+                  {showConversion && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {convertedBalance !== null
+                        ? `≈ ${convertedBalance.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${baseCurrency} (tipo de cambio aproximado)`
+                        : 'Calculando conversión...'}
+                    </p>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}

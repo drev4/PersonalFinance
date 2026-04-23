@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import pino from 'pino';
-import { getUniqueSymbolsByType, updatePrice } from '../modules/holdings/holding.repository.js';
+import { getUniqueSymbolsByType } from '../modules/holdings/holding.repository.js';
+import { updatePriceForSymbol } from '../modules/holdings/holding.service.js';
 import { PriceSnapshotModel } from '../modules/holdings/priceSnapshot.model.js';
 import { getLatestQuotes } from '../modules/holdings/integrations/coinmarketcap.client.js';
 import { getQuote } from '../modules/holdings/integrations/finnhub.client.js';
@@ -65,7 +66,8 @@ async function runCryptoPriceUpdate(): Promise<void> {
     for (const [symbol, quote] of Object.entries(quotes)) {
       const priceInCents = Math.round(quote.price * 100);
 
-      await updatePrice(symbol, priceInCents, 'cmc');
+      // CMC returns prices in USD; convert to each holding's currency
+      await updatePriceForSymbol(symbol, priceInCents, 'USD');
       await maybeSaveSnapshot(symbol, priceInCents, 'USD', 'cmc');
       updated++;
     }
@@ -105,7 +107,7 @@ async function runStockPriceUpdate(): Promise<void> {
 
       if (quote !== null && quote.c > 0) {
         const priceInCents = Math.round(quote.c * 100);
-        await updatePrice(symbol, priceInCents, 'finnhub');
+        await updatePriceForSymbol(symbol, priceInCents, 'USD');
         await maybeSaveSnapshot(symbol, priceInCents, 'USD', 'finnhub');
         updated++;
       }

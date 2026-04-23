@@ -29,6 +29,7 @@ import { registerIntegrationRoutes } from './modules/integrations/integration.ro
 import { registerSimulatorRoutes } from './modules/simulators/simulator.routes.js';
 import { registerNotificationRoutes } from './modules/notifications/notification.routes.js';
 import { registerReportRoutes } from './modules/reports/report.routes.js';
+import { registerCurrencyRoutes } from './modules/currency/currency.routes.js';
 import { scheduleAllJobs } from './jobs/index.js';
 
 const fastify = Fastify({
@@ -243,6 +244,9 @@ await fastify.register(registerNotificationRoutes);
 
 // Report routes: /reports
 await fastify.register(registerReportRoutes);
+
+// Currency rates route: /currency/rates
+await fastify.register(registerCurrencyRoutes);
 
 // ---- Server startup --------------------------------------------------------
 

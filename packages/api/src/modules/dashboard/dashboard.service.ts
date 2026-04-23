@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import pino from 'pino';
 import { AccountModel } from '../accounts/account.model.js';
 import { TransactionModel, type ITransaction } from '../transactions/transaction.model.js';
+import { getRates, convertWithRates, type ExchangeRates } from '../../services/currency.service.js';
 import { CategoryModel } from '../categories/category.model.js';
 import {
   getCashflow as repoCashflow,
@@ -140,13 +141,33 @@ export async function getNetWorth(userId: string): Promise<NetWorthSummary> {
     logger.warn({ err, userId }, 'Net-worth cache read failed');
   }
 
+  // Fetch base currency first — needed to convert all account/holding amounts.
+  let currency = 'EUR';
+  try {
+    const { UserModel } = await import('../users/user.model.js');
+    const user = await UserModel.findById(userId).select('baseCurrency').lean().exec();
+    if (user !== null && user.baseCurrency) {
+      currency = user.baseCurrency;
+    }
+  } catch {
+    // Non-critical — leave default currency
+  }
+
+  // Fetch exchange rates once for all conversions (cached in Redis).
+  let rates: ExchangeRates = { [currency]: 1 };
+  try {
+    rates = await getRates(currency);
+  } catch (err) {
+    logger.warn({ err, currency }, 'Failed to fetch exchange rates; values may be unconverted');
+  }
+
   const [accounts, holdings] = await Promise.all([
     AccountModel.find({
       userId: new mongoose.Types.ObjectId(userId),
       isActive: true,
       includedInNetWorth: true,
     })
-      .select('type currentBalance')
+      .select('type currentBalance currency')
       .lean()
       .exec(),
     (async () => {
@@ -174,32 +195,25 @@ export async function getNetWorth(userId: string): Promise<NetWorthSummary> {
     const bucket = bucketForType(account.type);
     if (bucket === null) continue;
 
+    const accountCurrency = (account as any).currency ?? currency;
+    const balanceInBase = convertWithRates(account.currentBalance, accountCurrency, currency, rates);
+
     if (bucket === 'debts') {
-      liabilities += account.currentBalance;
-      breakdown.debts += account.currentBalance;
+      liabilities += balanceInBase;
+      breakdown.debts += balanceInBase;
     } else {
-      assets += account.currentBalance;
-      breakdown[bucket] += account.currentBalance;
+      assets += balanceInBase;
+      breakdown[bucket] += balanceInBase;
     }
   }
 
   for (const holding of holdings as any[]) {
     const bucket = bucketForType(holding.assetType);
     if (bucket === null) continue;
-    assets += holding.currentValue;
-    breakdown[bucket] += holding.currentValue;
-  }
-
-  // Fetch baseCurrency from User model (optional enrichment)
-  let currency = 'EUR';
-  try {
-    const { UserModel } = await import('../users/user.model.js');
-    const user = await UserModel.findById(userId).select('baseCurrency').lean().exec();
-    if (user !== null && user.baseCurrency) {
-      currency = user.baseCurrency;
-    }
-  } catch {
-    // Non-critical — leave default currency
+    const holdingCurrency = holding.currency ?? currency;
+    const valueInBase = convertWithRates(holding.currentValue, holdingCurrency, currency, rates);
+    assets += valueInBase;
+    breakdown[bucket] += valueInBase;
   }
 
   const summary: NetWorthSummary = {

@@ -14,9 +14,10 @@ export function formatCurrency(
   locale = 'es-ES',
 ): string {
   const amount = amountInCents / 100;
+  const currencyCode = currency && currency.length === 3 ? currency.toUpperCase() : 'EUR';
   return new Intl.NumberFormat(locale, {
     style: 'currency',
-    currency,
+    currency: currencyCode,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);

@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Bitcoin, BarChart2, TrendingUp, Landmark, ArrowLeft } from 'lucide-react';
+import { CURRENCIES } from '@finanzas/shared';
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,7 @@ import { Combobox } from '../ui/combobox';
 import { Skeleton } from '../ui/skeleton';
 import { useAccounts } from '../../hooks/useAccounts';
 import { useCreateHolding, useUpdateHolding, useSearchTicker } from '../../hooks/useHoldings';
+import { useCurrencyConverter } from '../../hooks/useCurrency';
 import type { HoldingWithValue, AssetType } from '../../types/api';
 import { cn } from '../../lib/utils';
 
@@ -25,6 +27,7 @@ import { cn } from '../../lib/utils';
 
 const holdingSchema = z.object({
   accountId: z.string().min(1, 'La cuenta es requerida'),
+  currency: z.string().length(3, 'Selecciona una divisa válida'),
   quantity: z
     .string()
     .min(1, 'La cantidad es requerida')
@@ -169,6 +172,7 @@ export default function HoldingFormDialog({
   const { data: accounts = [], isLoading: accountsLoading } = useAccounts();
   const createMutation = useCreateHolding();
   const updateMutation = useUpdateHolding();
+  const { convert, baseCurrency } = useCurrencyConverter();
 
   const {
     register,
@@ -180,27 +184,41 @@ export default function HoldingFormDialog({
     resolver: zodResolver(holdingSchema),
     defaultValues: {
       accountId: editing?.accountId ?? '',
+      currency: editing?.currency ?? baseCurrency,
       quantity: editing?.quantity ?? '',
-      averageBuyPrice: editing ? editing.averageBuyPrice / 100 : undefined,
-      currentPrice: editing?.currentPrice ? editing.currentPrice / 100 : undefined,
+      averageBuyPrice: editing ? editing.averageBuyPrice / 100 : ('' as unknown as number),
+      currentPrice: editing?.currentPrice ? editing.currentPrice / 100 : ('' as unknown as number),
     },
   });
+
+  const watchedCurrency = useWatch({ control, name: 'currency' });
+  const watchedBuyPrice = useWatch({ control, name: 'averageBuyPrice' });
+
+  const showConversion =
+    watchedCurrency &&
+    watchedCurrency.toUpperCase() !== baseCurrency.toUpperCase() &&
+    watchedBuyPrice > 0;
+
+  const convertedBuyPrice = showConversion
+    ? convert(watchedBuyPrice, watchedCurrency, baseCurrency)
+    : null;
 
   // Reset form when dialog opens/closes or editing target changes
   React.useEffect(() => {
     if (open) {
       reset({
         accountId: editing?.accountId ?? '',
+        currency: editing?.currency ?? baseCurrency,
         quantity: editing?.quantity ?? '',
-        averageBuyPrice: editing ? editing.averageBuyPrice / 100 : undefined,
-        currentPrice: editing?.currentPrice ? editing.currentPrice / 100 : undefined,
+        averageBuyPrice: editing ? editing.averageBuyPrice / 100 : ('' as unknown as number),
+        currentPrice: editing?.currentPrice ? editing.currentPrice / 100 : ('' as unknown as number),
       });
       setStep(1);
       setSelectedSymbol(editing?.symbol ?? '');
       setSelectedExchange(editing?.exchange ?? undefined);
       if (editing) setSelectedAssetType(editing.assetType);
     }
-  }, [open, editing, reset]);
+  }, [open, editing, reset, baseCurrency]);
 
   // Filter accounts to investment/crypto types for the select
   const investmentAccounts = accounts.filter(
@@ -222,15 +240,20 @@ export default function HoldingFormDialog({
   async function onSubmit(values: HoldingFormValues): Promise<void> {
     if (!isEditing && !selectedSymbol) return;
 
+    const currentPriceCents =
+      values.currentPrice !== undefined && !isNaN(values.currentPrice)
+        ? Math.round(values.currentPrice * 100)
+        : undefined;
+
     if (isEditing && editing) {
       await updateMutation.mutateAsync({
         id: editing._id,
         data: {
           accountId: values.accountId,
+          currency: values.currency,
           quantity: values.quantity,
-          // Backend expects cents
           averageBuyPrice: Math.round(values.averageBuyPrice * 100),
-          currentPrice: values.currentPrice !== undefined ? Math.round(values.currentPrice * 100) : undefined,
+          ...(currentPriceCents !== undefined ? { currentPrice: currentPriceCents } : {}),
         },
       });
     } else {
@@ -238,12 +261,11 @@ export default function HoldingFormDialog({
         accountId: values.accountId,
         assetType: selectedAssetType,
         symbol: selectedSymbol,
-        exchange: selectedExchange,
+        ...(selectedExchange !== undefined ? { exchange: selectedExchange } : {}),
+        currency: values.currency,
         quantity: values.quantity,
-        // Backend expects cents
         averageBuyPrice: Math.round(values.averageBuyPrice * 100),
-        currentPrice: values.currentPrice !== undefined ? Math.round(values.currentPrice * 100) : undefined,
-        currency: 'EUR',
+        ...(currentPriceCents !== undefined ? { currentPrice: currentPriceCents } : {}),
       });
     }
 
@@ -326,9 +348,27 @@ export default function HoldingFormDialog({
               )}
             </div>
 
+            {/* Currency */}
+            <div className="space-y-1.5">
+              <Label htmlFor="currency">Divisa</Label>
+              <Controller
+                control={control}
+                name="currency"
+                render={({ field }) => (
+                  <Select id="currency" {...field}>
+                    {CURRENCIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </Select>
+                )}
+              />
+            </div>
+
             {/* Average buy price */}
             <div className="space-y-1.5">
-              <Label htmlFor="averageBuyPrice">Precio medio de compra (€)</Label>
+              <Label htmlFor="averageBuyPrice">
+                Precio medio de compra ({watchedCurrency || baseCurrency})
+              </Label>
               <Input
                 id="averageBuyPrice"
                 type="number"
@@ -338,6 +378,13 @@ export default function HoldingFormDialog({
                 {...register('averageBuyPrice', { valueAsNumber: true })}
                 aria-invalid={Boolean(errors.averageBuyPrice)}
               />
+              {showConversion && (
+                <p className="text-xs text-gray-500">
+                  {convertedBuyPrice !== null
+                    ? `≈ ${convertedBuyPrice.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${baseCurrency} (tipo de cambio aproximado)`
+                    : 'Calculando conversión...'}
+                </p>
+              )}
               {errors.averageBuyPrice && (
                 <p className="text-xs text-red-600" role="alert">
                   {errors.averageBuyPrice.message}
@@ -346,7 +393,10 @@ export default function HoldingFormDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="currentPrice">Precio actual (€) <span className="text-xs font-normal text-gray-400 font-normal">(Opcional)</span></Label>
+              <Label htmlFor="currentPrice">
+                Precio actual ({watchedCurrency || baseCurrency}){' '}
+                <span className="text-xs font-normal text-gray-400">(Opcional)</span>
+              </Label>
               <Input
                 id="currentPrice"
                 type="number"
@@ -457,9 +507,27 @@ export default function HoldingFormDialog({
               )}
             </div>
 
+            {/* Currency */}
+            <div className="space-y-1.5">
+              <Label htmlFor="currency-edit">Divisa</Label>
+              <Controller
+                control={control}
+                name="currency"
+                render={({ field }) => (
+                  <Select id="currency-edit" {...field}>
+                    {CURRENCIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </Select>
+                )}
+              />
+            </div>
+
             {/* Average buy price */}
             <div className="space-y-1.5">
-              <Label htmlFor="averageBuyPrice">Precio medio de compra (€)</Label>
+              <Label htmlFor="averageBuyPrice">
+                Precio medio de compra ({watchedCurrency || baseCurrency})
+              </Label>
               <Input
                 id="averageBuyPrice"
                 type="number"
@@ -469,6 +537,13 @@ export default function HoldingFormDialog({
                 {...register('averageBuyPrice', { valueAsNumber: true })}
                 aria-invalid={Boolean(errors.averageBuyPrice)}
               />
+              {showConversion && (
+                <p className="text-xs text-gray-500">
+                  {convertedBuyPrice !== null
+                    ? `≈ ${convertedBuyPrice.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${baseCurrency} (tipo de cambio aproximado)`
+                    : 'Calculando conversión...'}
+                </p>
+              )}
               {errors.averageBuyPrice && (
                 <p className="text-xs text-red-600" role="alert">
                   {errors.averageBuyPrice.message}
@@ -477,7 +552,9 @@ export default function HoldingFormDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="currentPrice">Precio actual (€)</Label>
+              <Label htmlFor="currentPrice">
+                Precio actual ({watchedCurrency || baseCurrency})
+              </Label>
               <Input
                 id="currentPrice"
                 type="number"

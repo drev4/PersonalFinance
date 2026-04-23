@@ -20,6 +20,8 @@ import type {
   CashflowData,
 } from '../types/api';
 import { accountKeys } from './useAccounts';
+import { dashboardKeys } from './useDashboard';
+import { holdingKeys } from './useHoldings';
 
 const STALE_TIME = 1000 * 60 * 5;
 
@@ -53,6 +55,8 @@ export function useCreateTransaction(): UseMutationResult<
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
+      void queryClient.invalidateQueries({ queryKey: holdingKeys.all });
     },
   });
 }
@@ -68,6 +72,8 @@ export function useCreateTransfer(): UseMutationResult<
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
+      void queryClient.invalidateQueries({ queryKey: holdingKeys.all });
     },
   });
 }
@@ -83,6 +89,8 @@ export function useUpdateTransaction(): UseMutationResult<
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
+      void queryClient.invalidateQueries({ queryKey: holdingKeys.all });
     },
   });
 }
@@ -94,6 +102,8 @@ export function useDeleteTransaction(): UseMutationResult<void, Error, string> {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
+      void queryClient.invalidateQueries({ queryKey: holdingKeys.all });
     },
   });
 }
