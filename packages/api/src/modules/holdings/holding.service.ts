@@ -1,4 +1,5 @@
 import { parse } from 'csv-parse/sync';
+import axios from 'axios';
 import pino from 'pino';
 import mongoose from 'mongoose';
 import { AccountModel } from '../accounts/account.model.js';
@@ -26,7 +27,7 @@ export interface TickerSearchResult {
   symbol: string;
   name: string;
   type: string;
-  exchange?: string;
+  exchange?: string | undefined;
 }
 
 export interface ImportResult {
@@ -121,13 +122,38 @@ async function validateAccountOwnership(
 
 /** Fetches the current price (in cents) for a crypto symbol via CMC. */
 async function fetchCryptoPrice(symbol: string): Promise<number | undefined> {
+  const normalised = symbol.toUpperCase();
   try {
-    const quotes = await getLatestQuotes([symbol]);
-    const quote = quotes[symbol.toUpperCase()];
-    if (quote === undefined) return undefined;
-    // CMC returns USD price as decimal — convert to cents
-    return Math.round(quote.price * 100);
-  } catch {
+    const quotes = await getLatestQuotes([normalised]);
+    const quote = quotes[normalised];
+    if (quote !== undefined) {
+      // CMC returns USD price as decimal — convert to cents
+      return Math.round(quote.price * 100);
+    }
+
+    // Fallback to CoinGecko public API if no CMC key or symbol not in top results
+    const searchRes = await axios.get<{
+      coins: Array<{ id: string; symbol: string }>;
+    }>('https://api.coingecko.com/api/v3/search', {
+      params: { query: normalised },
+    });
+
+    const coin = searchRes.data.coins.find((c) => c.symbol.toUpperCase() === normalised);
+    if (!coin) return undefined;
+
+    const priceRes = await axios.get<{
+      [key: string]: { eur: number; usd: number };
+    }>('https://api.coingecko.com/api/v3/simple/price', {
+      params: { ids: coin.id, vs_currencies: 'eur' },
+    });
+
+    const eurPrice = priceRes.data[coin.id]?.eur;
+    if (eurPrice !== undefined) {
+      return Math.round(eurPrice * 100);
+    }
+    return undefined;
+  } catch (err) {
+    logger.warn({ err, symbol }, '[HoldingService] Failed to fetch crypto price from any source');
     return undefined;
   }
 }
@@ -139,7 +165,8 @@ async function fetchStockPrice(symbol: string): Promise<number | undefined> {
     if (quote === null) return undefined;
     // Finnhub returns price in the native currency — convert to cents
     return Math.round(quote.c * 100);
-  } catch {
+  } catch (err) {
+    logger.warn({ err, symbol }, '[HoldingService] Failed to fetch stock price from Finnhub');
     return undefined;
   }
 }
@@ -155,7 +182,7 @@ interface ParsedCsvRow {
   quantity: number;
   averageBuyPrice: number; // already in cents
   currency: string;
-  exchange?: string;
+  exchange?: string | undefined;
 }
 
 function detectFormat(headers: string[]): CsvFormat {
@@ -209,7 +236,8 @@ function parseRows(
           row['simbolo'] ??
           row['symbol'] ??
           '';
-        symbol = rawSymbol.split('/')[0].trim().toUpperCase();
+        const splitSymbol = rawSymbol.split('/');
+        symbol = (splitSymbol[0] ?? '').trim().toUpperCase();
         quantity = parseFloat((row['cantidad'] ?? row['quantity'] ?? '').replace(',', '.'));
         priceRaw = parseFloat(
           (row['precio de cierre'] ?? row['close price'] ?? row['precio'] ?? '0').replace(',', '.'),
@@ -297,13 +325,18 @@ export async function createHolding(
     if (currentPrice !== undefined) priceUpdatedAt = new Date();
   }
 
-  return holdingRepository.create({
+  const holding = await holdingRepository.create({
     ...dto,
     userId,
     currentPrice: currentPrice ?? dto.currentPrice,
     priceUpdatedAt: priceUpdatedAt ?? dto.priceUpdatedAt,
     source: dto.source ?? 'manual',
   });
+
+  // Invalidate dashboard cache
+  import('../dashboard/dashboard.service.js').then(m => m.invalidateNetWorthCache(userId)).catch(() => { });
+
+  return holding;
 }
 
 export async function updateHolding(
@@ -325,6 +358,10 @@ export async function updateHolding(
   if (updated === null) {
     throw new HoldingError('HOLDING_NOT_FOUND', 'Holding not found', 404);
   }
+
+  // Invalidate dashboard cache
+  import('../dashboard/dashboard.service.js').then(m => m.invalidateNetWorthCache(userId)).catch(() => { });
+
   return updated;
 }
 
@@ -336,6 +373,9 @@ export async function deleteHolding(
   if (!deleted) {
     throw new HoldingError('HOLDING_NOT_FOUND', 'Holding not found', 404);
   }
+
+  // Invalidate dashboard cache
+  import('../dashboard/dashboard.service.js').then(m => m.invalidateNetWorthCache(userId)).catch(() => { });
 }
 
 export async function searchTicker(
@@ -381,11 +421,11 @@ export async function importFromCsv(
     return { created: 0, updated: 0, errors: [`CSV parse error: ${String(err)}`] };
   }
 
-  if (records.length === 0) {
+  if (!records || records.length === 0) {
     return { created: 0, updated: 0, errors: ['CSV file is empty or has no data rows'] };
   }
 
-  const headers = Object.keys(records[0]);
+  const headers = Object.keys(records[0] ?? {});
   const format = detectFormat(headers);
   logger.info({ format, rowCount: records.length }, '[Holdings] CSV import detected format');
 
@@ -434,6 +474,10 @@ export async function importFromCsv(
     } catch (err) {
       errors.push(`Failed to upsert ${row.symbol}: ${String(err)}`);
     }
+  }
+
+  if (created > 0 || updated > 0) {
+    import('../dashboard/dashboard.service.js').then(m => m.invalidateNetWorthCache(userId)).catch(() => { });
   }
 
   return { created, updated, errors };

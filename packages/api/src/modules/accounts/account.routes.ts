@@ -130,9 +130,8 @@ export async function registerAccountRoutes(
       const { userId } = request.user;
       const { id } = request.params as { id: string };
 
-      // Import findById directly from repository to avoid circular dependency
-      const { findById } = await import('./account.repository.js');
-      const account = await findById(id, userId);
+      const { getAccountById } = await import('./account.service.js');
+      const account = await getAccountById(userId, id);
 
       if (account === null) {
         return reply.status(404).send({

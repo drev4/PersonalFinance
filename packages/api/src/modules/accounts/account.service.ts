@@ -27,7 +27,77 @@ export class AccountError extends Error {
 }
 
 export async function getUserAccounts(userId: string): Promise<IAccount[]> {
-  return findByUser(userId);
+  const accounts = await findByUser(userId);
+
+  // For investment and crypto accounts, we want to include the current total 
+  // value of holdings in the balance shown to the user.
+  try {
+    const { HoldingModel } = await import('../holdings/holding.model.js');
+
+    // Fetch all holdings for these accounts
+    const holdings = await HoldingModel.find({
+      userId: new mongoose.Types.ObjectId(userId),
+    }).lean().exec();
+
+    // Map holdings to account totals
+    const holdingTotals = new Map<string, number>();
+    for (const h of holdings) {
+      const accId = h.accountId.toHexString();
+      const qty = parseFloat(h.quantity);
+      const price = h.currentPrice ?? 0;
+      const value = Math.round(qty * price);
+
+      holdingTotals.set(accId, (holdingTotals.get(accId) ?? 0) + value);
+    }
+
+    // Enrich account objects (as plain objects to avoid Mongoose doc issues)
+    return accounts.map(acc => {
+      const accId = acc._id.toHexString();
+      if ((acc.type === 'investment' || acc.type === 'crypto') && holdingTotals.has(accId)) {
+        // Return a shallow copy of the doc with the enriched balance
+        const doc = acc.toObject ? acc.toObject() : acc;
+        return {
+          ...doc,
+          currentBalance: doc.currentBalance + (holdingTotals.get(accId) ?? 0)
+        } as unknown as IAccount;
+      }
+      return acc;
+    });
+  } catch (err) {
+    // Fallback to raw accounts if enrichment fails
+    return accounts;
+  }
+}
+
+export async function getAccountById(userId: string, accountId: string): Promise<IAccount | null> {
+  const account = await findById(accountId, userId);
+  if (!account) return null;
+
+  if (account.type !== 'investment' && account.type !== 'crypto') {
+    return account;
+  }
+
+  try {
+    const { HoldingModel } = await import('../holdings/holding.model.js');
+    const holdings = await HoldingModel.find({
+      userId: new mongoose.Types.ObjectId(userId),
+      accountId: new mongoose.Types.ObjectId(accountId),
+    }).lean().exec();
+
+    const holdingsTotal = holdings.reduce((sum, h) => {
+      const qty = parseFloat(h.quantity);
+      const price = h.currentPrice ?? 0;
+      return sum + Math.round(qty * price);
+    }, 0);
+
+    const doc = account.toObject ? account.toObject() : account;
+    return {
+      ...doc,
+      currentBalance: doc.currentBalance + holdingsTotal,
+    } as unknown as IAccount;
+  } catch {
+    return account;
+  }
 }
 
 export async function createAccount(

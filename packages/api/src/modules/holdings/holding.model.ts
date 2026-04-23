@@ -9,14 +9,14 @@ export interface IHolding extends Document {
   accountId: mongoose.Types.ObjectId;
   assetType: AssetType;
   symbol: string;
-  exchange?: string;
+  exchange?: string | undefined;
   quantity: string;
   averageBuyPrice: number;
   currency: string;
-  currentPrice?: number;
-  priceUpdatedAt?: Date;
+  currentPrice?: number | undefined;
+  priceUpdatedAt?: Date | undefined;
   source: HoldingSource;
-  externalId?: string;
+  externalId?: string | undefined;
   createdAt: Date;
   updatedAt: Date;
 }

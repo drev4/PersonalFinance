@@ -81,6 +81,9 @@ function bucketForType(
       return 'cash';
     case 'investment':
     case 'crypto':
+    case 'stock':
+    case 'etf':
+    case 'bond':
       return 'investments';
     case 'real_estate':
       return 'realEstate';
@@ -137,14 +140,24 @@ export async function getNetWorth(userId: string): Promise<NetWorthSummary> {
     logger.warn({ err, userId }, 'Net-worth cache read failed');
   }
 
-  const accounts = await AccountModel.find({
-    userId: new mongoose.Types.ObjectId(userId),
-    isActive: true,
-    includedInNetWorth: true,
-  })
-    .select('type currentBalance')
-    .lean()
-    .exec();
+  const [accounts, holdings] = await Promise.all([
+    AccountModel.find({
+      userId: new mongoose.Types.ObjectId(userId),
+      isActive: true,
+      includedInNetWorth: true,
+    })
+      .select('type currentBalance')
+      .lean()
+      .exec(),
+    (async () => {
+      try {
+        const { getUserHoldings } = await import('../holdings/holding.service.js');
+        return await getUserHoldings(userId);
+      } catch {
+        return [];
+      }
+    })(),
+  ]);
 
   const breakdown: INetWorthBreakdown = {
     cash: 0,
@@ -162,13 +175,19 @@ export async function getNetWorth(userId: string): Promise<NetWorthSummary> {
     if (bucket === null) continue;
 
     if (bucket === 'debts') {
-      // Positive currentBalance on a liability account means owed amount
       liabilities += account.currentBalance;
       breakdown.debts += account.currentBalance;
     } else {
       assets += account.currentBalance;
       breakdown[bucket] += account.currentBalance;
     }
+  }
+
+  for (const holding of holdings as any[]) {
+    const bucket = bucketForType(holding.assetType);
+    if (bucket === null) continue;
+    assets += holding.currentValue;
+    breakdown[bucket] += holding.currentValue;
   }
 
   // Fetch baseCurrency from User model (optional enrichment)

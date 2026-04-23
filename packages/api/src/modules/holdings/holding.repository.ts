@@ -6,28 +6,28 @@ export interface CreateHoldingDTO {
   accountId: string;
   assetType: AssetType;
   symbol: string;
-  exchange?: string;
+  exchange?: string | undefined;
   quantity: string;
   averageBuyPrice: number;
   currency: string;
-  currentPrice?: number;
-  priceUpdatedAt?: Date;
+  currentPrice?: number | undefined;
+  priceUpdatedAt?: Date | undefined;
   source: HoldingSource;
-  externalId?: string;
+  externalId?: string | undefined;
 }
 
 export interface UpdateHoldingDTO {
-  accountId?: string;
-  assetType?: AssetType;
-  symbol?: string;
-  exchange?: string;
-  quantity?: string;
-  averageBuyPrice?: number;
-  currency?: string;
-  currentPrice?: number;
-  priceUpdatedAt?: Date;
-  source?: HoldingSource;
-  externalId?: string;
+  accountId?: string | undefined;
+  assetType?: AssetType | undefined;
+  symbol?: string | undefined;
+  exchange?: string | undefined;
+  quantity?: string | undefined;
+  averageBuyPrice?: number | undefined;
+  currency?: string | undefined;
+  currentPrice?: number | undefined;
+  priceUpdatedAt?: Date | undefined;
+  source?: HoldingSource | undefined;
+  externalId?: string | undefined;
 }
 
 export async function findByUser(userId: string): Promise<IHolding[]> {

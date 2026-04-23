@@ -35,6 +35,10 @@ const holdingSchema = z.object({
   averageBuyPrice: z
     .number({ invalid_type_error: 'El precio debe ser un número' })
     .positive('El precio debe ser mayor que 0'),
+  currentPrice: z.preprocess(
+    (val) => (val === '' || val === null || (typeof val === 'number' && isNaN(val)) ? undefined : Number(val)),
+    z.number().min(0, 'El precio no puede ser negativo').optional(),
+  ),
 });
 
 type HoldingFormValues = z.infer<typeof holdingSchema>;
@@ -178,6 +182,7 @@ export default function HoldingFormDialog({
       accountId: editing?.accountId ?? '',
       quantity: editing?.quantity ?? '',
       averageBuyPrice: editing ? editing.averageBuyPrice / 100 : undefined,
+      currentPrice: editing?.currentPrice ? editing.currentPrice / 100 : undefined,
     },
   });
 
@@ -188,6 +193,7 @@ export default function HoldingFormDialog({
         accountId: editing?.accountId ?? '',
         quantity: editing?.quantity ?? '',
         averageBuyPrice: editing ? editing.averageBuyPrice / 100 : undefined,
+        currentPrice: editing?.currentPrice ? editing.currentPrice / 100 : undefined,
       });
       setStep(1);
       setSelectedSymbol(editing?.symbol ?? '');
@@ -224,6 +230,7 @@ export default function HoldingFormDialog({
           quantity: values.quantity,
           // Backend expects cents
           averageBuyPrice: Math.round(values.averageBuyPrice * 100),
+          currentPrice: values.currentPrice !== undefined ? Math.round(values.currentPrice * 100) : undefined,
         },
       });
     } else {
@@ -235,6 +242,7 @@ export default function HoldingFormDialog({
         quantity: values.quantity,
         // Backend expects cents
         averageBuyPrice: Math.round(values.averageBuyPrice * 100),
+        currentPrice: values.currentPrice !== undefined ? Math.round(values.currentPrice * 100) : undefined,
         currency: 'EUR',
       });
     }
@@ -333,6 +341,24 @@ export default function HoldingFormDialog({
               {errors.averageBuyPrice && (
                 <p className="text-xs text-red-600" role="alert">
                   {errors.averageBuyPrice.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="currentPrice">Precio actual (€) <span className="text-xs font-normal text-gray-400 font-normal">(Opcional)</span></Label>
+              <Input
+                id="currentPrice"
+                type="number"
+                min="0"
+                step="0.00000001"
+                placeholder="0.00"
+                {...register('currentPrice', { valueAsNumber: true })}
+                aria-invalid={Boolean(errors.currentPrice)}
+              />
+              {errors.currentPrice && (
+                <p className="text-xs text-red-600" role="alert">
+                  {errors.currentPrice.message}
                 </p>
               )}
             </div>
@@ -446,6 +472,24 @@ export default function HoldingFormDialog({
               {errors.averageBuyPrice && (
                 <p className="text-xs text-red-600" role="alert">
                   {errors.averageBuyPrice.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="currentPrice">Precio actual (€)</Label>
+              <Input
+                id="currentPrice"
+                type="number"
+                min="0"
+                step="0.00000001"
+                placeholder="0.00"
+                {...register('currentPrice', { valueAsNumber: true })}
+                aria-invalid={Boolean(errors.currentPrice)}
+              />
+              {errors.currentPrice && (
+                <p className="text-xs text-red-600" role="alert">
+                  {errors.currentPrice.message}
                 </p>
               )}
             </div>

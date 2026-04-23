@@ -115,6 +115,31 @@ export async function getLatestQuotes(
 export async function searchCrypto(query: string): Promise<CmcSearchResult[]> {
   if (!query || query.trim().length === 0) return [];
 
+  const key = env.CMC_API_KEY;
+
+  if (!key || key.trim() === '') {
+    // If no CMC key, use CoinGecko public search as fallback
+    try {
+      const response = await axios.get<{
+        coins: Array<{ id: string; name: string; symbol: string; market_cap_rank: number }>;
+      }>('https://api.coingecko.com/api/v3/search', {
+        params: { query: query.trim() },
+      });
+
+      return response.data.coins
+        .slice(0, 20)
+        .map((coin, index) => ({
+          id: index, // CoinGecko uses string IDs, we map to index for CmcSearchResult compatibility
+          name: coin.name,
+          symbol: coin.symbol.toUpperCase(),
+          slug: coin.id,
+        }));
+    } catch (err) {
+      logger.error({ err, query }, '[CryptoSearch] Fallback failed');
+      return [];
+    }
+  }
+
   try {
     const response = await cmcAxios.get<{
       data: Array<{ id: number; name: string; symbol: string; slug: string }>;
