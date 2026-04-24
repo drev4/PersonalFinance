@@ -1,7 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(rm -rf ios/Pods ios/Podfile.lock ios/build node_modules/.vite)",
+      "Bash(rm -rf ~/Library/Developer/Xcode/DerivedData/Finanzas-*)",
+      "Bash(pnpm ios *)",
+      "Read(//private/tmp/**)",
+      "Bash(cp -r packages/mobile/src /tmp/mobile-src-backup)",
+      "Bash(cp -r packages/mobile/assets /tmp/mobile-assets-backup)",
+      "Bash(npx create-expo-app *)",
+      "Bash(cp -r /tmp/mobile-src-backup packages/mobile/src)",
+      "Bash(cp -r /tmp/mobile-assets-backup packages/mobile/assets)"
     ]
   }
 }
