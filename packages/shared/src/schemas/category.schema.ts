@@ -12,7 +12,7 @@ export const CategorySchema = z.object({
   isActive: z.boolean().default(true),
   parent: z.string().optional(),
   order: z.number().int().nonnegative().default(0),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
   deletedAt: z.date().optional(),

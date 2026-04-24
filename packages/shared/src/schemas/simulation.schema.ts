@@ -68,7 +68,7 @@ export const SimulationResultSchema = z.object({
   name: z.string().min(1, 'Simulation name is required'),
   description: z.string().optional(),
   simulation: SimulationSchema,
-  result: z.record(z.unknown()),
+  result: z.record(z.string(), z.unknown()),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
