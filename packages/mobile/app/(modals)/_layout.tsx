@@ -20,6 +20,14 @@ export default function ModalsLayout(): React.JSX.Element {
           gestureDirection: 'vertical',
         }}
       />
+      <Stack.Screen
+        name="transaction-filters"
+        options={{
+          presentation: 'modal',
+          gestureEnabled: true,
+          gestureDirection: 'vertical',
+        }}
+      />
     </Stack>
   );
 }
