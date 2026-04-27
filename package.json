@@ -9,20 +9,14 @@
   "scripts": {
     "dev": "lsof -ti:3001,5173 | xargs kill -9 2>/dev/null; pnpm --filter=api --filter=web --parallel run dev",
     "dev:win": "powershell -Command \"@(3001,5173) | ForEach-Object { $p = (Get-NetTCPConnection -LocalPort $_ -ErrorAction SilentlyContinue).OwningProcess; if($p) { Stop-Process -Id $p -Force } }; pnpm --filter=api --filter=web --parallel run dev\"",
-    "dev:mobile": "pnpm --filter=@finanzas/mobile run dev",
-    "mobile:ios": "pnpm --filter=@finanzas/mobile run ios",
-    "mobile:android": "pnpm --filter=@finanzas/mobile run android",
-    "mobile:build": "pnpm --filter=@finanzas/mobile run build",
-    "mobile:typecheck": "pnpm --filter=@finanzas/mobile run typecheck",
-    "mobile:lint": "pnpm --filter=@finanzas/mobile run lint",
-    "mobile:eas-login": "cd packages/mobile && npx eas-cli login",
-    "mobile:eas-init": "cd packages/mobile && npx eas-cli init",
     "build": "pnpm --filter=./packages run build",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.0.0",
@@ -43,5 +37,10 @@
       "eslint --fix",
       "prettier --write"
     ]
-  }
+  },
+  "pnpm": {
+    "overrides": {},
+    "nohoist": ["**/react-native", "**/expo*"]
+  },
+  "dependencies": {}
 }
