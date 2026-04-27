@@ -13,7 +13,8 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.finanzas.mobile"
+      "bundleIdentifier": "com.finanzas.mobile",
+      "jsEngine": "jsc"
     },
     "android": {
       "adaptiveIcon": {
@@ -28,6 +29,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "fc438c41-396c-4e21-9cb9-d5c8f5417ad7"
+      }
     }
   }
 }
