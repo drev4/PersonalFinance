@@ -12,8 +12,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronDown, ChevronUp, ChevronLeft, Edit2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTransactions, useAccounts, useCategories } from '@/api/transactions';
-import { TransactionRow } from '@/components/TransactionRow';
-import { EditTransactionModal } from '@/components/EditTransactionModal';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 
 function getMonthRange() {
@@ -67,7 +65,6 @@ export default function TransactionsScreen() {
   const [categoryId, setCategoryId] = useState('');
   const [type, setType] = useState('');
   const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   const { data: accountsData = [] } = useAccounts();
@@ -100,12 +97,6 @@ export default function TransactionsScreen() {
   const handleSelectTransaction = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
     setDetailModalVisible(true);
-  };
-
-  const handleEditTransaction = (transaction: Transaction) => {
-    setSelectedTransaction(transaction);
-    setDetailModalVisible(false);
-    setEditModalVisible(true);
   };
 
   return (
@@ -237,11 +228,57 @@ export default function TransactionsScreen() {
           data={transactions}
           keyExtractor={(item) => item._id}
           renderItem={({ item }) => (
-            <TransactionRow
-              transaction={item}
-              onNavigate={() => handleSelectTransaction(item as Transaction)}
-              onEdit={() => handleEditTransaction(item as Transaction)}
-            />
+            <TouchableOpacity
+              style={styles.transactionRow}
+              onPress={() => handleSelectTransaction(item as Transaction)}
+            >
+              <View style={styles.transactionContent}>
+                <View style={styles.transactionInfo}>
+                  <Text style={styles.transactionDate}>
+                    {formatDate(item.date, 'short')}
+                  </Text>
+                  <Text style={styles.transactionDescription} numberOfLines={1}>
+                    {item.description}
+                  </Text>
+                  {item.notes && (
+                    <Text style={styles.transactionNotes} numberOfLines={1}>
+                      {item.notes}
+                    </Text>
+                  )}
+                </View>
+
+                <View style={styles.transactionRight}>
+                  {categoriesData.find((c) => c._id === item.categoryId) && (
+                    <View
+                      style={[
+                        styles.categoryBadge,
+                        {
+                          backgroundColor:
+                            (categoriesData.find((c) => c._id === item.categoryId)?.color || '#000') + '20',
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.categoryBadgeText,
+                          {
+                            color: categoriesData.find((c) => c._id === item.categoryId)?.color || '#000',
+                          },
+                        ]}
+                      >
+                        {categoriesData.find((c) => c._id === item.categoryId)?.name}
+                      </Text>
+                    </View>
+                  )}
+                  <Text
+                    style={[styles.transactionAmount, { color: getTransactionTypeColor(item.type) }]}
+                  >
+                    {item.type === 'expense' ? '-' : '+'}
+                    {formatCurrency(item.amount, item.currency)}
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
           )}
           scrollEnabled={true}
         />
@@ -262,18 +299,20 @@ export default function TransactionsScreen() {
                 </TouchableOpacity>
                 <Text style={styles.modalTitle}>Detalle</Text>
                 {selectedTransaction.type !== 'transfer' && (
-                  <TouchableOpacity onPress={() => handleEditTransaction(selectedTransaction)}>
-                    <Edit2 size={24} color="#0066CC" />
-                  </TouchableOpacity>
+                  <View style={{ width: 24 }} />
                 )}
-                {selectedTransaction.type === 'transfer' && <View style={{ width: 24 }} />}
               </View>
 
               <ScrollView style={styles.modalContent}>
                 {/* Amount Card */}
                 <View style={styles.amountCard}>
                   <Text style={styles.amountLabel}>Monto</Text>
-                  <Text style={[styles.amount, { color: getTransactionTypeColor(selectedTransaction.type) }]}>
+                  <Text
+                    style={[
+                      styles.amount,
+                      { color: getTransactionTypeColor(selectedTransaction.type) },
+                    ]}
+                  >
                     {selectedTransaction.type === 'expense' ? '-' : '+'}
                     {formatCurrency(selectedTransaction.amount, selectedTransaction.currency)}
                   </Text>
@@ -288,7 +327,9 @@ export default function TransactionsScreen() {
                 {/* Date */}
                 <View style={styles.section}>
                   <Text style={styles.label}>Fecha</Text>
-                  <Text style={styles.value}>{formatDate(selectedTransaction.date, 'long')}</Text>
+                  <Text style={styles.value}>
+                    {formatDate(selectedTransaction.date, 'long')}
+                  </Text>
                 </View>
 
                 {/* Account */}
@@ -303,9 +344,12 @@ export default function TransactionsScreen() {
                           {accountsData.find((a) => a._id === selectedTransaction.accountId)?.name}
                         </Text>
                         <Text style={styles.accountBalance}>
-                          Saldo: {formatCurrency(
-                            accountsData.find((a) => a._id === selectedTransaction.accountId)?.currentBalance || 0,
-                            accountsData.find((a) => a._id === selectedTransaction.accountId)?.currency || 'EUR'
+                          Saldo:{' '}
+                          {formatCurrency(
+                            accountsData.find((a) => a._id === selectedTransaction.accountId)
+                              ?.currentBalance || 0,
+                            accountsData.find((a) => a._id === selectedTransaction.accountId)
+                              ?.currency || 'EUR'
                           )}
                         </Text>
                       </View>
@@ -314,21 +358,36 @@ export default function TransactionsScreen() {
                 )}
 
                 {/* Category */}
-                {selectedTransaction.type !== 'transfer' && categoriesData.find((c) => c._id === selectedTransaction.categoryId) && (
-                  <View style={styles.section}>
-                    <Text style={styles.label}>Categoría</Text>
-                    <View
-                      style={[
-                        styles.categoryBadge,
-                        { backgroundColor: (categoriesData.find((c) => c._id === selectedTransaction.categoryId)?.color || '#000') + '20' },
-                      ]}
-                    >
-                      <Text style={[styles.categoryText, { color: categoriesData.find((c) => c._id === selectedTransaction.categoryId)?.color || '#000' }]}>
-                        {categoriesData.find((c) => c._id === selectedTransaction.categoryId)?.name}
-                      </Text>
+                {selectedTransaction.type !== 'transfer' &&
+                  categoriesData.find((c) => c._id === selectedTransaction.categoryId) && (
+                    <View style={styles.section}>
+                      <Text style={styles.label}>Categoría</Text>
+                      <View
+                        style={[
+                          styles.categoryBadge,
+                          {
+                            backgroundColor:
+                              (categoriesData.find(
+                                (c) => c._id === selectedTransaction.categoryId
+                              )?.color || '#000') + '20',
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.categoryBadgeText,
+                            {
+                              color: categoriesData.find(
+                                (c) => c._id === selectedTransaction.categoryId
+                              )?.color || '#000',
+                            },
+                          ]}
+                        >
+                          {categoriesData.find((c) => c._id === selectedTransaction.categoryId)?.name}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                )}
+                  )}
 
                 {/* Notes */}
                 {selectedTransaction.notes && (
@@ -343,18 +402,6 @@ export default function TransactionsScreen() {
             </View>
           </SafeAreaView>
         </Modal>
-      )}
-
-      {/* Edit Modal */}
-      {selectedTransaction && (
-        <EditTransactionModal
-          visible={editModalVisible}
-          transaction={selectedTransaction}
-          onClose={() => {
-            setEditModalVisible(false);
-            setDetailModalVisible(false);
-          }}
-        />
       )}
     </SafeAreaView>
   );
@@ -454,6 +501,53 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
   },
+  transactionRow: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  transactionContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  transactionInfo: {
+    flex: 1,
+  },
+  transactionDate: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 4,
+  },
+  transactionDescription: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 4,
+  },
+  transactionNotes: {
+    fontSize: 12,
+    color: '#999',
+  },
+  transactionRight: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  categoryBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  categoryBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  transactionAmount: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
   safeContainer: {
     flex: 1,
     backgroundColor: '#fff',
@@ -526,16 +620,6 @@ const styles = StyleSheet.create({
   accountBalance: {
     fontSize: 12,
     color: '#999',
-  },
-  categoryBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  categoryText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   notesText: {
     fontSize: 14,
