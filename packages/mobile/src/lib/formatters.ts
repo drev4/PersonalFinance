@@ -7,7 +7,7 @@ export function formatCurrency(
   currency: string = 'EUR',
   locale = 'es-ES',
 ): string {
-  const amount = amountInCents;
+  const amount = amountInCents / 100;
   const currencyCode = currency && currency.length === 3 ? currency.toUpperCase() : 'EUR';
   return new Intl.NumberFormat(locale, {
     style: 'currency',
@@ -17,10 +17,29 @@ export function formatCurrency(
   }).format(amount);
 }
 
-export function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('es-ES', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+export function formatDate(
+  dateStr: string,
+  formatType: 'short' | 'long' | 'relative' = 'short',
+): string {
+  const date = new Date(dateStr);
+
+  switch (formatType) {
+    case 'long':
+      return date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    case 'short':
+    default:
+      return date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+  }
+}
+
+export function formatPercentage(value: number, decimals = 2): string {
+  return `${value.toFixed(decimals)}%`;
 }
