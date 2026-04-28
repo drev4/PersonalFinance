@@ -15,6 +15,7 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Calendar } from 'lucide-react-native';
 import { useCreateTransaction, useCategories, useAccounts } from '@/api/transactions';
 import { formatCurrency } from '@/lib/formatters';
+import { DatePickerCalendar } from './DatePickerCalendar';
 import * as Haptics from 'expo-haptics';
 
 interface QuickAddModalProps {
@@ -272,7 +273,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
         />
       </View>
 
-      {/* Date Picker */}
+      {/* Date Picker Calendar */}
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>Fecha*</Text>
         <TouchableOpacity
@@ -284,56 +285,13 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
         </TouchableOpacity>
 
         {showDatePicker && (
-          <View style={styles.datePickerContainer}>
-            <View style={styles.dateInputRow}>
-              <Text style={styles.datePickerLabel}>Año:</Text>
-              <TextInput
-                style={styles.dateInputSmall}
-                value={date.split('-')[0]}
-                onChangeText={(val) => {
-                  const [, m, d] = date.split('-');
-                  setDate(`${val}-${m}-${d}`);
-                }}
-                keyboardType="numeric"
-                maxLength={4}
-                placeholder="YYYY"
-              />
-            </View>
-            <View style={styles.dateInputRow}>
-              <Text style={styles.datePickerLabel}>Mes:</Text>
-              <TextInput
-                style={styles.dateInputSmall}
-                value={date.split('-')[1]}
-                onChangeText={(val) => {
-                  const [y, , d] = date.split('-');
-                  setDate(`${y}-${val.padStart(2, '0')}-${d}`);
-                }}
-                keyboardType="numeric"
-                maxLength={2}
-                placeholder="MM"
-              />
-            </View>
-            <View style={styles.dateInputRow}>
-              <Text style={styles.datePickerLabel}>Día:</Text>
-              <TextInput
-                style={styles.dateInputSmall}
-                value={date.split('-')[2]}
-                onChangeText={(val) => {
-                  const [y, m] = date.split('-');
-                  setDate(`${y}-${m}-${val.padStart(2, '0')}`);
-                }}
-                keyboardType="numeric"
-                maxLength={2}
-                placeholder="DD"
-              />
-            </View>
-            <TouchableOpacity
-              style={styles.datePickerClose}
-              onPress={() => setShowDatePicker(false)}
-            >
-              <Text style={styles.datePickerCloseText}>Aceptar</Text>
-            </TouchableOpacity>
-          </View>
+          <DatePickerCalendar
+            selectedDate={date}
+            onDateSelect={(newDate) => {
+              setDate(newDate);
+              setShowDatePicker(false);
+            }}
+          />
         )}
       </View>
 
@@ -514,48 +472,6 @@ const styles = StyleSheet.create({
   dateButtonText: {
     fontSize: 14,
     color: '#000',
-  },
-  datePickerContainer: {
-    marginTop: 12,
-    padding: 12,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    gap: 12,
-  },
-  dateInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  datePickerLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-    width: 40,
-  },
-  dateInputSmall: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 4,
-    fontSize: 14,
-    color: '#000',
-    backgroundColor: '#fff',
-  },
-  datePickerClose: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: '#0066CC',
-    borderRadius: 6,
-    marginTop: 8,
-  },
-  datePickerCloseText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
   },
   submitButton: {
     paddingVertical: 14,
