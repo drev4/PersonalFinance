@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
+import env from '../../config/env.js';
 import {
   registerHandler,
   loginHandler,
@@ -11,10 +12,10 @@ import {
 } from './auth.controller.js';
 
 export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void> {
-  // Scoped sub-router with a stricter rate limit: 10 requests per 15 minutes
+  // Scoped sub-router with a stricter rate limit
   await fastify.register(async (authScope: FastifyInstance) => {
     await authScope.register(rateLimit, {
-      max: 10,
+      max: env.NODE_ENV === 'development' ? 100 : 10,
       timeWindow: '15 minutes',
       skip(request) {
         return request.method === 'OPTIONS';
