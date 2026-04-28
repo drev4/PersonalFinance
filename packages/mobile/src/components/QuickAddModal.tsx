@@ -8,9 +8,10 @@ import {
   ActivityIndicator,
   Keyboard,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Calendar } from 'lucide-react-native';
 import { useCreateTransaction, useCategories, useAccounts } from '@/api/transactions';
 import { formatCurrency } from '@/lib/formatters';
@@ -32,6 +33,13 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  const handleClose = () => {
+    Keyboard.dismiss();
+    onClose();
+  };
 
   const { data: categories = [] } = useCategories();
   const { data: accounts = [] } = useAccounts();
@@ -89,8 +97,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
       {
         onSuccess: async () => {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          Keyboard.dismiss();
-          onClose();
+          handleClose();
         },
         onError: () => {
           Alert.alert('Error', 'No se pudo crear la transacción');
@@ -105,10 +112,12 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Quick Add</Text>
-        <TouchableOpacity onPress={onClose}>
+        <TouchableOpacity onPress={handleClose}>
           <X size={24} color="#000" />
         </TouchableOpacity>
       </View>
+
+      <ScrollView ref={scrollViewRef} scrollEnabled={true} keyboardShouldPersistTaps="handled">
 
       {/* Type Selector */}
       <View style={styles.typeSelector}>
@@ -303,6 +312,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
           <Text style={styles.submitButtonText}>Guardar</Text>
         )}
       </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
   );
 };
