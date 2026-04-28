@@ -111,11 +111,11 @@ await fastify.register(sanitizePlugin);
 await fastify.register(securityHeadersPlugin);
 
 // Global rate limit (auth routes will apply a stricter limit on top).
-// Backed by Redis so the budget is shared across API replicas.
-await fastify.register(rateLimit, {
+// In production, backed by Redis so the budget is shared across API replicas.
+// In development, uses local memory to avoid unnecessary Redis calls.
+const rateLimitConfig: Parameters<typeof rateLimit>[1] = {
   max: apiRateLimit.max,
   timeWindow: apiRateLimit.timeWindow,
-  redis: getRedisClient(),
   allowList: rateLimitAllowList,
   errorResponseBuilder: rateLimitErrorBuilder,
   addHeaders: {
@@ -124,60 +124,64 @@ await fastify.register(rateLimit, {
     'x-ratelimit-reset': true,
     'retry-after': true,
   },
-});
+};
+
+if (env.NODE_ENV === 'production') {
+  rateLimitConfig.redis = getRedisClient();
+}
+
+await fastify.register(rateLimit, rateLimitConfig);
 
 await fastify.register(cookie);
 
 // ---- Error handler ---------------------------------------------------------
 
-fastify.setErrorHandler(
-  (error: FastifyError | ZodError | Error, _request, reply) => {
-    // Zod validation errors
-    if (error instanceof ZodError) {
-      return reply.status(400).send({
+fastify.setErrorHandler((error: FastifyError | ZodError | Error, _request, reply) => {
+  // Zod validation errors
+  if (error instanceof ZodError) {
+    return reply.status(400).send({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Request validation failed',
+        details: error.issues,
+      },
+    });
+  }
+
+  // Fastify-native errors (e.g. rate limit, 404, etc.)
+  if ('statusCode' in error && typeof error.statusCode === 'number') {
+    const statusCode = error.statusCode;
+
+    // Rate limit errors from @fastify/rate-limit already return formatted responses
+    if (statusCode === 429) {
+      return reply.status(429).send({
         error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Request validation failed',
-          details: error.issues,
-        },
-      });
-    }
-
-    // Fastify-native errors (e.g. rate limit, 404, etc.)
-    if ('statusCode' in error && typeof error.statusCode === 'number') {
-      const statusCode = error.statusCode;
-
-      // Rate limit errors from @fastify/rate-limit already return formatted responses
-      if (statusCode === 429) {
-        return reply.status(429).send({
-          error: {
-            code: 'RATE_LIMIT_EXCEEDED',
-            message: error.message,
-          },
-        });
-      }
-
-      return reply.status(statusCode).send({
-        error: {
-          code: 'REQUEST_ERROR',
+          code: 'RATE_LIMIT_EXCEEDED',
           message: error.message,
         },
       });
     }
 
-    // Generic / unhandled errors
-    fastify.log.error(error);
-    return reply.status(500).send({
+    return reply.status(statusCode).send({
       error: {
-        code: 'INTERNAL_ERROR',
-        message:
-          env.NODE_ENV === 'production'
-            ? 'An unexpected error occurred'
-            : (error.message ?? 'An unexpected error occurred'),
+        code: 'REQUEST_ERROR',
+        message: error.message,
       },
     });
-  },
-);
+  }
+
+  // Generic / unhandled errors
+  fastify.log.error(error);
+  return reply.status(500).send({
+    error: {
+      code: 'INTERNAL_ERROR',
+      message:
+        env.NODE_ENV === 'production'
+          ? 'An unexpected error occurred'
+          : (error.message ?? 'An unexpected error occurred'),
+    },
+  });
+});
 
 // ---- Decorators ------------------------------------------------------------
 
@@ -264,8 +268,8 @@ const start = async (): Promise<void> => {
     await fastify.listen({ port: env.PORT, host: '0.0.0.0' });
     fastify.log.info(`Server running at http://localhost:${env.PORT}`);
 
-    // Schedule background jobs (skip in test environment)
-    if (env.NODE_ENV !== 'test') {
+    // Schedule background jobs (skip in test environment and when jobs are disabled)
+    if (env.NODE_ENV !== 'test' && env.ENABLE_JOBS) {
       scheduleAllJobs();
     }
   } catch (err) {
@@ -288,7 +292,11 @@ const shutdown = async (): Promise<void> => {
   process.exit(0);
 };
 
-process.on('SIGTERM', () => { void shutdown(); });
-process.on('SIGINT', () => { void shutdown(); });
+process.on('SIGTERM', () => {
+  void shutdown();
+});
+process.on('SIGINT', () => {
+  void shutdown();
+});
 
 start();
