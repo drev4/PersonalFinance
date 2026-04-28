@@ -1,0 +1,102 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import client from './client';
+import { useAuthStore } from '@/stores/authStore';
+
+interface Transaction {
+  id: string;
+  accountId: string;
+  type: 'income' | 'expense';
+  amount: number;
+  currency: string;
+  date: string;
+  description: string;
+  categoryId?: string;
+  tags?: string[];
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  type: 'income' | 'expense';
+  color: string;
+  icon?: string;
+  parentId?: string;
+}
+
+interface Account {
+  _id: string;
+  name: string;
+  type: string;
+  currentBalance: number;
+  currency: string;
+}
+
+interface CreateTransactionDTO {
+  accountId: string;
+  type: 'income' | 'expense' | 'transfer';
+  amount: number;
+  currency: string;
+  date: string;
+  description: string;
+  categoryId?: string;
+  tags?: string[];
+  notes?: string;
+}
+
+export const useCategories = () => {
+  const accessToken = useAuthStore((state) => state.accessToken);
+
+  return useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const response = await client.get<{ data: Category[] }>('/categories');
+      return response.data.data;
+    },
+    enabled: !!accessToken,
+  });
+};
+
+export const useAccounts = () => {
+  const accessToken = useAuthStore((state) => state.accessToken);
+
+  return useQuery({
+    queryKey: ['accounts'],
+    queryFn: async () => {
+      const response = await client.get<{ data: Account[] }>('/accounts');
+      return response.data.data;
+    },
+    enabled: !!accessToken,
+  });
+};
+
+export const useCreateTransaction = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateTransactionDTO) => {
+      if (data.type === 'transfer') {
+        const response = await client.post<{ data: { from: Transaction; to: Transaction } }>(
+          '/transactions/transfer',
+          {
+            fromAccountId: data.accountId,
+            toAccountId: data.categoryId,
+            amount: data.amount,
+            date: data.date,
+            description: data.description,
+          },
+        );
+        return response.data.data;
+      }
+
+      const response = await client.post<{ data: Transaction }>('/transactions', data);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    },
+  });
+};

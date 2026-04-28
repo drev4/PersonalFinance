@@ -1,6 +1,6 @@
-import { Tabs } from 'expo-router';
-import { StyleSheet } from 'react-native';
-import { Home, ArrowRightLeft, Wallet, Settings } from 'lucide-react-native';
+import { Tabs, useRouter } from 'expo-router';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Home, ArrowRightLeft, Wallet, Settings, Plus } from 'lucide-react-native';
 
 const createIcon = (Icon: React.ElementType) => {
   const TabIcon = ({ color, size }: { color: string; size: number }) => (
@@ -11,8 +11,11 @@ const createIcon = (Icon: React.ElementType) => {
 };
 
 export default function TabLayout() {
+  const router = useRouter();
+
   return (
-    <Tabs
+    <View style={styles.container}>
+      <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
@@ -49,11 +52,23 @@ export default function TabLayout() {
           tabBarIcon: createIcon(Settings),
         }}
       />
-    </Tabs>
+      </Tabs>
+
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => router.push('/(modals)/quick-add')}
+        activeOpacity={0.8}
+      >
+        <Plus size={28} color="#fff" strokeWidth={2.5} />
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   tabBar: {
     borderTopWidth: 1,
     borderTopColor: '#eee',
@@ -64,5 +79,21 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: 12,
     marginBottom: 4,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 76,
+    right: 16,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#0066CC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
 });
