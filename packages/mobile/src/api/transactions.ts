@@ -72,6 +72,47 @@ export const useAccounts = () => {
   });
 };
 
+interface TransactionFilters {
+  from?: string;
+  to?: string;
+  accountId?: string;
+  categoryId?: string;
+  type?: string;
+  page?: number;
+  limit?: number;
+}
+
+interface TransactionResponse {
+  data: Transaction[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+  };
+}
+
+export const useTransactions = (filters: TransactionFilters) => {
+  const accessToken = useAuthStore((state) => state.accessToken);
+
+  return useQuery({
+    queryKey: ['transactions', filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+          params.append(key, String(value));
+        }
+      });
+
+      const response = await client.get<TransactionResponse>(
+        `/transactions?${params.toString()}`
+      );
+      return response.data;
+    },
+    enabled: !!accessToken,
+  });
+};
+
 export const useCreateTransaction = () => {
   const queryClient = useQueryClient();
 
