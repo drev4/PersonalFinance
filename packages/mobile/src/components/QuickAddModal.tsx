@@ -110,6 +110,17 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
 
   const isValid = amount && selectedAccountId && description && selectedCategoryId;
 
+  // Debug: log validation state
+  useEffect(() => {
+    console.log('QuickAdd Validation:', {
+      amount: `"${amount}"`,
+      selectedAccountId: `"${selectedAccountId}"`,
+      description: `"${description}"`,
+      selectedCategoryId: `"${selectedCategoryId}"`,
+      isValid,
+    });
+  }, [amount, selectedAccountId, description, selectedCategoryId, isValid]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
