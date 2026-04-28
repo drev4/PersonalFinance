@@ -70,21 +70,21 @@ export const useDashboardSummary = () => {
           : 0;
 
         return {
-          netWorth: (netWorthData.total || 0) / 100,
+          netWorth: netWorthData.total || 0,
           netWorthChange24h: 0,
           netWorthChange30d: 0,
           sparklineData: [],
-          monthlyExpense: totalSpending / 100,
-          monthlyBudget: 2000,
+          monthlyExpense: totalSpending,
+          monthlyBudget: 2000 * 100,
           topAccounts: accountsData.map((acc) => ({
             id: acc._id,
             name: acc.name,
-            balance: (acc.currentBalance || 0) / 100,
+            balance: acc.currentBalance || 0,
           })),
           recentTransactions: transactionsData.map((tx) => ({
             id: tx._id,
             description: tx.description,
-            amount: (tx.amount || 0) / 100,
+            amount: tx.amount || 0,
             type: (tx.type as 'expense' | 'income' | 'transfer') || 'expense',
             date: tx.date,
             category: tx.categoryId,
