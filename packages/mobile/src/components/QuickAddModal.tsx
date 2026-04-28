@@ -33,6 +33,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -49,14 +50,14 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
     if (accounts.length > 0 && !selectedAccountId) {
       setSelectedAccountId(accounts[0]._id);
     }
-  }, [accounts, selectedAccountId]);
+  }, [accounts]);
 
   useEffect(() => {
     const filteredCategories = categories.filter((cat) => cat.type === type && cat.isActive !== false);
-    if (filteredCategories.length > 0 && !selectedCategoryId) {
+    if (filteredCategories.length > 0) {
       setSelectedCategoryId(filteredCategories[0].id);
     }
-  }, [type, categories, selectedCategoryId]);
+  }, [type, categories]);
 
   const handleTypeSelect = (newType: TransactionType) => {
     setType(newType);
@@ -271,19 +272,69 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
         />
       </View>
 
-      {/* Date Input */}
+      {/* Date Picker */}
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>Fecha*</Text>
-        <TouchableOpacity style={styles.dateButton}>
+        <TouchableOpacity
+          style={styles.dateButton}
+          onPress={() => setShowDatePicker(!showDatePicker)}
+        >
           <Calendar size={18} color="#0066CC" />
-          <TextInput
-            style={styles.dateInput}
-            placeholder="yyyy-MM-dd"
-            placeholderTextColor="#ccc"
-            value={date}
-            onChangeText={setDate}
-          />
+          <Text style={styles.dateButtonText}>{date}</Text>
         </TouchableOpacity>
+
+        {showDatePicker && (
+          <View style={styles.datePickerContainer}>
+            <View style={styles.dateInputRow}>
+              <Text style={styles.datePickerLabel}>Año:</Text>
+              <TextInput
+                style={styles.dateInputSmall}
+                value={date.split('-')[0]}
+                onChangeText={(val) => {
+                  const [, m, d] = date.split('-');
+                  setDate(`${val}-${m}-${d}`);
+                }}
+                keyboardType="numeric"
+                maxLength={4}
+                placeholder="YYYY"
+              />
+            </View>
+            <View style={styles.dateInputRow}>
+              <Text style={styles.datePickerLabel}>Mes:</Text>
+              <TextInput
+                style={styles.dateInputSmall}
+                value={date.split('-')[1]}
+                onChangeText={(val) => {
+                  const [y, , d] = date.split('-');
+                  setDate(`${y}-${val.padStart(2, '0')}-${d}`);
+                }}
+                keyboardType="numeric"
+                maxLength={2}
+                placeholder="MM"
+              />
+            </View>
+            <View style={styles.dateInputRow}>
+              <Text style={styles.datePickerLabel}>Día:</Text>
+              <TextInput
+                style={styles.dateInputSmall}
+                value={date.split('-')[2]}
+                onChangeText={(val) => {
+                  const [y, m] = date.split('-');
+                  setDate(`${y}-${m}-${val.padStart(2, '0')}`);
+                }}
+                keyboardType="numeric"
+                maxLength={2}
+                placeholder="DD"
+              />
+            </View>
+            <TouchableOpacity
+              style={styles.datePickerClose}
+              onPress={() => setShowDatePicker(false)}
+            >
+              <Text style={styles.datePickerCloseText}>Aceptar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* Notes Input */}
@@ -460,10 +511,51 @@ const styles = StyleSheet.create({
     backgroundColor: '#fafafa',
     gap: 8,
   },
-  dateInput: {
-    flex: 1,
+  dateButtonText: {
     fontSize: 14,
     color: '#000',
+  },
+  datePickerContainer: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    gap: 12,
+  },
+  dateInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  datePickerLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+    width: 40,
+  },
+  dateInputSmall: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 4,
+    fontSize: 14,
+    color: '#000',
+    backgroundColor: '#fff',
+  },
+  datePickerClose: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: '#0066CC',
+    borderRadius: 6,
+    marginTop: 8,
+  },
+  datePickerCloseText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   submitButton: {
     paddingVertical: 14,
