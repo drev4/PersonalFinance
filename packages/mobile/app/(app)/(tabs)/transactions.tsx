@@ -9,7 +9,7 @@ import {
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronDown, ChevronUp, ChevronLeft, Edit2 } from 'lucide-react-native';
+import { ChevronDown, ChevronUp, ChevronLeft } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTransactions, useAccounts, useCategories } from '@/api/transactions';
 import { formatCurrency, formatDate } from '@/lib/formatters';
@@ -30,7 +30,8 @@ function getMonthRange() {
 const { from: DEFAULT_FROM, to: DEFAULT_TO } = getMonthRange();
 
 interface Transaction {
-  _id: string;
+  _id?: string;
+  id?: string;
   accountId: string;
   type: 'income' | 'expense' | 'transfer';
   amount: number;
@@ -38,7 +39,7 @@ interface Transaction {
   date: string;
   description: string;
   categoryId?: string;
-  tags: string[];
+  tags?: string[];
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -64,8 +65,8 @@ export default function TransactionsScreen() {
   const [accountId, setAccountId] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [type, setType] = useState('');
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
 
   const { data: accountsData = [] } = useAccounts();
   const { data: categoriesData = [] } = useCategories();
@@ -77,12 +78,16 @@ export default function TransactionsScreen() {
     ...(categoryId && { categoryId }),
     ...(type && { type }),
     page: 1,
-    limit: 50,
+    limit: 100,
   };
 
   const { data: transactionsData, isLoading } = useTransactions(filters);
-  const transactions = transactionsData?.data ?? [];
-  const meta = transactionsData?.meta;
+
+  let transactions: Transaction[] = [];
+  if (transactionsData) {
+    // Handle both direct array and {data: []} response formats
+    transactions = Array.isArray(transactionsData) ? transactionsData : (transactionsData.data ?? []);
+  }
 
   const hasActiveFilters = from !== DEFAULT_FROM || to !== DEFAULT_TO || accountId || categoryId || type;
 
@@ -94,10 +99,7 @@ export default function TransactionsScreen() {
     setType('');
   };
 
-  const handleSelectTransaction = (transaction: Transaction) => {
-    setSelectedTransaction(transaction);
-    setDetailModalVisible(true);
-  };
+  const getTransactionId = (tx: Transaction) => tx._id || tx.id || '';
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -106,7 +108,7 @@ export default function TransactionsScreen() {
         <View>
           <Text style={styles.title}>Movimientos</Text>
           <Text style={styles.subtitle}>
-            {meta ? `${meta.total} transacciones` : 'Historial de movimientos'}
+            {transactions.length > 0 ? `${transactions.length} transacciones` : 'Historial de movimientos'}
           </Text>
         </View>
       </View>
@@ -131,16 +133,12 @@ export default function TransactionsScreen() {
           <ScrollView style={styles.filtersContent} horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.filterChip}>
               <Text style={styles.filterLabel}>Desde</Text>
-              <TouchableOpacity onPress={() => setFrom(DEFAULT_FROM)}>
-                <Text style={styles.filterValue}>{from}</Text>
-              </TouchableOpacity>
+              <Text style={styles.filterValue}>{from}</Text>
             </View>
 
             <View style={styles.filterChip}>
               <Text style={styles.filterLabel}>Hasta</Text>
-              <TouchableOpacity onPress={() => setTo(DEFAULT_TO)}>
-                <Text style={styles.filterValue}>{to}</Text>
-              </TouchableOpacity>
+              <Text style={styles.filterValue}>{to}</Text>
             </View>
 
             {accountsData.length > 0 && (
@@ -226,11 +224,14 @@ export default function TransactionsScreen() {
       ) : (
         <FlatList
           data={transactions}
-          keyExtractor={(item) => item._id}
+          keyExtractor={(item) => getTransactionId(item)}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.transactionRow}
-              onPress={() => handleSelectTransaction(item as Transaction)}
+              onPress={() => {
+                setSelectedTransaction(item);
+                setDetailModalVisible(true);
+              }}
             >
               <View style={styles.transactionContent}>
                 <View style={styles.transactionInfo}>
@@ -248,7 +249,7 @@ export default function TransactionsScreen() {
                 </View>
 
                 <View style={styles.transactionRight}>
-                  {categoriesData.find((c) => c._id === item.categoryId) && (
+                  {item.categoryId && categoriesData.find((c) => c._id === item.categoryId) && (
                     <View
                       style={[
                         styles.categoryBadge,
@@ -298,9 +299,7 @@ export default function TransactionsScreen() {
                   <ChevronLeft size={24} color="#000" />
                 </TouchableOpacity>
                 <Text style={styles.modalTitle}>Detalle</Text>
-                {selectedTransaction.type !== 'transfer' && (
-                  <View style={{ width: 24 }} />
-                )}
+                <View style={{ width: 24 }} />
               </View>
 
               <ScrollView style={styles.modalContent}>
@@ -335,30 +334,26 @@ export default function TransactionsScreen() {
                 {/* Account */}
                 {accountsData.find((a) => a._id === selectedTransaction.accountId) && (
                   <View style={styles.section}>
-                    <Text style={styles.label}>
-                      {selectedTransaction.type === 'transfer' ? 'Cuenta origen' : 'Cuenta'}
-                    </Text>
+                    <Text style={styles.label}>Cuenta</Text>
                     <View style={styles.accountCard}>
-                      <View>
-                        <Text style={styles.accountName}>
-                          {accountsData.find((a) => a._id === selectedTransaction.accountId)?.name}
-                        </Text>
-                        <Text style={styles.accountBalance}>
-                          Saldo:{' '}
-                          {formatCurrency(
-                            accountsData.find((a) => a._id === selectedTransaction.accountId)
-                              ?.currentBalance || 0,
-                            accountsData.find((a) => a._id === selectedTransaction.accountId)
-                              ?.currency || 'EUR'
-                          )}
-                        </Text>
-                      </View>
+                      <Text style={styles.accountName}>
+                        {accountsData.find((a) => a._id === selectedTransaction.accountId)?.name}
+                      </Text>
+                      <Text style={styles.accountBalance}>
+                        Saldo:{' '}
+                        {formatCurrency(
+                          accountsData.find((a) => a._id === selectedTransaction.accountId)
+                            ?.currentBalance || 0,
+                          accountsData.find((a) => a._id === selectedTransaction.accountId)
+                            ?.currency || 'EUR'
+                        )}
+                      </Text>
                     </View>
                   </View>
                 )}
 
                 {/* Category */}
-                {selectedTransaction.type !== 'transfer' &&
+                {selectedTransaction.categoryId &&
                   categoriesData.find((c) => c._id === selectedTransaction.categoryId) && (
                     <View style={styles.section}>
                       <Text style={styles.label}>Categoría</Text>
