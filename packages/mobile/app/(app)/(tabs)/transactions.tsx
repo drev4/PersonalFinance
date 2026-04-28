@@ -81,12 +81,15 @@ export default function TransactionsScreen() {
     limit: 100,
   };
 
-  const { data: transactionsData, isLoading } = useTransactions(filters);
+  const { data: response, isLoading, error } = useTransactions(filters);
 
   let transactions: Transaction[] = [];
-  if (transactionsData) {
-    // Handle both direct array and {data: []} response formats
-    transactions = Array.isArray(transactionsData) ? transactionsData : (transactionsData.data ?? []);
+  if (response && response.data) {
+    transactions = response.data;
+  }
+
+  if (error) {
+    console.error('Transaction fetch error:', error);
   }
 
   const hasActiveFilters = from !== DEFAULT_FROM || to !== DEFAULT_TO || accountId || categoryId || type;
@@ -108,7 +111,9 @@ export default function TransactionsScreen() {
         <View>
           <Text style={styles.title}>Movimientos</Text>
           <Text style={styles.subtitle}>
-            {transactions.length > 0 ? `${transactions.length} transacciones` : 'Historial de movimientos'}
+            {transactions.length > 0
+              ? `${transactions.length} transacciones`
+              : (isLoading ? 'Cargando...' : 'Historial de movimientos')}
           </Text>
         </View>
       </View>

@@ -104,10 +104,15 @@ export const useTransactions = (filters: TransactionFilters) => {
         }
       });
 
-      const response = await client.get<TransactionResponse>(
-        `/transactions?${params.toString()}`
-      );
-      return response.data;
+      try {
+        const response = await client.get<TransactionResponse>(
+          `/transactions?${params.toString()}`
+        );
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching transactions:', error);
+        return { data: [], meta: { total: 0, page: 1, limit: 50 } };
+      }
     },
     enabled: !!accessToken,
   });
