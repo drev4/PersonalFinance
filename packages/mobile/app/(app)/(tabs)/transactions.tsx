@@ -1,555 +1,551 @@
-/**
- * transactions.tsx — Main transactions list screen (Fase 4).
- *
- * Features:
- *  - Collapsible header with search input + filter button
- *  - Filter pill bar showing active filters (dismissable chips)
- *  - FlashList grouped by day with sticky headers
- *  - Swipe-to-delete and swipe-to-edit-category on each row
- *  - Pull-to-refresh
- *  - Empty state with CTA to Quick Add
- *  - Loading skeleton
- *  - Infinite scroll via fetchNextPage
- */
-
-import { FlashList } from '@shopify/flash-list';
-import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
-import { Filter, Search, X } from 'lucide-react-native';
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
 import {
-  AppState,
-  type AppStateStatus,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TextInput,
   View,
+  Text,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  TouchableOpacity,
+  ScrollView,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ChevronDown, ChevronUp, ChevronLeft, Edit2 } from 'lucide-react-native';
+import { useState } from 'react';
+import { useTransactions, useAccounts, useCategories } from '@/api/transactions';
+import { TransactionRow } from '@/components/TransactionRow';
+import { EditTransactionModal } from '@/components/EditTransactionModal';
+import { formatCurrency, formatDate } from '@/lib/formatters';
 
-import { useDeleteTransaction } from '@/api/hooks/useDeleteTransaction';
-import {
-  useInvalidateTransactions,
-  useTransactions,
-  type TransactionFilters,
-  type TransactionGroup,
-} from '@/api/hooks/useTransactions';
-import { useUpdateTransactionCategory } from '@/api/hooks/useUpdateTransactionCategory';
-import { FilterPillBar, type FilterPill } from '@/components/transactions/FilterPillBar';
-import { TransactionGroupHeader } from '@/components/transactions/TransactionGroupHeader';
-import { TransactionItem } from '@/components/transactions/TransactionItem';
-import { TransactionItemSkeleton } from '@/components/transactions/TransactionItemSkeleton';
-import type { Transaction } from '@/schemas/transaction.schemas';
-import type { FiltersState } from '../../(modals)/transaction-filters';
-import { pendingFilters } from '../../(modals)/transaction-filters';
+function getMonthRange() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const from = new Date(year, month, 1);
+  const to = new Date(year, month + 1, 0);
 
-// ─── List item types ──────────────────────────────────────────────────────────
+  const fromStr = from.toISOString().split('T')[0];
+  const toStr = to.toISOString().split('T')[0];
 
-type ListItem =
-  | { kind: 'header'; dateKey: string; group: TransactionGroup }
-  | { kind: 'transaction'; transaction: Transaction; dateKey: string };
-
-function buildListItems(groups: TransactionGroup[]): ListItem[] {
-  const items: ListItem[] = [];
-  for (const group of groups) {
-    items.push({ kind: 'header', dateKey: group.dateKey, group });
-    for (const tx of group.transactions) {
-      items.push({ kind: 'transaction', transaction: tx, dateKey: group.dateKey });
-    }
-  }
-  return items;
+  return { from: fromStr, to: toStr };
 }
 
-// ─── Filter pill helpers ──────────────────────────────────────────────────────
+const { from: DEFAULT_FROM, to: DEFAULT_TO } = getMonthRange();
 
-function buildPills(filters: FiltersState): FilterPill[] {
-  const pills: FilterPill[] = [];
-  if (filters.type) {
-    const label =
-      filters.type === 'expense'
-        ? 'Tipo: Gasto'
-        : filters.type === 'income'
-        ? 'Tipo: Ingreso'
-        : 'Tipo: Transferencia';
-    pills.push({ key: 'type', label });
-  }
-  if (filters.categoryId) {
-    pills.push({ key: 'categoryId', label: 'Categoría seleccionada' });
-  }
-  if (filters.dateFrom) {
-    pills.push({ key: 'dateFrom', label: `Desde: ${filters.dateFrom}` });
-  }
-  if (filters.dateTo) {
-    pills.push({ key: 'dateTo', label: `Hasta: ${filters.dateTo}` });
-  }
-  if (filters.pendingOnly) {
-    pills.push({ key: 'pendingOnly', label: 'Pendientes' });
-  }
-  return pills;
+interface Transaction {
+  _id: string;
+  accountId: string;
+  type: 'income' | 'expense' | 'transfer';
+  amount: number;
+  currency: string;
+  date: string;
+  description: string;
+  categoryId?: string;
+  tags: string[];
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-// ─── Empty state ──────────────────────────────────────────────────────────────
-
-function EmptyState(): React.JSX.Element {
-  return (
-    <View style={styles.emptyContainer} accessibilityRole="text">
-      <Text style={styles.emptyIcon}>📭</Text>
-      <Text style={styles.emptyTitle}>No hay movimientos</Text>
-      <Text style={styles.emptySubtitle}>
-        Añade tu primer movimiento con el botón +
-      </Text>
-      <Pressable
-        style={styles.emptyButton}
-        onPress={() => router.push('/(modals)/quick-add')}
-        accessible
-        accessibilityRole="button"
-        accessibilityLabel="Añadir transacción"
-      >
-        <Text style={styles.emptyButtonText}>Añadir movimiento</Text>
-      </Pressable>
-    </View>
-  );
+function getTransactionTypeColor(type: string): string {
+  switch (type) {
+    case 'income':
+      return '#10b981';
+    case 'expense':
+      return '#ef4444';
+    case 'transfer':
+      return '#8b5cf6';
+    default:
+      return '#6b7280';
+  }
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+export default function TransactionsScreen() {
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [from, setFrom] = useState(DEFAULT_FROM);
+  const [to, setTo] = useState(DEFAULT_TO);
+  const [accountId, setAccountId] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [type, setType] = useState('');
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
-export default function TransactionsScreen(): React.JSX.Element {
-  // ── Search state ─────────────────────────────────────────────────────────
-  const [searchText, setSearchText] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const { data: accountsData = [] } = useAccounts();
+  const { data: categoriesData = [] } = useCategories();
 
-  // ── Filter state ─────────────────────────────────────────────────────────
-  const [activeFilters, setActiveFilters] = useState<FiltersState>({});
+  const filters = {
+    from,
+    to,
+    ...(accountId && { accountId }),
+    ...(categoryId && { categoryId }),
+    ...(type && { type }),
+    page: 1,
+    limit: 50,
+  };
 
-  // ── Refresh state ─────────────────────────────────────────────────────────
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { data: transactionsData, isLoading } = useTransactions(filters);
+  const transactions = transactionsData?.data ?? [];
+  const meta = transactionsData?.meta;
 
-  const invalidateTransactions = useInvalidateTransactions();
+  const hasActiveFilters = from !== DEFAULT_FROM || to !== DEFAULT_TO || accountId || categoryId || type;
 
-  // Debounce search text
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchText);
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [searchText]);
+  const handleClearFilters = () => {
+    setFrom(DEFAULT_FROM);
+    setTo(DEFAULT_TO);
+    setAccountId('');
+    setCategoryId('');
+    setType('');
+  };
 
-  // ── Build query filters ───────────────────────────────────────────────────
-  const queryFilters = useMemo((): TransactionFilters => {
-    const f: TransactionFilters = { limit: 20 };
-    if (debouncedSearch) f.search = debouncedSearch;
-    if (activeFilters.type) f.type = activeFilters.type;
-    if (activeFilters.categoryId) f.categoryId = activeFilters.categoryId;
-    if (activeFilters.dateFrom) f.dateFrom = activeFilters.dateFrom;
-    if (activeFilters.dateTo) f.dateTo = activeFilters.dateTo;
-    return f;
-  }, [debouncedSearch, activeFilters]);
+  const handleSelectTransaction = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setDetailModalVisible(true);
+  };
 
-  const {
-    groups,
-    fetchNextPage,
-    hasNextPage,
-    isLoading,
-    isFetchingNextPage,
-    error,
-    refetch,
-  } = useTransactions(queryFilters);
-
-  const { deleteTransaction } = useDeleteTransaction();
-  const { updateCategory } = useUpdateTransactionCategory();
-
-  // ── Poll for filter changes from modal ───────────────────────────────────
-  // The modal stores its result in `pendingFilters` (module-level ref).
-  // We track app state transitions to pick them up after the modal closes.
-  const appState = useRef<AppStateStatus>(AppState.currentState);
-
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
-      // When returning to active state, check if filters were updated by modal
-      if (
-        appState.current.match(/inactive|background/) &&
-        next === 'active'
-      ) {
-        const newFilters = pendingFilters;
-        if (Object.keys(newFilters).length > 0 || Object.keys(activeFilters).length > 0) {
-          setActiveFilters({ ...newFilters });
-        }
-      }
-      appState.current = next;
-    });
-
-    return () => sub.remove();
-  }, [activeFilters]);
-
-  // Also pick up filters when screen re-focuses (router.back from modal)
-  const lastFocusTimestamp = useRef(0);
-  useEffect(() => {
-    // Simple polling approach — after filters modal might have closed
-    const timer = setInterval(() => {
-      const now = Date.now();
-      if (now - lastFocusTimestamp.current < 2000) {
-        const f = pendingFilters;
-        setActiveFilters((prev) => {
-          const same = JSON.stringify(prev) === JSON.stringify(f);
-          return same ? prev : { ...f };
-        });
-        lastFocusTimestamp.current = 0;
-      }
-    }, 500);
-    return () => clearInterval(timer);
-  }, []);
-
-  // ── Filter pill bar ───────────────────────────────────────────────────────
-  const pills = useMemo(() => buildPills(activeFilters), [activeFilters]);
-
-  const handleRemovePill = useCallback((key: string) => {
-    void Haptics.selectionAsync();
-    setActiveFilters((prev) => {
-      const next = { ...prev };
-      if (key === 'type') delete next.type;
-      if (key === 'categoryId') delete next.categoryId;
-      if (key === 'dateFrom') delete next.dateFrom;
-      if (key === 'dateTo') delete next.dateTo;
-      if (key === 'pendingOnly') delete next.pendingOnly;
-      return next;
-    });
-  }, []);
-
-  // ── Pull-to-refresh ───────────────────────────────────────────────────────
-  const handleRefresh = useCallback(() => {
-    setIsRefreshing(true);
-    invalidateTransactions();
-    refetch();
-    setTimeout(() => setIsRefreshing(false), 1000);
-  }, [invalidateTransactions, refetch]);
-
-  // ── Open filters modal ────────────────────────────────────────────────────
-  const handleOpenFilters = useCallback(() => {
-    void Haptics.selectionAsync();
-    lastFocusTimestamp.current = Date.now() + 500;
-    const initial = JSON.stringify(activeFilters);
-    router.push({
-      pathname: '/(modals)/transaction-filters',
-      params: { initial },
-    });
-  }, [activeFilters]);
-
-  // ── Delete handler ────────────────────────────────────────────────────────
-  const handleDelete = useCallback(
-    (id: string) => {
-      void deleteTransaction(id);
-    },
-    [deleteTransaction],
-  );
-
-  // ── Category update handler ───────────────────────────────────────────────
-  const handleCategoryUpdate = useCallback(
-    (
-      transactionId: string,
-      categoryId: string,
-      categoryName: string,
-      categoryColor: string,
-    ) => {
-      void updateCategory({ transactionId, categoryId, categoryName, categoryColor });
-    },
-    [updateCategory],
-  );
-
-  // ── Build FlashList data ──────────────────────────────────────────────────
-  const listItems = useMemo(() => buildListItems(groups), [groups]);
-
-  // ── Filter active indicator ───────────────────────────────────────────────
-  const hasActiveFilters = pills.length > 0;
-
-  // ── Render item ───────────────────────────────────────────────────────────
-  const renderItem = useCallback(
-    ({ item }: { item: ListItem }) => {
-      if (item.kind === 'header') {
-        return (
-          <TransactionGroupHeader
-            dateKey={item.dateKey}
-            transactions={item.group.transactions}
-          />
-        );
-      }
-
-      return (
-        <TransactionItem
-          transaction={item.transaction}
-          onDelete={handleDelete}
-          onCategoryUpdate={handleCategoryUpdate}
-        />
-      );
-    },
-    [handleDelete, handleCategoryUpdate],
-  );
-
-  const keyExtractor = useCallback((item: ListItem): string => {
-    if (item.kind === 'header') return `header-${item.dateKey}`;
-    return `tx-${item.transaction.id}`;
-  }, []);
-
-  const handleEndReached = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  const getItemType = useCallback((item: ListItem): string => {
-    return item.kind;
-  }, []);
-
-  // ── Footer (loading more indicator) ──────────────────────────────────────
-  const ListFooter = useMemo(() => {
-    if (!isFetchingNextPage) return null;
-    return (
-      <View style={styles.footerLoader}>
-        <TransactionItemSkeleton count={2} />
-      </View>
-    );
-  }, [isFetchingNextPage]);
+  const handleEditTransaction = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setDetailModalVisible(false);
+    setEditModalVisible(true);
+  };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* ── Header ────────────────────────────────────────────────────────── */}
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Movimientos</Text>
+        <View>
+          <Text style={styles.title}>Movimientos</Text>
+          <Text style={styles.subtitle}>
+            {meta ? `${meta.total} transacciones` : 'Historial de movimientos'}
+          </Text>
+        </View>
       </View>
 
-      {/* ── Search bar ────────────────────────────────────────────────────── */}
-      <View style={styles.searchRow}>
-        <View style={styles.searchInputWrapper}>
-          <Search size={16} color="#64748b" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            value={searchText}
-            onChangeText={setSearchText}
-            placeholder="Buscar movimientos..."
-            placeholderTextColor="#475569"
-            returnKeyType="search"
-            clearButtonMode="while-editing"
-            autoCorrect={false}
-            accessibilityLabel="Buscar transacciones"
-            accessibilityRole="search"
-          />
-          {searchText.length > 0 ? (
-            <Pressable
-              onPress={() => setSearchText('')}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessible
-              accessibilityRole="button"
-              accessibilityLabel="Limpiar búsqueda"
-            >
-              <X size={16} color="#64748b" />
-            </Pressable>
-          ) : null}
-        </View>
-
-        {/* Filter button */}
-        <Pressable
-          style={[
-            styles.filterButton,
-            hasActiveFilters && styles.filterButtonActive,
-          ]}
-          onPress={handleOpenFilters}
-          accessible
-          accessibilityRole="button"
-          accessibilityLabel={`Filtros${hasActiveFilters ? `, ${pills.length} activos` : ''}`}
+      {/* Filters */}
+      <View style={styles.filtersPanel}>
+        <TouchableOpacity
+          style={styles.filtersHeader}
+          onPress={() => setFiltersOpen(!filtersOpen)}
         >
-          <Filter
-            size={18}
-            color={hasActiveFilters ? '#38bdf8' : '#94a3b8'}
-            strokeWidth={2}
-          />
-          {hasActiveFilters ? (
-            <View style={styles.filterBadge}>
-              <Text style={styles.filterBadgeText}>{pills.length}</Text>
+          <Text style={styles.filtersTitle}>
+            Filtros {hasActiveFilters && '●'}
+          </Text>
+          {filtersOpen ? (
+            <ChevronUp size={20} color="#666" />
+          ) : (
+            <ChevronDown size={20} color="#666" />
+          )}
+        </TouchableOpacity>
+
+        {filtersOpen && (
+          <ScrollView style={styles.filtersContent} horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.filterChip}>
+              <Text style={styles.filterLabel}>Desde</Text>
+              <TouchableOpacity onPress={() => setFrom(DEFAULT_FROM)}>
+                <Text style={styles.filterValue}>{from}</Text>
+              </TouchableOpacity>
             </View>
-          ) : null}
-        </Pressable>
+
+            <View style={styles.filterChip}>
+              <Text style={styles.filterLabel}>Hasta</Text>
+              <TouchableOpacity onPress={() => setTo(DEFAULT_TO)}>
+                <Text style={styles.filterValue}>{to}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {accountsData.length > 0 && (
+              <View style={styles.filterChip}>
+                <Text style={styles.filterLabel}>Cuenta</Text>
+                <TouchableOpacity
+                  onPress={() =>
+                    setAccountId(accountId ? '' : accountsData[0]._id)
+                  }
+                >
+                  <Text style={styles.filterValue}>
+                    {accountId
+                      ? accountsData.find((a) => a._id === accountId)?.name || 'Todas'
+                      : 'Todas'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {categoriesData.length > 0 && (
+              <View style={styles.filterChip}>
+                <Text style={styles.filterLabel}>Categoría</Text>
+                <TouchableOpacity
+                  onPress={() =>
+                    setCategoryId(categoryId ? '' : categoriesData[0]._id)
+                  }
+                >
+                  <Text style={styles.filterValue}>
+                    {categoryId
+                      ? categoriesData.find((c) => c._id === categoryId)?.name || 'Todas'
+                      : 'Todas'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <View style={styles.filterChip}>
+              <Text style={styles.filterLabel}>Tipo</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  if (type === 'income') setType('expense');
+                  else if (type === 'expense') setType('transfer');
+                  else if (type === 'transfer') setType('');
+                  else setType('income');
+                }}
+              >
+                <Text style={styles.filterValue}>
+                  {type === 'income'
+                    ? 'Ingreso'
+                    : type === 'expense'
+                      ? 'Gasto'
+                      : type === 'transfer'
+                        ? 'Transferencia'
+                        : 'Todos'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {hasActiveFilters && (
+              <TouchableOpacity
+                style={styles.filterClear}
+                onPress={handleClearFilters}
+              >
+                <Text style={styles.filterClearText}>Limpiar</Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+        )}
       </View>
 
-      {/* ── Active filter pills ────────────────────────────────────────────── */}
-      <FilterPillBar pills={pills} onRemove={handleRemovePill} />
-
-      {/* ── Error banner ──────────────────────────────────────────────────── */}
-      {error !== null ? (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      ) : null}
-
-      {/* ── Loading skeleton ──────────────────────────────────────────────── */}
+      {/* List */}
       {isLoading ? (
-        <View style={styles.skeletonContainer}>
-          <TransactionItemSkeleton count={8} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#0066CC" />
+        </View>
+      ) : transactions.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>No hay transacciones</Text>
+          <Text style={styles.emptySubtitle}>
+            No se encontraron transacciones con los filtros actuales
+          </Text>
         </View>
       ) : (
-        /* ── FlashList ────────────────────────────────────────────────────── */
-        <FlashList
-          data={listItems}
-          renderItem={renderItem}
-          keyExtractor={keyExtractor}
-          getItemType={getItemType}
-          onEndReached={handleEndReached}
-          onEndReachedThreshold={0.3}
-          ListEmptyComponent={EmptyState}
-          ListFooterComponent={ListFooter}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={handleRefresh}
-              tintColor="#0ea5e9"
-              colors={['#0ea5e9']}
+        <FlatList
+          data={transactions}
+          keyExtractor={(item) => item._id}
+          renderItem={({ item }) => (
+            <TransactionRow
+              transaction={item}
+              onNavigate={() => handleSelectTransaction(item as Transaction)}
+              onEdit={() => handleEditTransaction(item as Transaction)}
             />
-          }
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
-          accessibilityRole="list"
-          accessibilityLabel="Lista de transacciones"
+          )}
+          scrollEnabled={true}
+        />
+      )}
+
+      {/* Detail Modal */}
+      {selectedTransaction && (
+        <Modal
+          visible={detailModalVisible}
+          animationType="slide"
+          onRequestClose={() => setDetailModalVisible(false)}
+        >
+          <SafeAreaView style={styles.safeContainer} edges={['top']}>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+                  <ChevronLeft size={24} color="#000" />
+                </TouchableOpacity>
+                <Text style={styles.modalTitle}>Detalle</Text>
+                {selectedTransaction.type !== 'transfer' && (
+                  <TouchableOpacity onPress={() => handleEditTransaction(selectedTransaction)}>
+                    <Edit2 size={24} color="#0066CC" />
+                  </TouchableOpacity>
+                )}
+                {selectedTransaction.type === 'transfer' && <View style={{ width: 24 }} />}
+              </View>
+
+              <ScrollView style={styles.modalContent}>
+                {/* Amount Card */}
+                <View style={styles.amountCard}>
+                  <Text style={styles.amountLabel}>Monto</Text>
+                  <Text style={[styles.amount, { color: getTransactionTypeColor(selectedTransaction.type) }]}>
+                    {selectedTransaction.type === 'expense' ? '-' : '+'}
+                    {formatCurrency(selectedTransaction.amount, selectedTransaction.currency)}
+                  </Text>
+                </View>
+
+                {/* Description */}
+                <View style={styles.section}>
+                  <Text style={styles.label}>Descripción</Text>
+                  <Text style={styles.value}>{selectedTransaction.description}</Text>
+                </View>
+
+                {/* Date */}
+                <View style={styles.section}>
+                  <Text style={styles.label}>Fecha</Text>
+                  <Text style={styles.value}>{formatDate(selectedTransaction.date, 'long')}</Text>
+                </View>
+
+                {/* Account */}
+                {accountsData.find((a) => a._id === selectedTransaction.accountId) && (
+                  <View style={styles.section}>
+                    <Text style={styles.label}>
+                      {selectedTransaction.type === 'transfer' ? 'Cuenta origen' : 'Cuenta'}
+                    </Text>
+                    <View style={styles.accountCard}>
+                      <View>
+                        <Text style={styles.accountName}>
+                          {accountsData.find((a) => a._id === selectedTransaction.accountId)?.name}
+                        </Text>
+                        <Text style={styles.accountBalance}>
+                          Saldo: {formatCurrency(
+                            accountsData.find((a) => a._id === selectedTransaction.accountId)?.currentBalance || 0,
+                            accountsData.find((a) => a._id === selectedTransaction.accountId)?.currency || 'EUR'
+                          )}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                {/* Category */}
+                {selectedTransaction.type !== 'transfer' && categoriesData.find((c) => c._id === selectedTransaction.categoryId) && (
+                  <View style={styles.section}>
+                    <Text style={styles.label}>Categoría</Text>
+                    <View
+                      style={[
+                        styles.categoryBadge,
+                        { backgroundColor: (categoriesData.find((c) => c._id === selectedTransaction.categoryId)?.color || '#000') + '20' },
+                      ]}
+                    >
+                      <Text style={[styles.categoryText, { color: categoriesData.find((c) => c._id === selectedTransaction.categoryId)?.color || '#000' }]}>
+                        {categoriesData.find((c) => c._id === selectedTransaction.categoryId)?.name}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Notes */}
+                {selectedTransaction.notes && (
+                  <View style={styles.section}>
+                    <Text style={styles.label}>Notas</Text>
+                    <Text style={styles.notesText}>{selectedTransaction.notes}</Text>
+                  </View>
+                )}
+
+                <View style={styles.spacer} />
+              </ScrollView>
+            </View>
+          </SafeAreaView>
+        </Modal>
+      )}
+
+      {/* Edit Modal */}
+      {selectedTransaction && (
+        <EditTransactionModal
+          visible={editModalVisible}
+          transaction={selectedTransaction}
+          onClose={() => {
+            setEditModalVisible(false);
+            setDetailModalVisible(false);
+          }}
         />
       )}
     </SafeAreaView>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#fff',
   },
   header: {
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 4,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  headerTitle: {
+  title: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#f1f5f9',
-    letterSpacing: -0.5,
+    fontWeight: '700',
+    color: '#000',
   },
-  searchRow: {
+  subtitle: {
+    fontSize: 13,
+    color: '#999',
+    marginTop: 4,
+  },
+  filtersPanel: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    backgroundColor: '#fafafa',
+  },
+  filtersHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 10,
+    paddingVertical: 12,
   },
-  searchInputWrapper: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 40,
-    gap: 8,
+  filtersTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
   },
-  searchIcon: {
-    flexShrink: 0,
+  filtersContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: '#f1f5f9',
-    paddingVertical: 0,
-  },
-  filterButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#1e293b',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filterButtonActive: {
-    backgroundColor: '#0ea5e920',
+  filterChip: {
+    marginRight: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#fff',
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#0ea5e9',
+    borderColor: '#e0e0e0',
   },
-  filterBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#0ea5e9',
-    alignItems: 'center',
-    justifyContent: 'center',
+  filterLabel: {
+    fontSize: 10,
+    color: '#999',
+    marginBottom: 2,
   },
-  filterBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
+  filterValue: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#000',
+  },
+  filterClear: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#ff4444',
+    borderRadius: 6,
+  },
+  filterClearText: {
+    fontSize: 12,
+    fontWeight: '600',
     color: '#fff',
   },
-  errorBanner: {
-    marginHorizontal: 16,
-    marginVertical: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: '#450a0a',
-    borderRadius: 10,
-    borderLeftWidth: 3,
-    borderLeftColor: '#ef4444',
-  },
-  errorText: {
-    fontSize: 13,
-    color: '#fca5a5',
-    fontWeight: '500',
-  },
-  skeletonContainer: {
+  loadingContainer: {
     flex: 1,
-  },
-  listContent: {
-    paddingBottom: 100,
-  },
-  footerLoader: {
-    paddingBottom: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emptyContainer: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 32,
-    paddingTop: 80,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#e2e8f0',
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#999',
     textAlign: 'center',
+  },
+  safeContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+  },
+  modalContent: {
+    flex: 1,
+    padding: 16,
+  },
+  amountCard: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 12,
+    padding: 16,
     marginBottom: 24,
+    alignItems: 'center',
   },
-  emptyButton: {
-    backgroundColor: '#0ea5e9',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 14,
+  amountLabel: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 8,
+    fontWeight: '500',
   },
-  emptyButtonText: {
-    fontSize: 15,
+  amount: {
+    fontSize: 32,
     fontWeight: '700',
-    color: '#fff',
+  },
+  section: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  value: {
+    fontSize: 14,
+    color: '#000',
+    lineHeight: 20,
+  },
+  accountCard: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    padding: 12,
+  },
+  accountName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 4,
+  },
+  accountBalance: {
+    fontSize: 12,
+    color: '#999',
+  },
+  categoryBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  categoryText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  notesText: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
+    backgroundColor: '#f8f8f8',
+    padding: 12,
+    borderRadius: 8,
+  },
+  spacer: {
+    height: 24,
   },
 });
