@@ -13,10 +13,7 @@ const EnvSchema = z.object({
   ENCRYPTION_KEY: z.string().min(1, 'ENCRYPTION_KEY is required'),
   // Optional in development (CORS whitelist falls back to localhost dev servers).
   // Required in production — enforced in the post-parse guard below.
-  FRONTEND_URL: z
-    .string()
-    .url('FRONTEND_URL must be a valid URL')
-    .optional(),
+  FRONTEND_URL: z.string().url('FRONTEND_URL must be a valid URL').optional(),
   BINANCE_API_KEY: z.string().optional(),
   BINANCE_API_SECRET: z.string().optional(),
   CMC_API_KEY: z.string().optional(),
@@ -24,6 +21,8 @@ const EnvSchema = z.object({
   PLAID_CLIENT_ID: z.string().optional(),
   PLAID_SECRET: z.string().optional(),
   PLAID_ENVIRONMENT: z.enum(['sandbox', 'development', 'production']).optional(),
+  // Enable background jobs (cron tasks and BullMQ workers). Default true in production.
+  ENABLE_JOBS: z.coerce.boolean().default(true),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
