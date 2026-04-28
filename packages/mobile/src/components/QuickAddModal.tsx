@@ -7,12 +7,12 @@ import {
   FlatList,
   ActivityIndicator,
   Keyboard,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react-native';
+import { X, Calendar } from 'lucide-react-native';
 import { useCreateTransaction, useCategories, useAccounts } from '@/api/transactions';
-import { useAuthStore } from '@/stores/authStore';
 import { formatCurrency } from '@/lib/formatters';
 import * as Haptics from 'expo-haptics';
 
@@ -20,13 +20,14 @@ interface QuickAddModalProps {
   onClose: () => void;
 }
 
-type TransactionType = 'expense' | 'income' | 'transfer';
+type TransactionType = 'income' | 'expense';
 
 export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [showAccountPicker, setShowAccountPicker] = useState(false);
@@ -43,7 +44,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
   }, [accounts, selectedAccountId]);
 
   useEffect(() => {
-    const filteredCategories = categories.filter((cat) => cat.type === type && type !== 'transfer');
+    const filteredCategories = categories.filter((cat) => cat.type === type && cat.isActive !== false);
     if (filteredCategories.length > 0 && !selectedCategoryId) {
       setSelectedCategoryId(filteredCategories[0].id);
     }
@@ -55,19 +56,24 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
   };
 
   const filteredCategories = categories.filter(
-    (cat) => cat.type === type && type !== 'transfer',
+    (cat) => cat.type === type && cat.isActive !== false,
   );
 
   const selectedAccount = accounts.find((acc) => acc._id === selectedAccountId);
   const selectedCategory = categories.find((cat) => cat.id === selectedCategoryId);
 
   const handleSubmit = async () => {
-    if (!amount || !selectedAccountId) {
+    if (!amount || !selectedAccountId || !description) {
+      Alert.alert('Error', 'Por favor completa cantidad, cuenta y descripción');
+      return;
+    }
+
+    if (!selectedCategoryId) {
+      Alert.alert('Error', 'Por favor selecciona una categoría');
       return;
     }
 
     const amountInCents = Math.round(parseFloat(amount) * 100);
-    const today = new Date().toISOString().split('T')[0];
 
     createTransaction(
       {
@@ -75,8 +81,8 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
         type,
         amount: amountInCents,
         currency: selectedAccount?.currency || 'EUR',
-        date: today,
-        description: description || `${type === 'expense' ? 'Gasto' : 'Ingreso'}`,
+        date,
+        description,
         categoryId: selectedCategoryId,
         notes: notes || undefined,
       },
@@ -86,11 +92,14 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
           Keyboard.dismiss();
           onClose();
         },
+        onError: () => {
+          Alert.alert('Error', 'No se pudo crear la transacción');
+        },
       },
     );
   };
 
-  const isValid = amount && selectedAccountId && (type === 'transfer' || selectedCategoryId);
+  const isValid = amount && selectedAccountId && description && selectedCategoryId;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -243,14 +252,29 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
 
       {/* Description Input */}
       <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Descripción</Text>
+        <Text style={styles.sectionLabel}>Descripción*</Text>
         <TextInput
           style={styles.input}
-          placeholder="Añade una descripción (opcional)"
+          placeholder="Descripción obligatoria"
           placeholderTextColor="#ccc"
           value={description}
           onChangeText={setDescription}
         />
+      </View>
+
+      {/* Date Input */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>Fecha*</Text>
+        <TouchableOpacity style={styles.dateButton}>
+          <Calendar size={18} color="#0066CC" />
+          <TextInput
+            style={styles.dateInput}
+            placeholder="yyyy-MM-dd"
+            placeholderTextColor="#ccc"
+            value={date}
+            onChangeText={setDate}
+          />
+        </TouchableOpacity>
       </View>
 
       {/* Notes Input */}
@@ -414,6 +438,22 @@ const styles = StyleSheet.create({
   notesInput: {
     textAlignVertical: 'top',
     paddingTop: 12,
+  },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    backgroundColor: '#fafafa',
+    gap: 8,
+  },
+  dateInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#000',
   },
   submitButton: {
     paddingVertical: 14,
