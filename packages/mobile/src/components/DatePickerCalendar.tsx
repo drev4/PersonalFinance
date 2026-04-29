@@ -54,8 +54,10 @@ export const DatePickerCalendar: React.FC<DatePickerCalendarProps> = ({
   };
 
   const handleDayPress = (day: number) => {
-    const d = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-    onDateSelect(d.toISOString().split('T')[0]);
+    const y = currentDate.getFullYear();
+    const m = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const d = String(day).padStart(2, '0');
+    onDateSelect(`${y}-${m}-${d}`);
   };
 
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
