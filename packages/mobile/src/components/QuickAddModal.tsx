@@ -104,7 +104,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
       {
         accountId: selectedAccountId,
         type,
-        amount: Math.round(parseFloat(amount) * 100),
+        amount: Math.round(parseFloat(amount.replace(',', '.')) * 100),
         currency: selectedAccount?.currency || 'EUR',
         date,
         description,
