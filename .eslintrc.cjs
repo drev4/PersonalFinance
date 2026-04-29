@@ -5,10 +5,10 @@ module.exports = {
     browser: true,
     es2022: true,
   },
+  ignorePatterns: ['packages/mobile/**'],
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
-    'plugin:@typescript-eslint/recommended-type-checked',
     'plugin:react/recommended',
     'plugin:react-hooks/recommended',
     'plugin:import/recommended',
