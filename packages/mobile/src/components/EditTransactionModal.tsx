@@ -4,20 +4,18 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  FlatList,
   ActivityIndicator,
   Keyboard,
   Alert,
   ScrollView,
   Modal,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useState, useEffect, useMemo } from 'react';
 import type React from 'react';
-import { X, Calendar, ChevronLeft } from 'lucide-react-native';
+import { X, Calendar } from 'lucide-react-native';
 import { useUpdateTransaction, useCategories } from '@/api/transactions';
+import { formatDate } from '@/lib/formatters';
 import { radius, spacing, type ThemeColors, getShadow } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
 import { DatePickerCalendar } from './DatePickerCalendar';
@@ -29,6 +27,12 @@ interface EditTransactionModalProps {
   onClose: () => void;
 }
 
+const TYPE_LABEL: Record<string, string> = {
+  income: 'Ingreso',
+  expense: 'Gasto',
+  transfer: 'Transferencia',
+};
+
 export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
   visible,
   transaction,
@@ -37,6 +41,13 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
   const { colors, shadow, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadow), [isDark]);
 
+  const typeColor =
+    transaction?.type === 'income'
+      ? colors.income
+      : transaction?.type === 'transfer'
+      ? colors.transfer
+      : colors.expense;
+
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
@@ -44,11 +55,6 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-
-  const handleClose = () => {
-    Keyboard.dismiss();
-    onClose();
-  };
 
   const { data: categories = [] } = useCategories();
   const { mutate: updateTransaction, isPending } = useUpdateTransaction();
@@ -76,12 +82,12 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
       Alert.alert('Error', 'Por favor completa cantidad y descripción');
       return;
     }
-    if (!selectedCategoryId) {
+    if (transaction?.type !== 'transfer' && !selectedCategoryId) {
       Alert.alert('Error', 'Por favor selecciona una categoría');
       return;
     }
 
-    const amountInCents = Math.round(parseFloat(amount) * 100);
+    const amountInCents = Math.round(parseFloat(amount.replace(',', '.')) * 100);
     updateTransaction(
       {
         id: transaction._id || transaction.id,
@@ -89,14 +95,15 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
           amount: amountInCents,
           date,
           description,
-          categoryId: selectedCategoryId,
+          categoryId: selectedCategoryId || undefined,
           notes: notes || undefined,
         },
       },
       {
         onSuccess: async () => {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          handleClose();
+          Keyboard.dismiss();
+          onClose();
         },
         onError: () => {
           Alert.alert('Error', 'No se pudo actualizar la transacción');
@@ -105,36 +112,42 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
     );
   };
 
-  const isValid = amount && description && selectedCategoryId;
+  const isValid =
+    transaction?.type === 'transfer'
+      ? !!(amount && description)
+      : !!(amount && description && selectedCategoryId);
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaProvider>
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose} style={styles.backButton} hitSlop={8}>
-            <ChevronLeft size={20} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.title}>Editar transacción</Text>
-          <View style={{ width: 36 }} />
-        </View>
+        <SafeAreaView style={styles.container} edges={['top']}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Editar movimiento</Text>
+            <TouchableOpacity
+              onPress={() => { Keyboard.dismiss(); onClose(); }}
+              style={styles.closeBtn}
+              activeOpacity={0.7}
+            >
+              <X size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
 
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
+          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            {/* Type badge (read-only) */}
+            <View style={styles.typeRow}>
+              <View style={[styles.typeBadge, { backgroundColor: typeColor }]}>
+                <Text style={styles.typeBadgeText}>
+                  {TYPE_LABEL[transaction?.type] ?? 'Transacción'}
+                </Text>
+              </View>
+            </View>
+
             {/* Amount */}
-            <View style={styles.card}>
-              <Text style={styles.fieldLabel}>Cantidad</Text>
+            <View style={styles.amountSection}>
+              <Text style={styles.sectionLabel}>Cantidad</Text>
               <View style={styles.amountRow}>
-                <Text style={styles.currencySymbol}>€</Text>
+                <Text style={[styles.currencySymbol, { color: typeColor }]}>€</Text>
                 <TextInput
                   style={styles.amountInput}
                   placeholder="0.00"
@@ -148,11 +161,11 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
             </View>
 
             {/* Description */}
-            <View style={styles.card}>
-              <Text style={styles.fieldLabel}>Descripción</Text>
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Descripción *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Descripción de la transacción"
+                placeholder="Descripción obligatoria"
                 placeholderTextColor={colors.textTertiary}
                 value={description}
                 onChangeText={setDescription}
@@ -160,31 +173,27 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
               />
             </View>
 
-            {/* Category */}
-            <View style={styles.card}>
-              <Text style={styles.fieldLabel}>Categoría</Text>
-              <TouchableOpacity
-                style={styles.selectorBtn}
-                onPress={() => setShowCategoryPicker(!showCategoryPicker)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.selectorText, !selectedCategory && styles.placeholderText]}>
-                  {selectedCategory?.name || 'Seleccionar categoría'}
-                </Text>
-                <Text style={styles.selectorChevron}>{showCategoryPicker ? '▲' : '▼'}</Text>
-              </TouchableOpacity>
-
-              {showCategoryPicker && (
-                <View style={styles.pickerList}>
-                  <FlatList
-                    data={filteredCategories}
-                    keyExtractor={(item) => item._id}
-                    scrollEnabled={false}
-                    renderItem={({ item }) => (
+            {/* Category (income/expense only) */}
+            {transaction?.type !== 'transfer' && (
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>Categoría</Text>
+                <TouchableOpacity
+                  style={styles.selectorBtn}
+                  onPress={() => setShowCategoryPicker(!showCategoryPicker)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.selectorText}>
+                    {selectedCategory?.name || 'Seleccionar categoría'}
+                  </Text>
+                </TouchableOpacity>
+                {showCategoryPicker && (
+                  <View style={styles.pickerList}>
+                    {filteredCategories.map((item) => (
                       <TouchableOpacity
+                        key={item._id}
                         style={[
                           styles.pickerItem,
-                          selectedCategoryId === item._id && styles.pickerItemSelected,
+                          selectedCategoryId === item._id && styles.pickerItemActive,
                         ]}
                         onPress={() => {
                           setSelectedCategoryId(item._id);
@@ -198,47 +207,46 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
                         <Text
                           style={[
                             styles.pickerItemText,
-                            selectedCategoryId === item._id && styles.pickerItemTextSelected,
+                            selectedCategoryId === item._id && { color: colors.primary },
                           ]}
                         >
                           {item.name}
                         </Text>
                       </TouchableOpacity>
-                    )}
-                  />
-                </View>
-              )}
-            </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
 
             {/* Date */}
-            <View style={styles.card}>
-              <Text style={styles.fieldLabel}>Fecha</Text>
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Fecha *</Text>
               <TouchableOpacity
-                style={styles.selectorBtn}
+                style={styles.dateBtn}
                 onPress={() => setShowDatePicker(!showDatePicker)}
-                activeOpacity={0.7}
+                activeOpacity={0.8}
               >
-                <Calendar size={16} color={colors.primary} />
-                <Text style={styles.selectorText}>{date}</Text>
+                <Calendar size={16} color={typeColor} />
+                <Text style={styles.dateBtnText}>
+                  {date ? formatDate(date, 'long') : 'Seleccionar fecha'}
+                </Text>
               </TouchableOpacity>
-
-              {showDatePicker && (
-                <View style={styles.calendarWrap}>
-                  <DatePickerCalendar
-                    selectedDate={date}
-                    onDateSelect={(newDate) => {
-                      setDate(newDate);
-                      setShowDatePicker(false);
-                    }}
-                    colors={colors}
-                  />
-                </View>
-              )}
+              {showDatePicker && date ? (
+                <DatePickerCalendar
+                  selectedDate={date}
+                  onDateSelect={(d) => {
+                    setDate(d);
+                    setShowDatePicker(false);
+                  }}
+                  colors={colors}
+                />
+              ) : null}
             </View>
 
             {/* Notes */}
-            <View style={styles.card}>
-              <Text style={styles.fieldLabel}>Notas</Text>
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Notas</Text>
               <TextInput
                 style={[styles.input, styles.notesInput]}
                 placeholder="Notas adicionales (opcional)"
@@ -254,20 +262,22 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
 
             {/* Submit */}
             <TouchableOpacity
-              style={[styles.submitBtn, !isValid && styles.submitBtnDisabled]}
+              style={[
+                styles.submitBtn,
+                { backgroundColor: isValid ? typeColor : colors.textTertiary },
+              ]}
               onPress={handleSubmit}
               disabled={!isValid || isPending}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
             >
               {isPending ? (
                 <ActivityIndicator color={colors.white} />
               ) : (
-                <Text style={styles.submitText}>Guardar cambios</Text>
+                <Text style={styles.submitBtnText}>Guardar cambios</Text>
               )}
             </TouchableOpacity>
           </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+        </SafeAreaView>
       </SafeAreaProvider>
     </Modal>
   );
@@ -283,115 +293,106 @@ function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>)
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.md,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-      backgroundColor: colors.bg,
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.lg,
     },
-    backButton: {
+    title: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    closeBtn: {
       width: 36,
       height: 36,
-      borderRadius: radius.sm,
+      borderRadius: radius.full,
       backgroundColor: colors.card,
       justifyContent: 'center',
       alignItems: 'center',
       ...shadow.sm,
     },
-    title: {
-      fontSize: 17,
-      fontWeight: '600',
-      color: colors.text,
+    typeRow: {
+      paddingHorizontal: spacing.xl,
+      marginBottom: spacing.xl,
     },
-    scrollView: {
-      flex: 1,
+    typeBadge: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.full,
     },
-    scrollContent: {
-      padding: spacing.xl,
-      gap: spacing.md,
-      paddingBottom: spacing.xxxl,
+    typeBadgeText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#fff',
     },
-    card: {
-      backgroundColor: colors.card,
-      borderRadius: radius.lg,
-      padding: spacing.lg,
-      gap: spacing.sm,
-      ...shadow.sm,
+    amountSection: {
+      paddingHorizontal: spacing.xl,
+      marginBottom: spacing.xl,
     },
-    fieldLabel: {
+    sectionLabel: {
       fontSize: 11,
       fontWeight: '700',
       color: colors.textTertiary,
       textTransform: 'uppercase',
-      letterSpacing: 0.5,
+      letterSpacing: 0.6,
+      marginBottom: spacing.sm,
     },
     amountRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: spacing.sm,
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.lg,
+      ...shadow.sm,
     },
     currencySymbol: {
       fontSize: 22,
-      fontWeight: '700',
-      color: colors.primary,
+      fontWeight: '800',
+      marginRight: spacing.xs,
     },
     amountInput: {
       flex: 1,
+      paddingVertical: 16,
       fontSize: 28,
       fontWeight: '700',
       color: colors.text,
-      paddingVertical: spacing.xs,
+      letterSpacing: -0.5,
     },
-    input: {
-      fontSize: 15,
-      color: colors.text,
-      paddingVertical: spacing.xs,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    notesInput: {
-      minHeight: 72,
-      paddingTop: spacing.xs,
+    section: {
+      paddingHorizontal: spacing.xl,
+      marginBottom: spacing.lg,
     },
     selectorBtn: {
       flexDirection: 'row',
+      justifyContent: 'space-between',
       alignItems: 'center',
-      gap: spacing.sm,
-      paddingVertical: spacing.xs,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: 15,
+      ...shadow.sm,
     },
     selectorText: {
-      flex: 1,
       fontSize: 15,
-      fontWeight: '500',
+      fontWeight: '600',
       color: colors.text,
-    },
-    placeholderText: {
-      color: colors.textTertiary,
-    },
-    selectorChevron: {
-      fontSize: 10,
-      color: colors.textTertiary,
     },
     pickerList: {
       marginTop: spacing.sm,
-      borderRadius: radius.sm,
-      overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: colors.border,
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      ...shadow.sm,
     },
     pickerItem: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.sm,
+      paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
-      paddingHorizontal: spacing.md,
-      backgroundColor: colors.card,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    pickerItemSelected: {
+    pickerItemActive: {
       backgroundColor: colors.primaryLight,
     },
     categoryDot: {
@@ -400,31 +401,53 @@ function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>)
       borderRadius: 5,
     },
     pickerItemText: {
-      fontSize: 14,
-      fontWeight: '500',
+      fontSize: 15,
+      fontWeight: '600',
       color: colors.text,
     },
-    pickerItemTextSelected: {
-      color: colors.primary,
-      fontWeight: '600',
+    input: {
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: 15,
+      fontSize: 15,
+      color: colors.text,
+      fontWeight: '500',
+      ...shadow.sm,
     },
-    calendarWrap: {
-      marginTop: spacing.sm,
+    notesInput: {
+      textAlignVertical: 'top',
+      minHeight: 80,
+      paddingTop: spacing.md,
+    },
+    dateBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: 15,
+      ...shadow.sm,
+    },
+    dateBtnText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
     },
     submitBtn: {
-      paddingVertical: 16,
-      backgroundColor: colors.primary,
-      borderRadius: radius.lg,
-      alignItems: 'center',
+      marginHorizontal: spacing.xl,
       marginTop: spacing.sm,
+      marginBottom: spacing.xxl,
+      paddingVertical: 17,
+      borderRadius: radius.full,
+      alignItems: 'center',
+      ...shadow.md,
     },
-    submitBtnDisabled: {
-      backgroundColor: colors.textTertiary,
-    },
-    submitText: {
-      fontSize: 16,
-      fontWeight: '700',
+    submitBtnText: {
       color: colors.white,
+      fontSize: 17,
+      fontWeight: '700',
     },
   });
 }
