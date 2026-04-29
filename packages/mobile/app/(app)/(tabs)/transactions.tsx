@@ -7,14 +7,16 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
-import { ChevronDown, ChevronUp, ChevronLeft } from 'lucide-react-native';
+import { ChevronDown, ChevronUp, ChevronLeft, X } from 'lucide-react-native';
 import { useState, useMemo } from 'react';
 import { useTransactions, useAccounts, useCategories } from '@/api/transactions';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { radius, spacing, type ThemeColors, getShadow } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
+import { DatePickerCalendar } from '@/components/DatePickerCalendar';
 
 function getMonthRange() {
   const today = new Date();
@@ -74,6 +76,7 @@ export default function TransactionsScreen() {
   const [type, setType] = useState('');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [datePickerFor, setDatePickerFor] = useState<'from' | 'to' | null>(null);
 
   const { colors, shadow, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadow), [isDark]);
@@ -108,6 +111,17 @@ export default function TransactionsScreen() {
     setAccountId('');
     setCategoryId('');
     setType('');
+  };
+
+  const handleDateSelect = (date: string) => {
+    if (datePickerFor === 'from') {
+      setFrom(date);
+      if (date > to) setTo(date);
+    } else {
+      setTo(date);
+      if (date < from) setFrom(date);
+    }
+    setDatePickerFor(null);
   };
 
   const getTransactionId = (tx: Transaction) => tx._id || tx.id || '';
@@ -151,14 +165,26 @@ export default function TransactionsScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filterChips}
           >
-            <View style={styles.chip}>
-              <Text style={styles.chipLabel}>Desde</Text>
-              <Text style={styles.chipValue}>{from}</Text>
-            </View>
-            <View style={styles.chip}>
-              <Text style={styles.chipLabel}>Hasta</Text>
-              <Text style={styles.chipValue}>{to}</Text>
-            </View>
+            <TouchableOpacity
+              style={[styles.chip, styles.chipActive]}
+              onPress={() => setDatePickerFor('from')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.chipLabel, styles.chipLabelActive]}>Desde</Text>
+              <Text style={[styles.chipValue, styles.chipValueActive]}>
+                {formatDate(from, 'short')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.chip, styles.chipActive]}
+              onPress={() => setDatePickerFor('to')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.chipLabel, styles.chipLabelActive]}>Hasta</Text>
+              <Text style={[styles.chipValue, styles.chipValueActive]}>
+                {formatDate(to, 'short')}
+              </Text>
+            </TouchableOpacity>
             {accountsData.length > 0 && (
               <TouchableOpacity
                 style={[styles.chip, accountId && styles.chipActive]}
@@ -264,6 +290,38 @@ export default function TransactionsScreen() {
           )}
         />
       )}
+
+      {/* Date picker modal */}
+      <Modal
+        visible={datePickerFor !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDatePickerFor(null)}
+      >
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <Pressable
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' }}
+            onPress={() => setDatePickerFor(null)}
+          />
+          <View style={styles.dateSheet}>
+            <View style={styles.dateSheetHeader}>
+              <Text style={styles.dateSheetTitle}>
+                {datePickerFor === 'from' ? 'Fecha desde' : 'Fecha hasta'}
+              </Text>
+              <TouchableOpacity onPress={() => setDatePickerFor(null)} hitSlop={8}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            {datePickerFor !== null && (
+              <DatePickerCalendar
+                selectedDate={datePickerFor === 'from' ? from : to}
+                onDateSelect={handleDateSelect}
+                colors={colors}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Detail Modal */}
       {selectedTransaction && (
@@ -684,6 +742,24 @@ function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>)
     },
     detailRight: {
       alignItems: 'flex-end',
+    },
+    dateSheet: {
+      backgroundColor: colors.card,
+      borderTopLeftRadius: radius.xl,
+      borderTopRightRadius: radius.xl,
+      padding: spacing.xl,
+      paddingBottom: 40,
+    },
+    dateSheetHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+    dateSheetTitle: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: colors.text,
     },
   });
 }
