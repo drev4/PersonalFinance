@@ -19,7 +19,7 @@ export interface Transaction {
 }
 
 export interface Category {
-  id: string;
+  _id: string;
   name: string;
   type: 'income' | 'expense';
   color: string;
@@ -121,6 +121,45 @@ export const useTransactions = (filters: TransactionFilters) => {
       }
     },
     enabled: !!accessToken,
+  });
+};
+
+export interface UpdateTransactionDTO {
+  amount?: number;
+  date?: string;
+  description?: string;
+  categoryId?: string;
+  notes?: string;
+}
+
+export const useUpdateTransaction = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateTransactionDTO }) => {
+      const response = await client.patch<{ data: Transaction }>(`/transactions/${id}`, data);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    },
+  });
+};
+
+export const useDeleteTransaction = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await client.delete(`/transactions/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    },
   });
 };
 
