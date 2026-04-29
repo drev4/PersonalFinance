@@ -11,6 +11,8 @@ import {
   Alert,
   ActivityIndicator,
   Pressable,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -180,23 +182,25 @@ function TextEditModal({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Pressable style={styles.overlay} onPress={onClose} />
-        <View style={styles.sheet}>
-          <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>{title}</Text>
-            <TouchableOpacity onPress={onClose}><X size={20} color={colors.textSecondary} /></TouchableOpacity>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>{title}</Text>
+              <TouchableOpacity onPress={onClose}><X size={20} color={colors.textSecondary} /></TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.input}
+              value={value}
+              onChangeText={onChange}
+              placeholder={placeholder}
+              placeholderTextColor={colors.textTertiary}
+              autoFocus
+            />
+            <TouchableOpacity style={[styles.btn, isPending && styles.btnDisabled]} onPress={onSave} disabled={isPending} activeOpacity={0.85}>
+              {isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Guardar</Text>}
+            </TouchableOpacity>
           </View>
-          <TextInput
-            style={styles.input}
-            value={value}
-            onChangeText={onChange}
-            placeholder={placeholder}
-            placeholderTextColor={colors.textTertiary}
-            autoFocus
-          />
-          <TouchableOpacity style={[styles.btn, isPending && styles.btnDisabled]} onPress={onSave} disabled={isPending} activeOpacity={0.85}>
-            {isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Guardar</Text>}
-          </TouchableOpacity>
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -262,21 +266,23 @@ function PasswordModal({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Pressable style={styles.overlay} onPress={handleClose} />
-        <View style={styles.sheet}>
-          <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>Cambiar contraseña</Text>
-            <TouchableOpacity onPress={handleClose}><X size={20} color={colors.textSecondary} /></TouchableOpacity>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Cambiar contraseña</Text>
+              <TouchableOpacity onPress={handleClose}><X size={20} color={colors.textSecondary} /></TouchableOpacity>
+            </View>
+            <Text style={styles.inputLabel}>Contraseña actual</Text>
+            <TextInput style={styles.input} value={current} onChangeText={setCurrent} secureTextEntry placeholder="••••••••" placeholderTextColor={colors.textTertiary} />
+            <Text style={styles.inputLabel}>Nueva contraseña</Text>
+            <TextInput style={styles.input} value={next} onChangeText={setNext} secureTextEntry placeholder="Mín. 8 caracteres, 1 mayúscula, 1 número" placeholderTextColor={colors.textTertiary} />
+            <Text style={styles.inputLabel}>Confirmar contraseña</Text>
+            <TextInput style={[styles.input, { marginBottom: spacing.xl }]} value={confirm} onChangeText={setConfirm} secureTextEntry placeholder="••••••••" placeholderTextColor={colors.textTertiary} />
+            <TouchableOpacity style={[styles.btn, isPending && styles.btnDisabled]} onPress={handleSave} disabled={isPending} activeOpacity={0.85}>
+              {isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Cambiar contraseña</Text>}
+            </TouchableOpacity>
           </View>
-          <Text style={styles.inputLabel}>Contraseña actual</Text>
-          <TextInput style={styles.input} value={current} onChangeText={setCurrent} secureTextEntry placeholder="••••••••" placeholderTextColor={colors.textTertiary} />
-          <Text style={styles.inputLabel}>Nueva contraseña</Text>
-          <TextInput style={styles.input} value={next} onChangeText={setNext} secureTextEntry placeholder="Mín. 8 caracteres, 1 mayúscula, 1 número" placeholderTextColor={colors.textTertiary} />
-          <Text style={styles.inputLabel}>Confirmar contraseña</Text>
-          <TextInput style={[styles.input, { marginBottom: spacing.xl }]} value={confirm} onChangeText={setConfirm} secureTextEntry placeholder="••••••••" placeholderTextColor={colors.textTertiary} />
-          <TouchableOpacity style={[styles.btn, isPending && styles.btnDisabled]} onPress={handleSave} disabled={isPending} activeOpacity={0.85}>
-            {isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Cambiar contraseña</Text>}
-          </TouchableOpacity>
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -328,22 +334,24 @@ function BinanceModal({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Pressable style={styles.overlay} onPress={handleClose} />
-        <View style={styles.sheet}>
-          <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>Conectar Binance</Text>
-            <TouchableOpacity onPress={handleClose}><X size={20} color={colors.textSecondary} /></TouchableOpacity>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Conectar Binance</Text>
+              <TouchableOpacity onPress={handleClose}><X size={20} color={colors.textSecondary} /></TouchableOpacity>
+            </View>
+            <Text style={[styles.inputLabel, { marginBottom: spacing.sm }]}>
+              Solo necesitas permisos de lectura. Nunca se envían órdenes.
+            </Text>
+            <Text style={styles.inputLabel}>API Key</Text>
+            <TextInput style={styles.input} value={apiKey} onChangeText={setApiKey} autoCapitalize="none" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" placeholderTextColor={colors.textTertiary} />
+            <Text style={styles.inputLabel}>API Secret</Text>
+            <TextInput style={[styles.input, { marginBottom: spacing.xl }]} value={apiSecret} onChangeText={setApiSecret} secureTextEntry autoCapitalize="none" placeholder="••••••••••••••••••••••••••••••••••••••••" placeholderTextColor={colors.textTertiary} />
+            <TouchableOpacity style={[styles.btn, isPending && styles.btnDisabled]} onPress={handleConnect} disabled={isPending} activeOpacity={0.85}>
+              {isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Conectar</Text>}
+            </TouchableOpacity>
           </View>
-          <Text style={[styles.inputLabel, { marginBottom: spacing.sm }]}>
-            Solo necesitas permisos de lectura. Nunca se envían órdenes.
-          </Text>
-          <Text style={styles.inputLabel}>API Key</Text>
-          <TextInput style={styles.input} value={apiKey} onChangeText={setApiKey} autoCapitalize="none" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" placeholderTextColor={colors.textTertiary} />
-          <Text style={styles.inputLabel}>API Secret</Text>
-          <TextInput style={[styles.input, { marginBottom: spacing.xl }]} value={apiSecret} onChangeText={setApiSecret} secureTextEntry autoCapitalize="none" placeholder="••••••••••••••••••••••••••••••••••••••••" placeholderTextColor={colors.textTertiary} />
-          <TouchableOpacity style={[styles.btn, isPending && styles.btnDisabled]} onPress={handleConnect} disabled={isPending} activeOpacity={0.85}>
-            {isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Conectar</Text>}
-          </TouchableOpacity>
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );

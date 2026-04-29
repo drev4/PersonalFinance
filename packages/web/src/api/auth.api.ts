@@ -47,8 +47,8 @@ export async function verifyEmail(token: string): Promise<void> {
 }
 
 export async function getMe(): Promise<SafeUser> {
-  const response = await apiClient.get<SafeUser>('/auth/me');
-  return response.data;
+  const response = await apiClient.get<{ data: { user: SafeUser } }>('/users/me');
+  return response.data.data.user;
 }
 
 export interface UpdateProfileData {

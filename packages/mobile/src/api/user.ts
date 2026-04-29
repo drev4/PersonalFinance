@@ -62,6 +62,8 @@ export function useUpdateProfile() {
     onSuccess: (user) => {
       if (!user) return;
       qc.setQueryData(userKeys.me, user);
+      // Invalidate all cached data so screens re-render with the new baseCurrency/locale
+      qc.invalidateQueries();
       setUser({
         id: user.id,
         email: user.email,
