@@ -72,11 +72,11 @@ Las cuentas solo aparecen como scroll horizontal en el home, sin gestión.
 
 Solo tiene modo oscuro + logout + debug oculto.
 
-- [ ] Sección "Perfil": editar nombre, moneda base, idioma (llamar a `PATCH /users/me`)
-- [ ] Sección "Seguridad": cambiar contraseña (`PATCH /users/me/password`)
-- [ ] Sección "Notificaciones": toggle de alertas de presupuesto
-- [ ] Sección "Integraciones": ver estado de Binance, conectar/desconectar
-- [ ] Sección "Datos": exportar CSV, importar CSV (enlace a web si no es viable en mobile)
+- [x] Sección "Perfil": editar nombre, moneda base, idioma (llamar a `PATCH /users/me`)
+- [x] Sección "Seguridad": cambiar contraseña (`PATCH /users/me/password`)
+- [x] Sección "Notificaciones": toggle de alertas de presupuesto
+- [x] Sección "Integraciones": ver estado de Binance, conectar/desconectar
+- [x] Sección "Datos": exportar CSV (enlace a web — no hay expo-sharing/expo-file-system instalado)
 
 ### Mobile — funcionalidad rota en pantallas existentes
 
