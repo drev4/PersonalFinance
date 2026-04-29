@@ -53,71 +53,57 @@ export const useDashboardSummary = () => {
     queryKey: ['dashboard', 'summary'],
     enabled: !!accessToken,
     queryFn: async () => {
-      try {
-        const [netWorthRes, spendingRes, accountsRes, transactionsRes] = await Promise.all([
-          client.get<{ data: NetWorthData }>('/dashboard/net-worth'),
-          client.get<{ data: SpendingCategory[] }>('/dashboard/spending-by-category'),
-          client.get<{ data: { _id: string; name: string; currentBalance: number }[] }>(
-            '/accounts',
-          ),
-          client.get<{
+      const [netWorthRes, spendingRes, accountsRes, transactionsRes] = await Promise.all([
+        client.get<{ data: NetWorthData }>('/dashboard/net-worth'),
+        client.get<{ data: SpendingCategory[] }>('/dashboard/spending-by-category'),
+        client.get<{ data: { _id: string; name: string; currentBalance: number }[] }>(
+          '/accounts',
+        ),
+        client.get<{
+          data: {
             data: {
-              data: {
-                _id: string;
-                description: string;
-                amount: number;
-                type: string;
-                date: string;
-                categoryId?: string;
-              }[];
-              meta: unknown;
-            };
-          }>('/transactions?limit=5'),
-        ]);
+              _id: string;
+              description: string;
+              amount: number;
+              type: string;
+              date: string;
+              categoryId?: string;
+            }[];
+            meta: unknown;
+          };
+        }>('/transactions?limit=5'),
+      ]);
 
-        const netWorthData = netWorthRes.data?.data || {};
-        const spendingData = spendingRes.data?.data || {};
-        const accountsData = accountsRes.data?.data || [];
-        const transactionsData = transactionsRes.data?.data?.data || [];
+      const netWorthData = netWorthRes.data?.data || {};
+      const spendingData = spendingRes.data?.data || {};
+      const accountsData = accountsRes.data?.data || [];
+      const transactionsData = transactionsRes.data?.data?.data || [];
 
-        const totalSpending = Array.isArray(spendingData)
-          ? spendingData.reduce((sum, cat) => sum + (cat.total || 0), 0)
-          : 0;
+      const totalSpending = Array.isArray(spendingData)
+        ? spendingData.reduce((sum, cat) => sum + (cat.total || 0), 0)
+        : 0;
 
-        return {
-          netWorth: netWorthData.total || 0,
-          netWorthChange24h: 0,
-          netWorthChange30d: 0,
-          sparklineData: [],
-          monthlyExpense: totalSpending,
-          monthlyBudget: 2000 * 100,
-          topAccounts: accountsData.map((acc) => ({
-            id: acc._id,
-            name: acc.name,
-            balance: acc.currentBalance || 0,
-          })),
-          recentTransactions: transactionsData.map((tx) => ({
-            id: tx._id,
-            description: tx.description,
-            amount: tx.amount || 0,
-            type: (tx.type as 'expense' | 'income' | 'transfer') || 'expense',
-            date: tx.date,
-            category: tx.categoryId,
-          })),
-        };
-      } catch (error) {
-        console.log('Dashboard API error:', error);
-        return {
-          netWorth: 0,
-          netWorthChange24h: 0,
-          netWorthChange30d: 0,
-          sparklineData: [],
-          monthlyExpense: 0,
-          monthlyBudget: 2000,
-          topAccounts: [],
-          recentTransactions: [],
-        };
-      }
+      return {
+        netWorth: netWorthData.total || 0,
+        netWorthChange24h: 0,
+        netWorthChange30d: 0,
+        sparklineData: [],
+        monthlyExpense: totalSpending,
+        monthlyBudget: 2000 * 100,
+        topAccounts: accountsData.map((acc) => ({
+          id: acc._id,
+          name: acc.name,
+          balance: acc.currentBalance || 0,
+        })),
+        recentTransactions: transactionsData.map((tx) => ({
+          id: tx._id,
+          description: tx.description,
+          amount: tx.amount || 0,
+          type: (tx.type as 'expense' | 'income' | 'transfer') || 'expense',
+          date: tx.date,
+          category: tx.categoryId,
+        })),
+      };
     },
     staleTime: 5 * 60 * 1000,
     retry: 1,

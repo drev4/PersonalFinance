@@ -325,26 +325,55 @@ export default function TransactionsScreen() {
                   </View>
 
                   {(() => {
+                    const isTransfer = selectedTransaction.type === 'transfer';
                     const account = accountsData.find(
                       (a) => a._id === selectedTransaction.accountId,
                     );
-                    return account ? (
+                    const destAccount = isTransfer
+                      ? accountsData.find((a) => a._id === selectedTransaction.categoryId)
+                      : null;
+                    return (
                       <>
-                        <View style={styles.detailDivider} />
-                        <View style={styles.detailRow}>
-                          <Text style={styles.detailLabel}>Cuenta</Text>
-                          <View style={styles.detailRight}>
-                            <Text style={styles.detailValue}>{account.name}</Text>
-                            <Text style={styles.detailSub}>
-                              Saldo: {formatCurrency(account.currentBalance, account.currency)}
-                            </Text>
-                          </View>
-                        </View>
+                        {account && (
+                          <>
+                            <View style={styles.detailDivider} />
+                            <View style={styles.detailRow}>
+                              <Text style={styles.detailLabel}>
+                                {isTransfer ? 'Origen' : 'Cuenta'}
+                              </Text>
+                              <View style={styles.detailRight}>
+                                <Text style={styles.detailValue}>{account.name}</Text>
+                                <Text style={styles.detailSub}>
+                                  Saldo: {formatCurrency(account.currentBalance, account.currency)}
+                                </Text>
+                              </View>
+                            </View>
+                          </>
+                        )}
+                        {isTransfer && destAccount && (
+                          <>
+                            <View style={styles.detailDivider} />
+                            <View style={styles.detailRow}>
+                              <Text style={styles.detailLabel}>Destino</Text>
+                              <View style={styles.detailRight}>
+                                <Text style={styles.detailValue}>{destAccount.name}</Text>
+                                <Text style={styles.detailSub}>
+                                  Saldo:{' '}
+                                  {formatCurrency(
+                                    destAccount.currentBalance,
+                                    destAccount.currency,
+                                  )}
+                                </Text>
+                              </View>
+                            </View>
+                          </>
+                        )}
                       </>
-                    ) : null;
+                    );
                   })()}
 
-                  {selectedTransaction.categoryId &&
+                  {selectedTransaction.type !== 'transfer' &&
+                    selectedTransaction.categoryId &&
                     categoryMap[selectedTransaction.categoryId] && (
                       <>
                         <View style={styles.detailDivider} />

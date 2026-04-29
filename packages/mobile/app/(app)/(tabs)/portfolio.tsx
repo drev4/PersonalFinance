@@ -43,6 +43,7 @@ export default function PortfolioScreen() {
   const [formModalVisible, setFormModalVisible] = useState(false);
   const [editingHolding, setEditingHolding] = useState<HoldingWithValue | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [formData, setFormData] = useState({
     assetType: 'crypto' as AssetType,
     accountId: '',
@@ -84,7 +85,7 @@ export default function PortfolioScreen() {
         accountId: holding.accountId,
         symbol: holding.symbol,
         quantity: holding.quantity,
-        averageBuyPrice: String(holding.averageBuyPrice),
+        averageBuyPrice: String(holding.averageBuyPrice / 100),
         currency: holding.currency,
       });
     } else {
@@ -104,6 +105,7 @@ export default function PortfolioScreen() {
   const handleCloseModal = () => {
     setFormModalVisible(false);
     setEditingHolding(null);
+    setShowAccountPicker(false);
   };
 
   const handleSubmit = () => {
@@ -122,7 +124,7 @@ export default function PortfolioScreen() {
       assetType: formData.assetType,
       symbol: formData.symbol.toUpperCase(),
       quantity: formData.quantity,
-      averageBuyPrice: parseFloat(formData.averageBuyPrice),
+      averageBuyPrice: Math.round(parseFloat(formData.averageBuyPrice) * 100),
       currency: formData.currency,
     };
 
@@ -133,7 +135,7 @@ export default function PortfolioScreen() {
           data: {
             accountId: formData.accountId,
             quantity: formData.quantity,
-            averageBuyPrice: parseFloat(formData.averageBuyPrice),
+            averageBuyPrice: Math.round(parseFloat(formData.averageBuyPrice) * 100),
             currency: formData.currency,
           },
         },
@@ -434,7 +436,11 @@ export default function PortfolioScreen() {
               {/* Account */}
               <View style={styles.formSection}>
                 <Text style={styles.formLabel}>Cuenta</Text>
-                <View style={styles.selectRow}>
+                <TouchableOpacity
+                  style={styles.selectRow}
+                  onPress={() => setShowAccountPicker(!showAccountPicker)}
+                  disabled={isPending}
+                >
                   <Text style={styles.selectText}>
                     {selectedAccount?.name || 'Seleccionar cuenta'}
                   </Text>
@@ -443,7 +449,31 @@ export default function PortfolioScreen() {
                       {formatCurrency(selectedAccount.currentBalance)}
                     </Text>
                   )}
-                </View>
+                </TouchableOpacity>
+                {showAccountPicker && (
+                  <FlatList
+                    data={accounts}
+                    keyExtractor={(item) => item._id}
+                    scrollEnabled={false}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={[
+                          styles.pickerItem,
+                          formData.accountId === item._id && styles.pickerItemSelected,
+                        ]}
+                        onPress={() => {
+                          setFormData({ ...formData, accountId: item._id });
+                          setShowAccountPicker(false);
+                        }}
+                      >
+                        <Text style={styles.pickerItemText}>{item.name}</Text>
+                        <Text style={styles.pickerItemSub}>
+                          {formatCurrency(item.currentBalance)}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  />
+                )}
               </View>
 
               {/* Symbol */}
@@ -476,15 +506,18 @@ export default function PortfolioScreen() {
               {/* Avg buy price */}
               <View style={styles.formSection}>
                 <Text style={styles.formLabel}>Precio promedio de compra *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="0.00"
-                  placeholderTextColor={colors.textTertiary}
-                  value={formData.averageBuyPrice}
-                  onChangeText={(t) => setFormData({ ...formData, averageBuyPrice: t })}
-                  keyboardType="decimal-pad"
-                  editable={!isPending}
-                />
+                <View style={styles.priceInputRow}>
+                  <Text style={styles.currencyPrefix}>€</Text>
+                  <TextInput
+                    style={styles.priceInput}
+                    placeholder="0.00"
+                    placeholderTextColor={colors.textTertiary}
+                    value={formData.averageBuyPrice}
+                    onChangeText={(t) => setFormData({ ...formData, averageBuyPrice: t })}
+                    keyboardType="decimal-pad"
+                    editable={!isPending}
+                  />
+                </View>
               </View>
 
               {/* Currency */}
@@ -834,5 +867,48 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 17,
     fontWeight: '700',
+  },
+  priceInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    ...shadow.sm,
+  },
+  currencyPrefix: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.primary,
+    marginRight: spacing.sm,
+  },
+  priceInput: {
+    flex: 1,
+    paddingVertical: 15,
+    fontSize: 15,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  pickerItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.card,
+  },
+  pickerItemSelected: {
+    backgroundColor: colors.primaryLight,
+  },
+  pickerItemText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  pickerItemSub: {
+    fontSize: 12,
+    color: colors.textSecondary,
   },
 });

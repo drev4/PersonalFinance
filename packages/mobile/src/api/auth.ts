@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import client from './client';
 import { useAuthStore } from '@/stores/authStore';
 
+
 interface LoginRequest {
   email: string;
   password: string;
@@ -33,6 +34,7 @@ interface RegisterRequest {
 
 export const useLogin = () => {
   const { setUser, setTokens } = useAuthStore();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (data: LoginRequest) => {
@@ -43,6 +45,7 @@ export const useLogin = () => {
       const { user, accessToken, refreshToken } = data;
       setUser(user);
       await setTokens(accessToken, refreshToken);
+      queryClient.invalidateQueries();
     },
   });
 };
