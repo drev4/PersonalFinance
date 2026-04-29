@@ -4,12 +4,15 @@ import { useEffect } from 'react';
 
 interface ConfigState {
   apiUrl: string;
+  isDark: boolean;
   setApiUrl: (url: string) => Promise<void>;
-  loadApiUrl: () => Promise<void>;
+  setIsDark: (value: boolean) => Promise<void>;
+  loadConfig: () => Promise<void>;
 }
 
 export const useConfigStore = create<ConfigState>((set) => ({
   apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001',
+  isDark: false,
 
   setApiUrl: async (url: string) => {
     set({ apiUrl: url });
@@ -20,20 +23,33 @@ export const useConfigStore = create<ConfigState>((set) => ({
     }
   },
 
-  loadApiUrl: async () => {
+  setIsDark: async (value: boolean) => {
+    set({ isDark: value });
     try {
-      const savedUrl = await AsyncStorage.getItem('apiUrl');
-      if (savedUrl) {
-        set({ apiUrl: savedUrl });
-      }
+      await AsyncStorage.setItem('isDark', value ? '1' : '0');
     } catch (err) {
-      console.error('Failed to load API URL:', err);
+      console.error('Failed to save theme preference:', err);
+    }
+  },
+
+  loadConfig: async () => {
+    try {
+      const [savedUrl, savedDark] = await Promise.all([
+        AsyncStorage.getItem('apiUrl'),
+        AsyncStorage.getItem('isDark'),
+      ]);
+      const updates: Partial<Pick<ConfigState, 'apiUrl' | 'isDark'>> = {};
+      if (savedUrl) updates.apiUrl = savedUrl;
+      if (savedDark !== null) updates.isDark = savedDark === '1';
+      if (Object.keys(updates).length > 0) set(updates);
+    } catch (err) {
+      console.error('Failed to load config:', err);
     }
   },
 }));
 
 export function useLoadConfig() {
   useEffect(() => {
-    useConfigStore.getState().loadApiUrl();
+    useConfigStore.getState().loadConfig();
   }, []);
 }

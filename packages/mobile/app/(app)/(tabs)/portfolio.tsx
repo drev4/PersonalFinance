@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ChevronLeft, TrendingUp, TrendingDown, Pencil, Trash2 } from 'lucide-react-native';
 import {
   useHoldings,
@@ -27,7 +27,8 @@ import {
 import { useAccounts } from '@/api/transactions';
 import { formatCurrency, formatPercentage } from '@/lib/formatters';
 import { Skeleton } from '@/components/Skeleton';
-import { colors, radius, spacing, typography, shadow } from '@/theme';
+import { radius, spacing, type ThemeColors, getShadow } from '@/theme';
+import { useTheme } from '@/theme/useTheme';
 
 type TabFilter = 'all' | 'crypto' | 'stock' | 'etf' | 'bond';
 
@@ -52,6 +53,9 @@ export default function PortfolioScreen() {
     averageBuyPrice: '',
     currency: 'EUR',
   });
+
+  const { colors, shadow, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadow), [isDark]);
 
   const { data: holdings = [], isLoading, refetch } = useHoldings();
   const { data: summary, isLoading: summaryLoading } = usePortfolioSummary();
@@ -550,365 +554,374 @@ export default function PortfolioScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.md,
-  },
-  title: {
-    ...typography.title,
-  },
-  subtitle: {
-    ...typography.caption,
-    marginTop: 4,
-  },
-  addButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    ...shadow.sm,
-  },
-  addButtonText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  summaryCard: {
-    marginHorizontal: spacing.xl,
-    marginBottom: spacing.lg,
-    padding: spacing.xl,
-    backgroundColor: colors.card,
-    borderRadius: radius.xl,
-    ...shadow.sm,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  summaryLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  summaryTotal: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.text,
-    letterSpacing: -0.5,
-  },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.sm,
-  },
-  pnlContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  pnlValue: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  distributionRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  distBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 5,
-    borderRadius: radius.full,
-  },
-  distBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  tabsRow: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  tab: {
-    paddingVertical: 8,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
-    backgroundColor: colors.card,
-    ...shadow.sm,
-  },
-  tabActive: {
-    backgroundColor: colors.primary,
-  },
-  tabText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  tabTextActive: {
-    color: colors.white,
-  },
-  holdingsList: {
-    paddingHorizontal: spacing.xl,
-  },
-  holdingCard: {
-    backgroundColor: colors.card,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    ...shadow.sm,
-  },
-  holdingTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-  },
-  holdingTypeDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginTop: 5,
-  },
-  holdingInfo: {
-    flex: 1,
-  },
-  holdingSymbol: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: colors.text,
-    letterSpacing: 0.2,
-  },
-  holdingDetails: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 3,
-  },
-  holdingRight: {
-    alignItems: 'flex-end',
-  },
-  holdingValue: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  holdingPnl: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 3,
-  },
-  holdingBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  portfolioPct: {
-    fontSize: 12,
-    color: colors.textTertiary,
-    fontWeight: '500',
-  },
-  holdingActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  actionBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
-    backgroundColor: colors.inputBg,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 48,
-    paddingHorizontal: spacing.xxxl,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-  },
-  emptyCTA: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.md,
-    borderRadius: radius.full,
-  },
-  emptyCTAText: {
-    color: colors.white,
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  modalNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.sm,
-    backgroundColor: colors.card,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...shadow.sm,
-  },
-  modalNavTitle: {
-    ...typography.subheading,
-  },
-  formScroll: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-  },
-  formSection: {
-    marginBottom: spacing.xl,
-  },
-  formLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing.sm,
-  },
-  typeRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  typeChip: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-    alignItems: 'center',
-  },
-  typeChipText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textSecondary,
-  },
-  typeChipTextActive: {
-    color: colors.white,
-  },
-  selectRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 15,
-    ...shadow.sm,
-  },
-  selectText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  selectSub: {
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  input: {
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 15,
-    fontSize: 15,
-    color: colors.text,
-    fontWeight: '500',
-    ...shadow.sm,
-  },
-  submitBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.full,
-    paddingVertical: 17,
-    alignItems: 'center',
-    marginTop: spacing.sm,
-    marginBottom: spacing.xxl,
-    ...shadow.md,
-  },
-  submitBtnDisabled: {
-    backgroundColor: colors.textTertiary,
-    shadowOpacity: 0,
-  },
-  submitBtnText: {
-    color: colors.white,
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  priceInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    ...shadow.sm,
-  },
-  currencyPrefix: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.primary,
-    marginRight: spacing.sm,
-  },
-  priceInput: {
-    flex: 1,
-    paddingVertical: 15,
-    fontSize: 15,
-    color: colors.text,
-    fontWeight: '500',
-  },
-  pickerItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.card,
-  },
-  pickerItemSelected: {
-    backgroundColor: colors.primaryLight,
-  },
-  pickerItemText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  pickerItemSub: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-});
+function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.md,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: '700',
+      letterSpacing: -0.3,
+      color: colors.text,
+    },
+    subtitle: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.textSecondary,
+      marginTop: 4,
+    },
+    addButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.full,
+      ...shadow.sm,
+    },
+    addButtonText: {
+      color: colors.white,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    summaryCard: {
+      marginHorizontal: spacing.xl,
+      marginBottom: spacing.lg,
+      padding: spacing.xl,
+      backgroundColor: colors.card,
+      borderRadius: radius.xl,
+      ...shadow.sm,
+    },
+    summaryRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+    },
+    summaryLabel: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.3,
+    },
+    summaryTotal: {
+      fontSize: 22,
+      fontWeight: '800',
+      color: colors.text,
+      letterSpacing: -0.5,
+    },
+    summaryDivider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: spacing.sm,
+    },
+    pnlContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    pnlValue: {
+      fontSize: 16,
+      fontWeight: '700',
+    },
+    distributionRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+    },
+    distBadge: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 5,
+      borderRadius: radius.full,
+    },
+    distBadgeText: {
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    tabsRow: {
+      paddingHorizontal: spacing.xl,
+      paddingBottom: spacing.md,
+      gap: spacing.sm,
+    },
+    tab: {
+      paddingVertical: 8,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.full,
+      backgroundColor: colors.card,
+      ...shadow.sm,
+    },
+    tabActive: {
+      backgroundColor: colors.primary,
+    },
+    tabText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    tabTextActive: {
+      color: colors.white,
+    },
+    holdingsList: {
+      paddingHorizontal: spacing.xl,
+    },
+    holdingCard: {
+      backgroundColor: colors.card,
+      borderRadius: radius.xl,
+      padding: spacing.lg,
+      marginBottom: spacing.md,
+      ...shadow.sm,
+    },
+    holdingTop: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.md,
+    },
+    holdingTypeDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      marginTop: 5,
+    },
+    holdingInfo: {
+      flex: 1,
+    },
+    holdingSymbol: {
+      fontSize: 17,
+      fontWeight: '800',
+      color: colors.text,
+      letterSpacing: 0.2,
+    },
+    holdingDetails: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginTop: 3,
+    },
+    holdingRight: {
+      alignItems: 'flex-end',
+    },
+    holdingValue: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    holdingPnl: {
+      fontSize: 12,
+      fontWeight: '700',
+      marginTop: 3,
+    },
+    holdingBottom: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: spacing.md,
+      paddingTop: spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    portfolioPct: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      fontWeight: '500',
+    },
+    holdingActions: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    actionBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: radius.sm,
+      backgroundColor: colors.inputBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: 48,
+      paddingHorizontal: spacing.xxxl,
+    },
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: spacing.sm,
+    },
+    emptyText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: spacing.xl,
+    },
+    emptyCTA: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.xxl,
+      paddingVertical: spacing.md,
+      borderRadius: radius.full,
+    },
+    emptyCTAText: {
+      color: colors.white,
+      fontWeight: '700',
+      fontSize: 15,
+    },
+    modalContainer: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    modalNav: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+    },
+    backButton: {
+      width: 36,
+      height: 36,
+      borderRadius: radius.sm,
+      backgroundColor: colors.card,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...shadow.sm,
+    },
+    modalNavTitle: {
+      fontSize: 17,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    formScroll: {
+      flex: 1,
+      paddingHorizontal: spacing.xl,
+    },
+    formSection: {
+      marginBottom: spacing.xl,
+    },
+    formLabel: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      marginBottom: spacing.sm,
+    },
+    typeRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    typeChip: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: radius.md,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      backgroundColor: colors.card,
+      alignItems: 'center',
+    },
+    typeChipText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.textSecondary,
+    },
+    typeChipTextActive: {
+      color: colors.white,
+    },
+    selectRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: 15,
+      ...shadow.sm,
+    },
+    selectText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    selectSub: {
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    input: {
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: 15,
+      fontSize: 15,
+      color: colors.text,
+      fontWeight: '500',
+      ...shadow.sm,
+    },
+    submitBtn: {
+      backgroundColor: colors.primary,
+      borderRadius: radius.full,
+      paddingVertical: 17,
+      alignItems: 'center',
+      marginTop: spacing.sm,
+      marginBottom: spacing.xxl,
+      ...shadow.md,
+    },
+    submitBtnDisabled: {
+      backgroundColor: colors.textTertiary,
+      shadowOpacity: 0,
+    },
+    submitBtnText: {
+      color: colors.white,
+      fontSize: 17,
+      fontWeight: '700',
+    },
+    priceInputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.lg,
+      ...shadow.sm,
+    },
+    currencyPrefix: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: colors.primary,
+      marginRight: spacing.sm,
+    },
+    priceInput: {
+      flex: 1,
+      paddingVertical: 15,
+      fontSize: 15,
+      color: colors.text,
+      fontWeight: '500',
+    },
+    pickerItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      backgroundColor: colors.card,
+    },
+    pickerItemSelected: {
+      backgroundColor: colors.primaryLight,
+    },
+    pickerItemText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    pickerItemSub: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+  });
+}

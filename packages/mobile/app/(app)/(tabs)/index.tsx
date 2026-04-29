@@ -4,14 +4,18 @@ import { useDashboardSummary } from '@/api/dashboard';
 import { Skeleton, SkeletonGroup } from '@/components/Skeleton';
 import { useAuthStore } from '@/stores/authStore';
 import { formatCurrency } from '@/lib/formatters';
-import { useState } from 'react';
-import { colors, radius, spacing, typography, shadow } from '@/theme';
+import { useState, useMemo } from 'react';
+import { radius, spacing, type ThemeColors, getShadow } from '@/theme';
+import { useTheme } from '@/theme/useTheme';
 import { TrendingUp, TrendingDown } from 'lucide-react-native';
 
 export default function HomeScreen() {
   const user = useAuthStore((state) => state.user);
   const { data, isLoading, error, refetch } = useDashboardSummary();
   const [refreshing, setRefreshing] = useState(false);
+
+  const { colors, shadow, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadow), [isDark]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -89,13 +93,11 @@ export default function HomeScreen() {
             <View
               style={[
                 styles.variationPill,
-                {
-                  backgroundColor: change24h >= 0 ? 'rgba(0,200,150,0.15)' : 'rgba(255,71,87,0.15)',
-                },
+                { backgroundColor: change24h >= 0 ? colors.incomeLight : colors.expenseLight },
               ]}
             >
               {change24h >= 0 ? (
-                <TrendingUp size={11} color={change24h >= 0 ? colors.income : colors.expense} />
+                <TrendingUp size={11} color={colors.income} />
               ) : (
                 <TrendingDown size={11} color={colors.expense} />
               )}
@@ -112,9 +114,7 @@ export default function HomeScreen() {
             <View
               style={[
                 styles.variationPill,
-                {
-                  backgroundColor: change30d >= 0 ? 'rgba(0,200,150,0.15)' : 'rgba(255,71,87,0.15)',
-                },
+                { backgroundColor: change30d >= 0 ? colors.incomeLight : colors.expenseLight },
               ]}
             >
               {change30d >= 0 ? (
@@ -249,221 +249,229 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  contentContainer: {
-    paddingBottom: 20,
-  },
-  header: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
-  },
-  greeting: {
-    ...typography.title,
-    marginBottom: spacing.xs,
-  },
-  dateText: {
-    ...typography.caption,
-    textTransform: 'capitalize',
-  },
-  netWorthCard: {
-    marginHorizontal: spacing.xl,
-    marginBottom: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xxl,
-    backgroundColor: colors.primary,
-    borderRadius: radius.xl,
-    ...shadow.md,
-  },
-  netWorthLabel: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
-    fontWeight: '500',
-    marginBottom: spacing.sm,
-  },
-  netWorthAmount: {
-    fontSize: 38,
-    fontWeight: '800',
-    color: colors.white,
-    letterSpacing: -1,
-    marginBottom: spacing.lg,
-  },
-  variationRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  variationPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 5,
-    borderRadius: radius.full,
-  },
-  variationText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  card: {
-    marginHorizontal: spacing.xl,
-    marginBottom: spacing.lg,
-    padding: spacing.xl,
-    backgroundColor: colors.card,
-    borderRadius: radius.xl,
-    ...shadow.sm,
-  },
-  cardHeader: {
-    marginBottom: spacing.md,
-  },
-  section: {
-    marginBottom: spacing.lg,
-  },
-  accountsSection: {
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    ...typography.subheading,
-    marginBottom: spacing.sm,
-  },
-  chartArea: {
-    height: 80,
-    justifyContent: 'flex-end',
-    marginTop: spacing.md,
-  },
-  chartBars: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 4,
-    height: 80,
-  },
-  chartBar: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    borderRadius: 3,
-  },
-  accountCard: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.card,
-    borderRadius: radius.lg,
-    minWidth: 140,
-    ...shadow.sm,
-  },
-  accountDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-    marginBottom: spacing.sm,
-  },
-  accountName: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  accountBalance: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  expenseHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.md,
-  },
-  expenseAmount: {
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  budgetText: {
-    ...typography.caption,
-    marginTop: 2,
-  },
-  progressTrack: {
-    height: 6,
-    backgroundColor: colors.border,
-    borderRadius: radius.full,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: radius.full,
-  },
-  progressLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.xs,
-  },
-  progressLabel: {
-    fontSize: 10,
-    color: colors.textTertiary,
-    fontWeight: '500',
-  },
-  txRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    gap: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  txIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  txIconText: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  txInfo: {
-    flex: 1,
-  },
-  txDescription: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  txDate: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  txAmount: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  emptyText: {
-    fontSize: 14,
-    color: colors.textTertiary,
-    textAlign: 'center',
-    paddingVertical: spacing.xl,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xxxl,
-  },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-  },
-  errorSubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-});
+function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    contentContainer: {
+      paddingBottom: 20,
+    },
+    header: {
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.lg,
+    },
+    greeting: {
+      fontSize: 28,
+      fontWeight: '700',
+      letterSpacing: -0.3,
+      color: colors.text,
+      marginBottom: spacing.xs,
+    },
+    dateText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.textSecondary,
+      textTransform: 'capitalize',
+    },
+    netWorthCard: {
+      marginHorizontal: spacing.xl,
+      marginBottom: spacing.lg,
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.xxl,
+      backgroundColor: colors.primary,
+      borderRadius: radius.xl,
+      ...shadow.md,
+    },
+    netWorthLabel: {
+      fontSize: 14,
+      color: 'rgba(255,255,255,0.7)',
+      fontWeight: '500',
+      marginBottom: spacing.sm,
+    },
+    netWorthAmount: {
+      fontSize: 38,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      letterSpacing: -1,
+      marginBottom: spacing.lg,
+    },
+    variationRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    variationPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 5,
+      borderRadius: radius.full,
+    },
+    variationText: {
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    card: {
+      marginHorizontal: spacing.xl,
+      marginBottom: spacing.lg,
+      padding: spacing.xl,
+      backgroundColor: colors.card,
+      borderRadius: radius.xl,
+      ...shadow.sm,
+    },
+    cardHeader: {
+      marginBottom: spacing.md,
+    },
+    accountsSection: {
+      marginBottom: spacing.lg,
+    },
+    sectionTitle: {
+      fontSize: 17,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: spacing.sm,
+    },
+    chartArea: {
+      height: 80,
+      justifyContent: 'flex-end',
+      marginTop: spacing.md,
+    },
+    chartBars: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: 4,
+      height: 80,
+    },
+    chartBar: {
+      flex: 1,
+      backgroundColor: colors.primary,
+      borderRadius: 3,
+    },
+    accountCard: {
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.card,
+      borderRadius: radius.lg,
+      minWidth: 140,
+      ...shadow.sm,
+    },
+    accountDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: colors.primary,
+      marginBottom: spacing.sm,
+    },
+    accountName: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      fontWeight: '500',
+      marginBottom: 4,
+    },
+    accountBalance: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    expenseHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: spacing.md,
+    },
+    expenseAmount: {
+      fontSize: 20,
+      fontWeight: '800',
+      letterSpacing: -0.5,
+    },
+    budgetText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    progressTrack: {
+      height: 6,
+      backgroundColor: colors.border,
+      borderRadius: radius.full,
+      overflow: 'hidden',
+    },
+    progressFill: {
+      height: '100%',
+      borderRadius: radius.full,
+    },
+    progressLabels: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: spacing.xs,
+    },
+    progressLabel: {
+      fontSize: 10,
+      color: colors.textTertiary,
+      fontWeight: '500',
+    },
+    txRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 10,
+      gap: spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    txIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: radius.sm,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    txIconText: {
+      fontSize: 16,
+      fontWeight: '700',
+    },
+    txInfo: {
+      flex: 1,
+    },
+    txDescription: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    txDate: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    txAmount: {
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    emptyText: {
+      fontSize: 14,
+      color: colors.textTertiary,
+      textAlign: 'center',
+      paddingVertical: spacing.xl,
+    },
+    errorContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: spacing.xxxl,
+    },
+    errorTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: spacing.sm,
+      textAlign: 'center',
+    },
+    errorSubtitle: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+  });
+}

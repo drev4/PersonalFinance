@@ -9,10 +9,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLogin } from '@/api/auth';
 import { checkBackendHealth } from '@/api/health';
-import { colors, radius, spacing, typography, shadow } from '@/theme';
+import { radius, spacing, type ThemeColors, getShadow } from '@/theme';
+import { useTheme } from '@/theme/useTheme';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -20,6 +21,9 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [backendStatus, setBackendStatus] = useState<{ ok: boolean; error?: string } | null>(null);
   const { mutate: login, isPending, error } = useLogin();
+
+  const { colors, shadow, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadow, isDark), [isDark]);
 
   useEffect(() => {
     checkBackendHealth().then(setBackendStatus);
@@ -113,117 +117,123 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: spacing.xxl,
-  },
-  headerSection: {
-    paddingTop: 64,
-    paddingBottom: 48,
-    alignItems: 'flex-start',
-  },
-  logoMark: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: colors.primary,
-    marginBottom: spacing.lg,
-    ...shadow.md,
-  },
-  appName: {
-    ...typography.largeTitle,
-    marginBottom: spacing.xs,
-  },
-  tagline: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-  form: {
-    gap: spacing.lg,
-  },
-  inputGroup: {
-    gap: spacing.sm,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-    letterSpacing: 0.1,
-  },
-  input: {
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: colors.text,
-    ...shadow.sm,
-  },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.full,
-    paddingVertical: 17,
-    alignItems: 'center',
-    marginTop: spacing.sm,
-    ...shadow.md,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: colors.white,
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  registerLink: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  registerLinkText: {
-    fontSize: 15,
-    color: colors.textSecondary,
-  },
-  registerLinkBold: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  errorBox: {
-    backgroundColor: colors.expenseLight,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  errorText: {
-    color: colors.expense,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  warningBox: {
-    backgroundColor: '#FFFBEB',
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-    borderLeftWidth: 3,
-    borderLeftColor: '#F59E0B',
-  },
-  warningTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#92400E',
-    marginBottom: 4,
-  },
-  warningText: {
-    fontSize: 12,
-    color: '#92400E',
-  },
-});
+function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>, isDark: boolean) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingHorizontal: spacing.xxl,
+      paddingBottom: spacing.xxl,
+    },
+    headerSection: {
+      paddingTop: 64,
+      paddingBottom: 48,
+      alignItems: 'flex-start',
+    },
+    logoMark: {
+      width: 48,
+      height: 48,
+      borderRadius: radius.md,
+      backgroundColor: colors.primary,
+      marginBottom: spacing.lg,
+      ...shadow.md,
+    },
+    appName: {
+      fontSize: 34,
+      fontWeight: '800',
+      color: colors.text,
+      letterSpacing: -0.5,
+      marginBottom: spacing.xs,
+    },
+    tagline: {
+      fontSize: 15,
+      fontWeight: '400',
+      color: colors.textSecondary,
+    },
+    form: {
+      gap: spacing.lg,
+    },
+    inputGroup: {
+      gap: spacing.sm,
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      letterSpacing: 0.1,
+    },
+    input: {
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: 16,
+      fontSize: 16,
+      color: colors.text,
+      ...shadow.sm,
+    },
+    button: {
+      backgroundColor: colors.primary,
+      borderRadius: radius.full,
+      paddingVertical: 17,
+      alignItems: 'center',
+      marginTop: spacing.sm,
+      ...shadow.md,
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    buttonText: {
+      color: colors.white,
+      fontSize: 17,
+      fontWeight: '700',
+      letterSpacing: 0.2,
+    },
+    registerLink: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+    },
+    registerLinkText: {
+      fontSize: 15,
+      color: colors.textSecondary,
+    },
+    registerLinkBold: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+    errorBox: {
+      backgroundColor: colors.expenseLight,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    errorText: {
+      color: colors.expense,
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    warningBox: {
+      backgroundColor: isDark ? '#2A1F00' : '#FFFBEB',
+      borderRadius: radius.md,
+      padding: spacing.md,
+      marginBottom: spacing.lg,
+      borderLeftWidth: 3,
+      borderLeftColor: '#F59E0B',
+    },
+    warningTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: isDark ? '#FCD34D' : '#92400E',
+      marginBottom: 4,
+    },
+    warningText: {
+      fontSize: 12,
+      color: isDark ? '#FCD34D' : '#92400E',
+    },
+  });
+}

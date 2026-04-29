@@ -11,6 +11,7 @@ export interface Transaction {
   date: string;
   description: string;
   categoryId?: string;
+  transferToAccountId?: string;
   tags?: string[];
   notes?: string;
   createdAt: string;
