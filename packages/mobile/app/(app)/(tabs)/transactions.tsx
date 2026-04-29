@@ -29,10 +29,12 @@ const SwipeableRow = memo(({
   children,
   onDelete,
   deleteColor,
+  rowBg,
 }: {
   children: ReactNode;
   onDelete: () => void;
   deleteColor: string;
+  rowBg: string;
 }) => {
   const translateX = useRef(new Animated.Value(0)).current;
 
@@ -59,8 +61,9 @@ const SwipeableRow = memo(({
   }, [translateX]);
 
   return (
-    <View style={{ overflow: 'hidden' }}>
-      <View style={[swipeStyles.deleteAction, { backgroundColor: deleteColor, width: SWIPE_DELETE_WIDTH }]}>
+    <View style={{ backgroundColor: deleteColor }}>
+      {/* Delete action — visible at right edge as row slides left */}
+      <View style={swipeStyles.deleteAction}>
         <TouchableOpacity
           onPress={() => { close(); onDelete(); }}
           style={swipeStyles.deleteBtn}
@@ -70,7 +73,11 @@ const SwipeableRow = memo(({
           <Text style={swipeStyles.deleteBtnText}>Eliminar</Text>
         </TouchableOpacity>
       </View>
-      <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
+      {/* Opaque row slides on top of the red background */}
+      <Animated.View
+        style={{ transform: [{ translateX }], backgroundColor: rowBg }}
+        {...panResponder.panHandlers}
+      >
         {children}
       </Animated.View>
     </View>
@@ -83,6 +90,7 @@ const swipeStyles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
+    width: SWIPE_DELETE_WIDTH,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -354,6 +362,7 @@ export default function TransactionsScreen() {
             <SwipeableRow
               onDelete={() => confirmDelete(getTransactionId(item))}
               deleteColor={colors.expense}
+              rowBg={colors.bg}
             >
               <TouchableOpacity
                 style={styles.txRow}
