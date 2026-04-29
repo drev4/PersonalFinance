@@ -19,9 +19,9 @@
 
 Tres ficheros con código obsoleto que no se usan y pueden confundir:
 
-- [ ] Eliminar `packages/api/src/middleware/auth.ts` (tiene `TODO: Validate JWT token here`, el real está en `middlewares/authenticate.ts`)
-- [ ] Eliminar `packages/api/src/services/example.service.ts`
-- [ ] Eliminar `packages/api/src/routes/example.routes.ts`
+- [x] Eliminar `packages/api/src/middleware/auth.ts` (tiene `TODO: Validate JWT token here`, el real está en `middlewares/authenticate.ts`)
+- [x] Eliminar `packages/api/src/services/example.service.ts`
+- [x] Eliminar `packages/api/src/routes/example.routes.ts`
 
 ---
 
