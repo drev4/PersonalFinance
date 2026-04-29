@@ -84,8 +84,8 @@ Solo tiene modo oscuro + logout + debug oculto.
 
 Los chips "Desde" y "Hasta" en `transactions.tsx` muestran la fecha pero no abren ningún picker.
 
-- [ ] Conectar `DatePickerCalendar.tsx` (ya existe en `src/components/`) al chip de fecha
-- [ ] Al tocar el chip, abrir el calendario y actualizar el estado `from` / `to`
+- [x] Conectar `DatePickerCalendar.tsx` (ya existe en `src/components/`) al chip de fecha
+- [x] Al tocar el chip, abrir el calendario y actualizar el estado `from` / `to`
 
 #### 9. Sin editar/eliminar en el detalle de transacción `[MOB]`
 
