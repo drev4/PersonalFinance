@@ -8,15 +8,97 @@ import {
   ScrollView,
   Modal,
   Pressable,
+  Animated,
+  PanResponder,
+  Alert,
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
-import { ChevronDown, ChevronUp, ChevronLeft, X } from 'lucide-react-native';
-import { useState, useMemo } from 'react';
-import { useTransactions, useAccounts, useCategories } from '@/api/transactions';
+import { ChevronDown, ChevronUp, ChevronLeft, X, Pencil, Trash2 } from 'lucide-react-native';
+import { useState, useMemo, useRef, useCallback, memo, type ReactNode } from 'react';
+import * as Haptics from 'expo-haptics';
+import { useTransactions, useAccounts, useCategories, useDeleteTransaction } from '@/api/transactions';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { radius, spacing, type ThemeColors, getShadow } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
 import { DatePickerCalendar } from '@/components/DatePickerCalendar';
+import { EditTransactionModal } from '@/components/EditTransactionModal';
+
+const SWIPE_DELETE_WIDTH = 80;
+
+const SwipeableRow = memo(({
+  children,
+  onDelete,
+  deleteColor,
+}: {
+  children: ReactNode;
+  onDelete: () => void;
+  deleteColor: string;
+}) => {
+  const translateX = useRef(new Animated.Value(0)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gs) =>
+        Math.abs(gs.dx) > Math.abs(gs.dy) && gs.dx < -8,
+      onPanResponderMove: (_, gs) => {
+        translateX.setValue(Math.max(-SWIPE_DELETE_WIDTH, Math.min(0, gs.dx)));
+      },
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dx < -(SWIPE_DELETE_WIDTH / 2)) {
+          Animated.spring(translateX, { toValue: -SWIPE_DELETE_WIDTH, useNativeDriver: true }).start();
+        } else {
+          Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
+        }
+      },
+    })
+  ).current;
+
+  const close = useCallback(() => {
+    Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
+  }, [translateX]);
+
+  return (
+    <View style={{ overflow: 'hidden' }}>
+      <View style={[swipeStyles.deleteAction, { backgroundColor: deleteColor, width: SWIPE_DELETE_WIDTH }]}>
+        <TouchableOpacity
+          onPress={() => { close(); onDelete(); }}
+          style={swipeStyles.deleteBtn}
+          activeOpacity={0.8}
+        >
+          <Trash2 size={20} color="#fff" />
+          <Text style={swipeStyles.deleteBtnText}>Eliminar</Text>
+        </TouchableOpacity>
+      </View>
+      <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
+        {children}
+      </Animated.View>
+    </View>
+  );
+});
+
+const swipeStyles = StyleSheet.create({
+  deleteAction: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteBtn: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
+    width: SWIPE_DELETE_WIDTH,
+  },
+  deleteBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#fff',
+  },
+});
 
 function getMonthRange() {
   const today = new Date();
@@ -76,9 +158,11 @@ export default function TransactionsScreen() {
   const [type, setType] = useState('');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
   const [datePickerFor, setDatePickerFor] = useState<'from' | 'to' | null>(null);
 
   const { colors, shadow, isDark } = useTheme();
+  const { mutate: deleteTransaction } = useDeleteTransaction();
   const styles = useMemo(() => createStyles(colors, shadow), [isDark]);
 
   const { data: accountsData = [] } = useAccounts();
@@ -125,6 +209,29 @@ export default function TransactionsScreen() {
   };
 
   const getTransactionId = (tx: Transaction) => tx._id || tx.id || '';
+
+  const confirmDelete = useCallback((id: string, onSuccess?: () => void) => {
+    Alert.alert(
+      'Eliminar transacción',
+      '¿Estás seguro de que quieres eliminar esta transacción?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => {
+            deleteTransaction(id, {
+              onSuccess: async () => {
+                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                onSuccess?.();
+              },
+              onError: () => Alert.alert('Error', 'No se pudo eliminar la transacción'),
+            });
+          },
+        },
+      ],
+    );
+  }, [deleteTransaction]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -244,49 +351,54 @@ export default function TransactionsScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.txRow}
-              activeOpacity={0.7}
-              onPress={() => {
-                setSelectedTransaction(item);
-                setDetailModalVisible(true);
-              }}
+            <SwipeableRow
+              onDelete={() => confirmDelete(getTransactionId(item))}
+              deleteColor={colors.expense}
             >
-              <View style={[styles.txIconWrap, { backgroundColor: getTypeBg(item.type, colors) }]}>
-                <Text style={[styles.txIconText, { color: getTypeColor(item.type, colors) }]}>
-                  {getTypeLabel(item.type)}
-                </Text>
-              </View>
-              <View style={styles.txInfo}>
-                <Text style={styles.txDate}>{formatDate(item.date, 'short')}</Text>
-                <Text style={styles.txDescription} numberOfLines={1}>
-                  {item.description}
-                </Text>
-              </View>
-              <View style={styles.txRight}>
-                {item.categoryId && categoryMap[item.categoryId] && (
-                  <View
-                    style={[
-                      styles.categoryPill,
-                      { backgroundColor: (categoryMap[item.categoryId].color || '#000') + '18' },
-                    ]}
-                  >
-                    <Text
+              <TouchableOpacity
+                style={styles.txRow}
+                activeOpacity={0.7}
+                onPress={() => {
+                  setSelectedTransaction(item);
+                  setDetailModalVisible(true);
+                }}
+              >
+                <View style={[styles.txIconWrap, { backgroundColor: getTypeBg(item.type, colors) }]}>
+                  <Text style={[styles.txIconText, { color: getTypeColor(item.type, colors) }]}>
+                    {getTypeLabel(item.type)}
+                  </Text>
+                </View>
+                <View style={styles.txInfo}>
+                  <Text style={styles.txDate}>{formatDate(item.date, 'short')}</Text>
+                  <Text style={styles.txDescription} numberOfLines={1}>
+                    {item.description}
+                  </Text>
+                </View>
+                <View style={styles.txRight}>
+                  {item.categoryId && categoryMap[item.categoryId] && (
+                    <View
                       style={[
-                        styles.categoryPillText,
-                        { color: categoryMap[item.categoryId].color || colors.text },
+                        styles.categoryPill,
+                        { backgroundColor: (categoryMap[item.categoryId].color || '#000') + '18' },
                       ]}
                     >
-                      {categoryMap[item.categoryId].name}
-                    </Text>
-                  </View>
-                )}
-                <Text style={[styles.txAmount, { color: getTypeColor(item.type, colors) }]}>
-                  {item.type === 'expense' ? '-' : '+'}
-                  {formatCurrency(item.amount, item.currency)}
-                </Text>
-              </View>
-            </TouchableOpacity>
+                      <Text
+                        style={[
+                          styles.categoryPillText,
+                          { color: categoryMap[item.categoryId].color || colors.text },
+                        ]}
+                      >
+                        {categoryMap[item.categoryId].name}
+                      </Text>
+                    </View>
+                  )}
+                  <Text style={[styles.txAmount, { color: getTypeColor(item.type, colors) }]}>
+                    {item.type === 'expense' ? '-' : '+'}
+                    {formatCurrency(item.amount, item.currency)}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </SwipeableRow>
           )}
         />
       )}
@@ -322,6 +434,15 @@ export default function TransactionsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Edit Modal */}
+      {selectedTransaction && (
+        <EditTransactionModal
+          visible={editModalVisible}
+          transaction={selectedTransaction}
+          onClose={() => setEditModalVisible(false)}
+        />
+      )}
 
       {/* Detail Modal */}
       {selectedTransaction && (
@@ -480,6 +601,36 @@ export default function TransactionsScreen() {
                       </View>
                     </>
                   )}
+                </View>
+
+                {/* Actions */}
+                <View style={styles.detailActions}>
+                  {selectedTransaction.type !== 'transfer' && (
+                    <TouchableOpacity
+                      style={styles.detailEditBtn}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        setDetailModalVisible(false);
+                        setEditModalVisible(true);
+                      }}
+                    >
+                      <Pencil size={16} color={colors.primary} />
+                      <Text style={[styles.detailActionText, { color: colors.primary }]}>Editar</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    style={styles.detailDeleteBtn}
+                    activeOpacity={0.7}
+                    onPress={() =>
+                      confirmDelete(getTransactionId(selectedTransaction), () => {
+                        setDetailModalVisible(false);
+                        setSelectedTransaction(null);
+                      })
+                    }
+                  >
+                    <Trash2 size={16} color={colors.expense} />
+                    <Text style={[styles.detailActionText, { color: colors.expense }]}>Eliminar</Text>
+                  </TouchableOpacity>
                 </View>
               </ScrollView>
             </SafeAreaView>
@@ -760,6 +911,38 @@ function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>)
       fontSize: 17,
       fontWeight: '700',
       color: colors.text,
+    },
+    detailActions: {
+      flexDirection: 'row',
+      gap: spacing.md,
+      marginTop: spacing.xl,
+      marginBottom: spacing.xxxl,
+    },
+    detailEditBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 14,
+      borderRadius: radius.lg,
+      borderWidth: 1.5,
+      borderColor: colors.primary,
+    },
+    detailDeleteBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 14,
+      borderRadius: radius.lg,
+      borderWidth: 1.5,
+      borderColor: colors.expense,
+    },
+    detailActionText: {
+      fontSize: 15,
+      fontWeight: '600',
     },
   });
 }
