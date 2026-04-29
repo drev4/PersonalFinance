@@ -37,20 +37,29 @@ const SwipeableRow = memo(({
   rowBg: string;
 }) => {
   const translateX = useRef(new Animated.Value(0)).current;
+  // Tracks the resting offset so gestures compose from the correct baseline
+  const offset = useRef(0);
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, gs) =>
-        Math.abs(gs.dx) > Math.abs(gs.dy) && gs.dx < -8,
+      onMoveShouldSetPanResponder: (_, gs) => {
+        if (Math.abs(gs.dy) > Math.abs(gs.dx)) return false;
+        // Accept left-swipe from closed, or right-swipe when already open
+        return gs.dx < -8 || (offset.current < 0 && gs.dx > 8);
+      },
       onPanResponderMove: (_, gs) => {
-        translateX.setValue(Math.max(-SWIPE_DELETE_WIDTH, Math.min(0, gs.dx)));
+        const next = Math.max(-SWIPE_DELETE_WIDTH, Math.min(0, offset.current + gs.dx));
+        translateX.setValue(next);
       },
       onPanResponderRelease: (_, gs) => {
-        if (gs.dx < -(SWIPE_DELETE_WIDTH / 2)) {
+        const landed = offset.current + gs.dx;
+        if (landed < -(SWIPE_DELETE_WIDTH / 2)) {
           Animated.spring(translateX, { toValue: -SWIPE_DELETE_WIDTH, useNativeDriver: true }).start();
+          offset.current = -SWIPE_DELETE_WIDTH;
         } else {
           Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
+          offset.current = 0;
         }
       },
     })
@@ -58,6 +67,7 @@ const SwipeableRow = memo(({
 
   const close = useCallback(() => {
     Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
+    offset.current = 0;
   }, [translateX]);
 
   return (
