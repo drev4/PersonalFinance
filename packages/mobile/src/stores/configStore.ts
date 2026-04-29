@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { useEffect } from 'react';
 
 interface ConfigState {
@@ -17,7 +17,7 @@ export const useConfigStore = create<ConfigState>((set) => ({
   setApiUrl: async (url: string) => {
     set({ apiUrl: url });
     try {
-      await AsyncStorage.setItem('apiUrl', url);
+      await SecureStore.setItemAsync('apiUrl', url);
     } catch (err) {
       console.error('Failed to save API URL:', err);
     }
@@ -26,7 +26,7 @@ export const useConfigStore = create<ConfigState>((set) => ({
   setIsDark: async (value: boolean) => {
     set({ isDark: value });
     try {
-      await AsyncStorage.setItem('isDark', value ? '1' : '0');
+      await SecureStore.setItemAsync('isDark', value ? '1' : '0');
     } catch (err) {
       console.error('Failed to save theme preference:', err);
     }
@@ -35,8 +35,8 @@ export const useConfigStore = create<ConfigState>((set) => ({
   loadConfig: async () => {
     try {
       const [savedUrl, savedDark] = await Promise.all([
-        AsyncStorage.getItem('apiUrl'),
-        AsyncStorage.getItem('isDark'),
+        SecureStore.getItemAsync('apiUrl'),
+        SecureStore.getItemAsync('isDark'),
       ]);
       const updates: Partial<Pick<ConfigState, 'apiUrl' | 'isDark'>> = {};
       if (savedUrl) updates.apiUrl = savedUrl;
