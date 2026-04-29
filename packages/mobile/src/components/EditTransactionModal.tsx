@@ -13,7 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useState, useEffect, useMemo } from 'react';
 import type React from 'react';
 import { X, Calendar, ChevronLeft } from 'lucide-react-native';
@@ -109,6 +109,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
+      <SafeAreaProvider>
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
         {/* Header */}
         <View style={styles.header}>
@@ -267,6 +268,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 };
