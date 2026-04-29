@@ -13,9 +13,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
+import type React from 'react';
 import { X, Calendar } from 'lucide-react-native';
-import { useUpdateTransaction, useCategories, useAccounts } from '@/api/transactions';
-import { formatCurrency } from '@/lib/formatters';
+import { useUpdateTransaction, useCategories } from '@/api/transactions';
 import { DatePickerCalendar } from './DatePickerCalendar';
 import * as Haptics from 'expo-haptics';
 

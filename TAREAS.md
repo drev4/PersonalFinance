@@ -91,9 +91,10 @@ Los chips "Desde" y "Hasta" en `transactions.tsx` muestran la fecha pero no abre
 
 El modal de detalle solo muestra información. `EditTransactionModal.tsx` existe pero no está conectado.
 
-- [ ] Añadir botones "Editar" y "Eliminar" en el modal de detalle (`transactions.tsx`)
-- [ ] Al editar, abrir `EditTransactionModal` con los datos precargados
-- [ ] Al eliminar, confirmar con `Alert` + haptic feedback destructivo
+- [x] Añadir botones "Editar" y "Eliminar" en el modal de detalle (`transactions.tsx`)
+- [x] Al editar, abrir `EditTransactionModal` con los datos precargados
+- [x] Al eliminar, confirmar con `Alert` + haptic feedback destructivo
+- [x] Swipe-to-delete en filas de transacciones (PanResponder + Animated, sin dependencias externas)
 
 #### 10. Sin botón "+" en la tab de Transacciones `[MOB]`
 
