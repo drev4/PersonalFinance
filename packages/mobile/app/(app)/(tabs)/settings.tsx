@@ -5,6 +5,8 @@ import { useLogout } from '@/api/auth';
 import { useConfigStore } from '@/stores/configStore';
 import { useState } from 'react';
 import { updateClientBaseURL } from '@/api/client';
+import { LogOut, Server } from 'lucide-react-native';
+import { colors, radius, spacing, typography, shadow } from '@/theme';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -15,9 +17,7 @@ export default function SettingsScreen() {
 
   const handleLogout = () => {
     logout(undefined, {
-      onSuccess: () => {
-        router.replace('/(auth)/login');
-      },
+      onSuccess: () => router.replace('/(auth)/login'),
     });
   };
 
@@ -27,38 +27,45 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <ScrollView contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Ajustes</Text>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.title}>Ajustes</Text>
 
-      <TouchableOpacity style={styles.button} onPress={handleLogout}>
-        <Text style={styles.buttonText}>Cerrar Sesión</Text>
-      </TouchableOpacity>
-
-      {/* Debug Panel - tap title 5 times to show */}
-      <TouchableOpacity
-        onPress={() => setShowDebug(!showDebug)}
-        onLongPress={() => setShowDebug(true)}
-      >
-        <Text style={styles.debugHint}>ℹ️ Mantén presionado para debug</Text>
-      </TouchableOpacity>
-
-      {showDebug && (
-        <View style={styles.debugPanel}>
-          <Text style={styles.debugTitle}>🔧 API Debug</Text>
-          <Text style={styles.debugLabel}>URL del Backend:</Text>
-          <TextInput
-            style={styles.debugInput}
-            value={tempUrl}
-            onChangeText={setTempUrl}
-            placeholder="http://192.168.x.x:3001"
-          />
-          <TouchableOpacity style={styles.debugButton} onPress={handleSaveUrl}>
-            <Text style={styles.debugButtonText}>Guardar URL</Text>
+        {/* Settings list */}
+        <View style={styles.section}>
+          <TouchableOpacity style={styles.row} onPress={handleLogout} activeOpacity={0.7}>
+            <View style={[styles.rowIcon, { backgroundColor: colors.expenseLight }]}>
+              <LogOut size={18} color={colors.expense} />
+            </View>
+            <Text style={[styles.rowLabel, { color: colors.expense }]}>Cerrar sesión</Text>
           </TouchableOpacity>
-          <Text style={styles.debugInfo}>URL actual: {apiUrl}</Text>
         </View>
-      )}
+
+        {/* Debug panel trigger */}
+        <TouchableOpacity onLongPress={() => setShowDebug(!showDebug)} activeOpacity={1}>
+          <Text style={styles.debugHint}>Mantén presionado para opciones de debug</Text>
+        </TouchableOpacity>
+
+        {showDebug && (
+          <View style={styles.debugCard}>
+            <View style={styles.debugHeader}>
+              <Server size={16} color={colors.textSecondary} />
+              <Text style={styles.debugTitle}>API Debug</Text>
+            </View>
+            <Text style={styles.debugLabel}>URL del Backend</Text>
+            <TextInput
+              style={styles.debugInput}
+              value={tempUrl}
+              onChangeText={setTempUrl}
+              placeholder="http://192.168.x.x:3001"
+              placeholderTextColor={colors.textTertiary}
+            />
+            <TouchableOpacity style={styles.debugBtn} onPress={handleSaveUrl} activeOpacity={0.85}>
+              <Text style={styles.debugBtnText}>Guardar URL</Text>
+            </TouchableOpacity>
+            <Text style={styles.debugInfo}>Actual: {apiUrl}</Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -67,82 +74,98 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.bg,
   },
   content: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 32,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: 100,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 24,
+    ...typography.title,
+    marginBottom: spacing.xxl,
   },
-  button: {
-    backgroundColor: '#EF4444',
-    borderRadius: 8,
-    paddingVertical: 12,
+  section: {
+    backgroundColor: colors.card,
+    borderRadius: radius.xl,
+    marginBottom: spacing.lg,
+    ...shadow.sm,
+  },
+  row: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    padding: spacing.lg,
+    gap: spacing.md,
   },
-  buttonText: {
-    color: '#fff',
+  rowIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rowLabel: {
     fontSize: 16,
     fontWeight: '600',
+    color: colors.text,
   },
   debugHint: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textTertiary,
     textAlign: 'center',
-    marginTop: 16,
+    paddingVertical: spacing.md,
   },
-  debugPanel: {
-    marginTop: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
+  debugCard: {
+    backgroundColor: colors.card,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    marginTop: spacing.md,
+    ...shadow.sm,
+  },
+  debugHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
   },
   debugTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
+    fontWeight: '700',
+    color: colors.text,
   },
   debugLabel: {
     fontSize: 12,
-    color: '#666',
-    marginBottom: 8,
-    fontWeight: '500',
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    marginBottom: spacing.sm,
   },
   debugInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 12,
-    marginBottom: 12,
-    backgroundColor: '#fff',
+    backgroundColor: colors.inputBg,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    fontSize: 13,
+    color: colors.text,
+    marginBottom: spacing.md,
+    fontFamily: 'Courier New',
   },
-  debugButton: {
-    backgroundColor: '#0066CC',
-    borderRadius: 6,
-    paddingVertical: 10,
+  debugBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: 12,
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.sm,
   },
-  debugButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
+  debugBtnText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '700',
   },
   debugInfo: {
     fontSize: 11,
-    color: '#666',
-    marginTop: 8,
+    color: colors.textTertiary,
     fontStyle: 'italic',
   },
 });

@@ -22,6 +22,7 @@ interface LoginResponse {
     lastLoginAt?: string;
   };
   accessToken: string;
+  refreshToken: string;
 }
 
 interface RegisterRequest {
@@ -39,9 +40,9 @@ export const useLogin = () => {
       return response.data.data;
     },
     onSuccess: async (data) => {
-      const { user, accessToken } = data;
+      const { user, accessToken, refreshToken } = data;
       setUser(user);
-      await setTokens(accessToken, accessToken);
+      await setTokens(accessToken, refreshToken);
     },
   });
 };
@@ -55,9 +56,9 @@ export const useRegister = () => {
       return response.data.data;
     },
     onSuccess: async (data) => {
-      const { user, accessToken } = data;
+      const { user, accessToken, refreshToken } = data;
       setUser(user);
-      await setTokens(accessToken, accessToken);
+      await setTokens(accessToken, refreshToken);
     },
   });
 };

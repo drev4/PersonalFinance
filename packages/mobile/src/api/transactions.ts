@@ -1,49 +1,64 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import client from './client';
 import { useAuthStore } from '@/stores/authStore';
-import {
-  getTransactions,
-  getCategories,
-  getAccounts,
-  createTransaction,
-  createTransfer,
-  updateTransaction,
-  deleteTransaction,
-  type Transaction,
-  type Category,
-  type Account,
-  type TransactionFilters,
-  type PaginatedResponse,
-  type CreateTransactionDTO,
-  type CreateTransferDTO,
-  type UpdateTransactionDTO,
-} from './transactions.api';
 
-const STALE_TIME = 1000 * 60 * 5;
+export interface Transaction {
+  id: string;
+  accountId: string;
+  type: 'income' | 'expense' | 'transfer';
+  amount: number;
+  currency: string;
+  date: string;
+  description: string;
+  categoryId?: string;
+  tags?: string[];
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
-export const transactionKeys = {
-  all: ['transactions'] as const,
-  lists: () => [...transactionKeys.all, 'list'] as const,
-  list: (filters: TransactionFilters) => [...transactionKeys.lists(), filters] as const,
-};
+export interface Category {
+  id: string;
+  name: string;
+  type: 'income' | 'expense';
+  color: string;
+  icon?: string;
+  parentId?: string;
+  userId?: string;
+  isActive?: boolean;
+  isDefault?: boolean;
+}
 
-export const useTransactions = (filters: TransactionFilters) => {
-  const accessToken = useAuthStore((state) => state.accessToken);
+export interface Account {
+  _id: string;
+  name: string;
+  type: string;
+  currentBalance: number;
+  currency: string;
+}
 
-  return useQuery({
-    queryKey: transactionKeys.list(filters),
-    queryFn: () => getTransactions(filters),
-    staleTime: STALE_TIME,
-    enabled: !!accessToken,
-  });
-};
+export interface CreateTransactionDTO {
+  accountId: string;
+  type: 'income' | 'expense' | 'transfer';
+  amount: number;
+  currency: string;
+  date: string;
+  description: string;
+  categoryId?: string;
+  toAccountId?: string;
+  tags?: string[];
+  notes?: string;
+}
 
 export const useCategories = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
 
   return useQuery({
     queryKey: ['categories'],
-    queryFn: () => getCategories(),
-    staleTime: STALE_TIME,
+    queryFn: async () => {
+      const response = await client.get<{ data: Category[] }>('/categories');
+      return response.data.data;
+    },
     enabled: !!accessToken,
   });
 };
@@ -53,8 +68,57 @@ export const useAccounts = () => {
 
   return useQuery({
     queryKey: ['accounts'],
-    queryFn: () => getAccounts(),
-    staleTime: STALE_TIME,
+    queryFn: async () => {
+      const response = await client.get<{ data: Account[] }>('/accounts');
+      return response.data.data;
+    },
+    enabled: !!accessToken,
+  });
+};
+
+export interface TransactionFilters {
+  from?: string;
+  to?: string;
+  accountId?: string;
+  categoryId?: string;
+  type?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface TransactionResponse {
+  data: Transaction[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+  };
+}
+
+export const useTransactions = (filters: TransactionFilters) => {
+  const accessToken = useAuthStore((state) => state.accessToken);
+
+  return useQuery({
+    queryKey: ['transactions', filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+          params.append(key, String(value));
+        }
+      });
+
+      try {
+        const response = await client.get<{ data: TransactionResponse }>(
+          `/transactions?${params.toString()}`,
+        );
+        console.log('Transactions response:', response.data);
+        return response.data.data;
+      } catch (error) {
+        console.error('Error fetching transactions:', error);
+        throw error;
+      }
+    },
     enabled: !!accessToken,
   });
 };
@@ -63,61 +127,27 @@ export const useCreateTransaction = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: createTransaction,
+    mutationFn: async (data: CreateTransactionDTO) => {
+      if (data.type === 'transfer') {
+        const response = await client.post<{ data: { from: Transaction; to: Transaction } }>(
+          '/transactions/transfer',
+          {
+            fromAccountId: data.accountId,
+            toAccountId: data.toAccountId,
+            amount: data.amount,
+            date: data.date,
+            description: data.description,
+          },
+        );
+        return response.data.data;
+      }
+
+      const response = await client.post<{ data: Transaction }>('/transactions', data);
+      return response.data.data;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: transactionKeys.all });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
     },
   });
-};
-
-export const useCreateTransfer = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: createTransfer,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: transactionKeys.all });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-    },
-  });
-};
-
-export const useUpdateTransaction = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateTransactionDTO }) =>
-      updateTransaction(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: transactionKeys.all });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-    },
-  });
-};
-
-export const useDeleteTransaction = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: deleteTransaction,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: transactionKeys.all });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-    },
-  });
-};
-
-export type {
-  Transaction,
-  Category,
-  Account,
-  TransactionFilters,
-  PaginatedResponse,
-  CreateTransactionDTO,
-  UpdateTransactionDTO,
 };

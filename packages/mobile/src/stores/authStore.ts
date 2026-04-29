@@ -30,25 +30,37 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: false,
   error: null,
 
-  setUser: (user) => set({ user }),
+  setUser: (user) => {
+    set({ user });
+    if (user) {
+      try {
+        SecureStore.setItemAsync('user', JSON.stringify(user)).catch((err) =>
+          console.error('Failed to save user:', err),
+        );
+      } catch (err) {
+        console.error('Failed to save user:', err);
+      }
+    }
+  },
 
   setTokens: async (accessToken, refreshToken) => {
     set({ accessToken, refreshToken });
     try {
-      // Ensure refreshToken is a string
-      const tokenString = typeof refreshToken === 'string' ? refreshToken : JSON.stringify(refreshToken);
-      await SecureStore.setItemAsync('refreshToken', tokenString);
+      await SecureStore.setItemAsync('accessToken', String(accessToken));
+      await SecureStore.setItemAsync('refreshToken', String(refreshToken));
     } catch (err) {
-      console.error('Failed to save refresh token:', err);
+      console.error('Failed to save tokens:', err);
     }
   },
 
   clearAuth: async () => {
     set({ user: null, accessToken: null, refreshToken: null });
     try {
+      await SecureStore.deleteItemAsync('accessToken');
       await SecureStore.deleteItemAsync('refreshToken');
+      await SecureStore.deleteItemAsync('user');
     } catch (err) {
-      console.error('Failed to clear refresh token:', err);
+      console.error('Failed to clear auth:', err);
     }
   },
 
@@ -57,14 +69,18 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   restoreTokens: async () => {
     try {
+      const accessToken = await SecureStore.getItemAsync('accessToken');
       const refreshToken = await SecureStore.getItemAsync('refreshToken');
-      if (refreshToken) {
-        // Handle both string tokens and JSON-encoded tokens
-        const token = refreshToken.startsWith('{') ? JSON.parse(refreshToken) : refreshToken;
-        set({ refreshToken: typeof token === 'string' ? token : token.refreshToken || '' });
-      }
+      const userJson = await SecureStore.getItemAsync('user');
+      const user = userJson ? JSON.parse(userJson) : null;
+
+      set({
+        accessToken: accessToken || null,
+        refreshToken: refreshToken || null,
+        user: user || null,
+      });
     } catch (err) {
-      console.error('Failed to restore tokens:', err);
+      console.error('Failed to restore auth:', err);
     }
   },
 }));

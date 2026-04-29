@@ -86,23 +86,13 @@ export const DatePickerCalendar: React.FC<DatePickerCalendarProps> = ({
       <View style={styles.calendar}>
         {days.map((day, index) => (
           <TouchableOpacity
-            key={index}
-            style={[
-              styles.day,
-              day && isSelected(day) && styles.daySelected,
-            ]}
+            key={`day-${currentDate.getFullYear()}-${currentDate.getMonth()}-${index}`}
+            style={[styles.day, day && isSelected(day) && styles.daySelected]}
             onPress={() => day && handleDayPress(day)}
             disabled={!day}
           >
             {day && (
-              <Text
-                style={[
-                  styles.dayText,
-                  isSelected(day) && styles.dayTextSelected,
-                ]}
-              >
-                {day}
-              </Text>
+              <Text style={[styles.dayText, isSelected(day) && styles.dayTextSelected]}>{day}</Text>
             )}
           </TouchableOpacity>
         ))}

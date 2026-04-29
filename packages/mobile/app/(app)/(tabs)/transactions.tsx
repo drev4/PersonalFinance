@@ -8,11 +8,12 @@ import {
   ScrollView,
   Modal,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { ChevronDown, ChevronUp, ChevronLeft } from 'lucide-react-native';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTransactions, useAccounts, useCategories } from '@/api/transactions';
 import { formatCurrency, formatDate } from '@/lib/formatters';
+import { colors, radius, spacing, typography, shadow } from '@/theme';
 
 function getMonthRange() {
   const today = new Date();
@@ -20,11 +21,10 @@ function getMonthRange() {
   const month = today.getMonth();
   const from = new Date(year, month, 1);
   const to = new Date(year, month + 1, 0);
-
-  const fromStr = from.toISOString().split('T')[0];
-  const toStr = to.toISOString().split('T')[0];
-
-  return { from: fromStr, to: toStr };
+  return {
+    from: from.toISOString().split('T')[0],
+    to: to.toISOString().split('T')[0],
+  };
 }
 
 const { from: DEFAULT_FROM, to: DEFAULT_TO } = getMonthRange();
@@ -45,17 +45,22 @@ interface Transaction {
   updatedAt: string;
 }
 
-function getTransactionTypeColor(type: string): string {
-  switch (type) {
-    case 'income':
-      return '#10b981';
-    case 'expense':
-      return '#ef4444';
-    case 'transfer':
-      return '#8b5cf6';
-    default:
-      return '#6b7280';
-  }
+function getTypeColor(type: string) {
+  if (type === 'income') return colors.income;
+  if (type === 'expense') return colors.expense;
+  return colors.transfer;
+}
+
+function getTypeBg(type: string) {
+  if (type === 'income') return colors.incomeLight;
+  if (type === 'expense') return colors.expenseLight;
+  return colors.transferLight;
+}
+
+function getTypeLabel(type: string) {
+  if (type === 'income') return '↑';
+  if (type === 'expense') return '↓';
+  return '↔';
 }
 
 export default function TransactionsScreen() {
@@ -81,19 +86,16 @@ export default function TransactionsScreen() {
     limit: 100,
   };
 
-  const { data: response, isLoading, error } = useTransactions(filters);
+  const { data: response, isLoading } = useTransactions(filters);
 
-  let transactions: Transaction[] = [];
+  const categoryMap = useMemo(
+    () => Object.fromEntries(categoriesData.map((c) => [c._id, c])),
+    [categoriesData],
+  );
 
-  if (response && response.data) {
-    transactions = response.data;
-  }
-
-  if (error) {
-    console.error('Transaction fetch error:', error);
-  }
-
-  const hasActiveFilters = from !== DEFAULT_FROM || to !== DEFAULT_TO || accountId || categoryId || type;
+  const transactions: Transaction[] = response?.data || [];
+  const hasActiveFilters =
+    from !== DEFAULT_FROM || to !== DEFAULT_TO || accountId || categoryId || type;
 
   const handleClearFilters = () => {
     setFrom(DEFAULT_FROM);
@@ -114,7 +116,9 @@ export default function TransactionsScreen() {
           <Text style={styles.subtitle}>
             {transactions.length > 0
               ? `${transactions.length} transacciones`
-              : (isLoading ? 'Cargando...' : 'Historial de movimientos')}
+              : isLoading
+              ? 'Cargando...'
+              : 'Historial de movimientos'}
           </Text>
         </View>
       </View>
@@ -122,93 +126,70 @@ export default function TransactionsScreen() {
       {/* Filters */}
       <View style={styles.filtersPanel}>
         <TouchableOpacity
-          style={styles.filtersHeader}
+          style={styles.filtersToggle}
           onPress={() => setFiltersOpen(!filtersOpen)}
+          activeOpacity={0.7}
         >
-          <Text style={styles.filtersTitle}>
-            Filtros {hasActiveFilters && '●'}
+          <Text style={[styles.filtersLabel, hasActiveFilters && styles.filtersLabelActive]}>
+            Filtros {hasActiveFilters ? '·' : ''}
           </Text>
           {filtersOpen ? (
-            <ChevronUp size={20} color="#666" />
+            <ChevronUp size={16} color={colors.textSecondary} />
           ) : (
-            <ChevronDown size={20} color="#666" />
+            <ChevronDown size={16} color={colors.textSecondary} />
           )}
         </TouchableOpacity>
 
         {filtersOpen && (
-          <ScrollView style={styles.filtersContent} horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.filterChip}>
-              <Text style={styles.filterLabel}>Desde</Text>
-              <Text style={styles.filterValue}>{from}</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterChips}
+          >
+            <View style={styles.chip}>
+              <Text style={styles.chipLabel}>Desde</Text>
+              <Text style={styles.chipValue}>{from}</Text>
             </View>
-
-            <View style={styles.filterChip}>
-              <Text style={styles.filterLabel}>Hasta</Text>
-              <Text style={styles.filterValue}>{to}</Text>
+            <View style={styles.chip}>
+              <Text style={styles.chipLabel}>Hasta</Text>
+              <Text style={styles.chipValue}>{to}</Text>
             </View>
-
             {accountsData.length > 0 && (
-              <View style={styles.filterChip}>
-                <Text style={styles.filterLabel}>Cuenta</Text>
-                <TouchableOpacity
-                  onPress={() =>
-                    setAccountId(accountId ? '' : accountsData[0]._id)
-                  }
-                >
-                  <Text style={styles.filterValue}>
-                    {accountId
-                      ? accountsData.find((a) => a._id === accountId)?.name || 'Todas'
-                      : 'Todas'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {categoriesData.length > 0 && (
-              <View style={styles.filterChip}>
-                <Text style={styles.filterLabel}>Categoría</Text>
-                <TouchableOpacity
-                  onPress={() =>
-                    setCategoryId(categoryId ? '' : categoriesData[0]._id)
-                  }
-                >
-                  <Text style={styles.filterValue}>
-                    {categoryId
-                      ? categoriesData.find((c) => c._id === categoryId)?.name || 'Todas'
-                      : 'Todas'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            <View style={styles.filterChip}>
-              <Text style={styles.filterLabel}>Tipo</Text>
               <TouchableOpacity
-                onPress={() => {
-                  if (type === 'income') setType('expense');
-                  else if (type === 'expense') setType('transfer');
-                  else if (type === 'transfer') setType('');
-                  else setType('income');
-                }}
+                style={[styles.chip, accountId && styles.chipActive]}
+                onPress={() => setAccountId(accountId ? '' : accountsData[0]._id)}
               >
-                <Text style={styles.filterValue}>
-                  {type === 'income'
-                    ? 'Ingreso'
-                    : type === 'expense'
-                      ? 'Gasto'
-                      : type === 'transfer'
-                        ? 'Transferencia'
-                        : 'Todos'}
+                <Text style={[styles.chipLabel, accountId && styles.chipLabelActive]}>Cuenta</Text>
+                <Text style={[styles.chipValue, accountId && styles.chipValueActive]}>
+                  {accountId
+                    ? accountsData.find((a) => a._id === accountId)?.name || 'Todas'
+                    : 'Todas'}
                 </Text>
               </TouchableOpacity>
-            </View>
-
+            )}
+            <TouchableOpacity
+              style={[styles.chip, type && styles.chipActive]}
+              onPress={() => {
+                if (type === 'income') setType('expense');
+                else if (type === 'expense') setType('transfer');
+                else if (type === 'transfer') setType('');
+                else setType('income');
+              }}
+            >
+              <Text style={[styles.chipLabel, type && styles.chipLabelActive]}>Tipo</Text>
+              <Text style={[styles.chipValue, type && styles.chipValueActive]}>
+                {type === 'income'
+                  ? 'Ingreso'
+                  : type === 'expense'
+                  ? 'Gasto'
+                  : type === 'transfer'
+                  ? 'Transfer.'
+                  : 'Todos'}
+              </Text>
+            </TouchableOpacity>
             {hasActiveFilters && (
-              <TouchableOpacity
-                style={styles.filterClear}
-                onPress={handleClearFilters}
-              >
-                <Text style={styles.filterClearText}>Limpiar</Text>
+              <TouchableOpacity style={styles.chipClear} onPress={handleClearFilters}>
+                <Text style={styles.chipClearText}>Limpiar</Text>
               </TouchableOpacity>
             )}
           </ScrollView>
@@ -217,77 +198,65 @@ export default function TransactionsScreen() {
 
       {/* List */}
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0066CC" />
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : transactions.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>No hay transacciones</Text>
-          <Text style={styles.emptySubtitle}>
-            No se encontraron transacciones con los filtros actuales
-          </Text>
+        <View style={styles.centerContainer}>
+          <Text style={styles.emptyTitle}>Sin transacciones</Text>
+          <Text style={styles.emptySubtitle}>No hay resultados con los filtros actuales</Text>
         </View>
       ) : (
         <FlatList
           data={transactions}
-          keyExtractor={(item) => getTransactionId(item)}
+          keyExtractor={getTransactionId}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={styles.transactionRow}
+              style={styles.txRow}
+              activeOpacity={0.7}
               onPress={() => {
                 setSelectedTransaction(item);
                 setDetailModalVisible(true);
               }}
             >
-              <View style={styles.transactionContent}>
-                <View style={styles.transactionInfo}>
-                  <Text style={styles.transactionDate}>
-                    {formatDate(item.date, 'short')}
-                  </Text>
-                  <Text style={styles.transactionDescription} numberOfLines={1}>
-                    {item.description}
-                  </Text>
-                  {item.notes && (
-                    <Text style={styles.transactionNotes} numberOfLines={1}>
-                      {item.notes}
-                    </Text>
-                  )}
-                </View>
-
-                <View style={styles.transactionRight}>
-                  {item.categoryId && categoriesData.find((c) => c._id === item.categoryId) && (
-                    <View
+              <View style={[styles.txIconWrap, { backgroundColor: getTypeBg(item.type) }]}>
+                <Text style={[styles.txIconText, { color: getTypeColor(item.type) }]}>
+                  {getTypeLabel(item.type)}
+                </Text>
+              </View>
+              <View style={styles.txInfo}>
+                <Text style={styles.txDate}>{formatDate(item.date, 'short')}</Text>
+                <Text style={styles.txDescription} numberOfLines={1}>
+                  {item.description}
+                </Text>
+              </View>
+              <View style={styles.txRight}>
+                {item.categoryId && categoryMap[item.categoryId] && (
+                  <View
+                    style={[
+                      styles.categoryPill,
+                      { backgroundColor: (categoryMap[item.categoryId].color || '#000') + '18' },
+                    ]}
+                  >
+                    <Text
                       style={[
-                        styles.categoryBadge,
-                        {
-                          backgroundColor:
-                            (categoriesData.find((c) => c._id === item.categoryId)?.color || '#000') + '20',
-                        },
+                        styles.categoryPillText,
+                        { color: categoryMap[item.categoryId].color || colors.text },
                       ]}
                     >
-                      <Text
-                        style={[
-                          styles.categoryBadgeText,
-                          {
-                            color: categoriesData.find((c) => c._id === item.categoryId)?.color || '#000',
-                          },
-                        ]}
-                      >
-                        {categoriesData.find((c) => c._id === item.categoryId)?.name}
-                      </Text>
-                    </View>
-                  )}
-                  <Text
-                    style={[styles.transactionAmount, { color: getTransactionTypeColor(item.type) }]}
-                  >
-                    {item.type === 'expense' ? '-' : '+'}
-                    {formatCurrency(item.amount, item.currency)}
-                  </Text>
-                </View>
+                      {categoryMap[item.categoryId].name}
+                    </Text>
+                  </View>
+                )}
+                <Text style={[styles.txAmount, { color: getTypeColor(item.type) }]}>
+                  {item.type === 'expense' ? '-' : '+'}
+                  {formatCurrency(item.amount, item.currency)}
+                </Text>
               </View>
             </TouchableOpacity>
           )}
-          scrollEnabled={true}
         />
       )}
 
@@ -298,24 +267,42 @@ export default function TransactionsScreen() {
           animationType="slide"
           onRequestClose={() => setDetailModalVisible(false)}
         >
-          <SafeAreaView style={styles.safeContainer} edges={['top']}>
-            <View style={styles.modalContainer}>
-              <View style={styles.modalHeader}>
-                <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
-                  <ChevronLeft size={24} color="#000" />
+          <SafeAreaProvider>
+            <SafeAreaView style={styles.modalSafe} edges={['top', 'left', 'right']}>
+              <View style={styles.modalNav}>
+                <TouchableOpacity
+                  onPress={() => setDetailModalVisible(false)}
+                  style={styles.backButton}
+                >
+                  <ChevronLeft size={20} color={colors.text} />
                 </TouchableOpacity>
-                <Text style={styles.modalTitle}>Detalle</Text>
-                <View style={{ width: 24 }} />
+                <Text style={styles.modalNavTitle}>Detalle</Text>
+                <View style={{ width: 36 }} />
               </View>
 
-              <ScrollView style={styles.modalContent}>
-                {/* Amount Card */}
-                <View style={styles.amountCard}>
-                  <Text style={styles.amountLabel}>Monto</Text>
+              <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+                {/* Amount hero */}
+                <View style={styles.amountHero}>
+                  <View
+                    style={[
+                      styles.amountHeroIcon,
+                      { backgroundColor: getTypeBg(selectedTransaction.type) },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.amountHeroIconText,
+                        { color: getTypeColor(selectedTransaction.type) },
+                      ]}
+                    >
+                      {getTypeLabel(selectedTransaction.type)}
+                    </Text>
+                  </View>
+                  <Text style={styles.amountHeroLabel}>Monto</Text>
                   <Text
                     style={[
-                      styles.amount,
-                      { color: getTransactionTypeColor(selectedTransaction.type) },
+                      styles.amountHeroValue,
+                      { color: getTypeColor(selectedTransaction.type) },
                     ]}
                   >
                     {selectedTransaction.type === 'expense' ? '-' : '+'}
@@ -323,85 +310,88 @@ export default function TransactionsScreen() {
                   </Text>
                 </View>
 
-                {/* Description */}
-                <View style={styles.section}>
-                  <Text style={styles.label}>Descripción</Text>
-                  <Text style={styles.value}>{selectedTransaction.description}</Text>
-                </View>
-
-                {/* Date */}
-                <View style={styles.section}>
-                  <Text style={styles.label}>Fecha</Text>
-                  <Text style={styles.value}>
-                    {formatDate(selectedTransaction.date, 'long')}
-                  </Text>
-                </View>
-
-                {/* Account */}
-                {accountsData.find((a) => a._id === selectedTransaction.accountId) && (
-                  <View style={styles.section}>
-                    <Text style={styles.label}>Cuenta</Text>
-                    <View style={styles.accountCard}>
-                      <Text style={styles.accountName}>
-                        {accountsData.find((a) => a._id === selectedTransaction.accountId)?.name}
-                      </Text>
-                      <Text style={styles.accountBalance}>
-                        Saldo:{' '}
-                        {formatCurrency(
-                          accountsData.find((a) => a._id === selectedTransaction.accountId)
-                            ?.currentBalance || 0,
-                          accountsData.find((a) => a._id === selectedTransaction.accountId)
-                            ?.currency || 'EUR'
-                        )}
-                      </Text>
-                    </View>
+                {/* Details card */}
+                <View style={styles.detailCard}>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Descripción</Text>
+                    <Text style={styles.detailValue}>{selectedTransaction.description}</Text>
                   </View>
-                )}
+                  <View style={styles.detailDivider} />
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Fecha</Text>
+                    <Text style={styles.detailValue}>
+                      {formatDate(selectedTransaction.date, 'long')}
+                    </Text>
+                  </View>
 
-                {/* Category */}
-                {selectedTransaction.categoryId &&
-                  categoriesData.find((c) => c._id === selectedTransaction.categoryId) && (
-                    <View style={styles.section}>
-                      <Text style={styles.label}>Categoría</Text>
-                      <View
-                        style={[
-                          styles.categoryBadge,
-                          {
-                            backgroundColor:
-                              (categoriesData.find(
-                                (c) => c._id === selectedTransaction.categoryId
-                              )?.color || '#000') + '20',
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.categoryBadgeText,
-                            {
-                              color: categoriesData.find(
-                                (c) => c._id === selectedTransaction.categoryId
-                              )?.color || '#000',
-                            },
-                          ]}
-                        >
-                          {categoriesData.find((c) => c._id === selectedTransaction.categoryId)?.name}
+                  {(() => {
+                    const account = accountsData.find(
+                      (a) => a._id === selectedTransaction.accountId,
+                    );
+                    return account ? (
+                      <>
+                        <View style={styles.detailDivider} />
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Cuenta</Text>
+                          <View style={styles.detailRight}>
+                            <Text style={styles.detailValue}>{account.name}</Text>
+                            <Text style={styles.detailSub}>
+                              Saldo: {formatCurrency(account.currentBalance, account.currency)}
+                            </Text>
+                          </View>
+                        </View>
+                      </>
+                    ) : null;
+                  })()}
+
+                  {selectedTransaction.categoryId &&
+                    categoryMap[selectedTransaction.categoryId] && (
+                      <>
+                        <View style={styles.detailDivider} />
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Categoría</Text>
+                          <View
+                            style={[
+                              styles.categoryPill,
+                              {
+                                backgroundColor:
+                                  (categoryMap[selectedTransaction.categoryId].color || '#000') +
+                                  '18',
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.categoryPillText,
+                                {
+                                  color:
+                                    categoryMap[selectedTransaction.categoryId].color ||
+                                    colors.text,
+                                },
+                              ]}
+                            >
+                              {categoryMap[selectedTransaction.categoryId].name}
+                            </Text>
+                          </View>
+                        </View>
+                      </>
+                    )}
+
+                  {selectedTransaction.notes && (
+                    <>
+                      <View style={styles.detailDivider} />
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>Notas</Text>
+                        <Text style={[styles.detailValue, { flex: 1, textAlign: 'right' }]}>
+                          {selectedTransaction.notes}
                         </Text>
                       </View>
-                    </View>
+                    </>
                   )}
-
-                {/* Notes */}
-                {selectedTransaction.notes && (
-                  <View style={styles.section}>
-                    <Text style={styles.label}>Notas</Text>
-                    <Text style={styles.notesText}>{selectedTransaction.notes}</Text>
-                  </View>
-                )}
-
-                <View style={styles.spacer} />
+                </View>
               </ScrollView>
-            </View>
-          </SafeAreaView>
+            </SafeAreaView>
+          </SafeAreaProvider>
         </Modal>
       )}
     </SafeAreaView>
@@ -411,226 +401,246 @@ export default function TransactionsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.bg,
   },
   header: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#000',
+    ...typography.title,
   },
   subtitle: {
-    fontSize: 13,
-    color: '#999',
+    ...typography.caption,
     marginTop: 4,
   },
   filtersPanel: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fafafa',
+    backgroundColor: colors.bg,
+    paddingBottom: spacing.sm,
   },
-  filtersHeader: {
+  filtersToggle: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
   },
-  filtersTitle: {
+  filtersLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textSecondary,
   },
-  filtersContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+  filtersLabelActive: {
+    color: colors.primary,
   },
-  filterChip: {
-    marginRight: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: '#fff',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+  filterChips: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.sm,
+    gap: spacing.sm,
   },
-  filterLabel: {
+  chip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    backgroundColor: colors.card,
+    borderRadius: radius.full,
+    ...shadow.sm,
+  },
+  chipActive: {
+    backgroundColor: colors.primaryLight,
+  },
+  chipLabel: {
     fontSize: 10,
-    color: '#999',
+    fontWeight: '600',
+    color: colors.textTertiary,
+    textTransform: 'uppercase',
     marginBottom: 2,
   },
-  filterValue: {
-    fontSize: 12,
+  chipLabelActive: {
+    color: colors.primary,
+  },
+  chipValue: {
+    fontSize: 13,
     fontWeight: '600',
-    color: '#000',
+    color: colors.text,
   },
-  filterClear: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: '#ff4444',
-    borderRadius: 6,
+  chipValueActive: {
+    color: colors.primary,
   },
-  filterClearText: {
-    fontSize: 12,
+  chipClear: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    backgroundColor: colors.expenseLight,
+    borderRadius: radius.full,
+    justifyContent: 'center',
+  },
+  chipClearText: {
+    fontSize: 13,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.expense,
   },
-  loadingContainer: {
-    flex: 1,
+  listContent: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: 100,
+  },
+  txRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing.md,
+  },
+  txIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.sm,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  emptyContainer: {
+  txIconText: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  txInfo: {
+    flex: 1,
+  },
+  txDate: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 3,
+  },
+  txDescription: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  txRight: {
+    alignItems: 'flex-end',
+    gap: 6,
+  },
+  categoryPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+  },
+  categoryPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  txAmount: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing.xxxl,
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 8,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: spacing.sm,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
     textAlign: 'center',
   },
-  transactionRow: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  transactionContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  transactionInfo: {
+  modalSafe: {
     flex: 1,
+    backgroundColor: colors.bg,
   },
-  transactionDate: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 4,
-  },
-  transactionDescription: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 4,
-  },
-  transactionNotes: {
-    fontSize: 12,
-    color: '#999',
-  },
-  transactionRight: {
-    alignItems: 'flex-end',
-    gap: 8,
-  },
-  categoryBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  categoryBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  transactionAmount: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  safeContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  modalHeader: {
+  modalNav: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadow.sm,
+  },
+  modalNavTitle: {
+    ...typography.subheading,
   },
   modalContent: {
     flex: 1,
-    padding: 16,
+    padding: spacing.xl,
   },
-  amountCard: {
-    backgroundColor: '#f8f8f8',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
+  amountHero: {
     alignItems: 'center',
+    paddingVertical: spacing.xxl,
+    marginBottom: spacing.xl,
   },
-  amountLabel: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 8,
+  amountHeroIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  amountHeroIconText: {
+    fontSize: 28,
+    fontWeight: '800',
+  },
+  amountHeroLabel: {
+    fontSize: 13,
+    color: colors.textSecondary,
     fontWeight: '500',
-  },
-  amount: {
-    fontSize: 32,
-    fontWeight: '700',
-  },
-  section: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
+    marginBottom: spacing.xs,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  value: {
-    fontSize: 14,
-    color: '#000',
-    lineHeight: 20,
+  amountHeroValue: {
+    fontSize: 44,
+    fontWeight: '800',
+    letterSpacing: -1,
   },
-  accountCard: {
-    backgroundColor: '#f8f8f8',
-    borderRadius: 8,
-    padding: 12,
+  detailCard: {
+    backgroundColor: colors.card,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    ...shadow.sm,
   },
-  accountName: {
-    fontSize: 14,
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  detailDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  detailLabel: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  detailValue: {
+    fontSize: 15,
     fontWeight: '600',
-    color: '#000',
-    marginBottom: 4,
+    color: colors.text,
   },
-  accountBalance: {
+  detailSub: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textSecondary,
+    marginTop: 2,
+    textAlign: 'right',
   },
-  notesText: {
-    fontSize: 14,
-    color: '#333',
-    lineHeight: 20,
-    backgroundColor: '#f8f8f8',
-    padding: 12,
-    borderRadius: 8,
-  },
-  spacer: {
-    height: 24,
+  detailRight: {
+    alignItems: 'flex-end',
   },
 });

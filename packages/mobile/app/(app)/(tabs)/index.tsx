@@ -1,14 +1,16 @@
-import { View, Text, StyleSheet, ScrollView, RefreshControl, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDashboardSummary } from '@/api/dashboard';
 import { Skeleton, SkeletonGroup } from '@/components/Skeleton';
 import { useAuthStore } from '@/stores/authStore';
 import { formatCurrency } from '@/lib/formatters';
 import { useState } from 'react';
+import { colors, radius, spacing, typography, shadow } from '@/theme';
+import { TrendingUp, TrendingDown } from 'lucide-react-native';
 
 export default function HomeScreen() {
   const user = useAuthStore((state) => state.user);
-  const { data, isLoading, refetch } = useDashboardSummary();
+  const { data, isLoading, error, refetch } = useDashboardSummary();
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = async () => {
@@ -17,7 +19,6 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
-  // Format current date with Spanish localization
   const getFormattedDate = () => {
     const now = new Date();
     return new Intl.DateTimeFormat('es-ES', {
@@ -27,117 +28,222 @@ export default function HomeScreen() {
     }).format(now);
   };
 
+  if (error && !data) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>No se pudieron cargar los datos</Text>
+          <Text style={styles.errorSubtitle}>Comprueba tu conexión e inténtalo de nuevo</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (isLoading && !data) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <ScrollView contentContainerStyle={styles.contentContainer}>
-        <View style={styles.header}>
-          <Skeleton width="30%" height={16} marginBottom={8} />
-          <Skeleton width="50%" height={20} marginBottom={0} />
-        </View>
-        <SkeletonGroup />
-        <SkeletonGroup />
+          <View style={styles.header}>
+            <Skeleton width="30%" height={14} marginBottom={8} />
+            <Skeleton width="55%" height={32} marginBottom={0} />
+          </View>
+          <SkeletonGroup />
+          <SkeletonGroup />
         </ScrollView>
       </SafeAreaView>
     );
   }
 
-  const getVariationColor = (change: number) => (change >= 0 ? '#10B981' : '#EF4444');
+  const change24h = data?.netWorthChange24h ?? 0;
+  const change30d = data?.netWorthChange30d ?? 0;
+  const expenseRatio = Math.min(
+    ((data?.monthlyExpense || 0) / (data?.monthlyBudget || 1)) * 100,
+    100,
+  );
+  const expenseColor =
+    expenseRatio > 85 ? colors.expense : expenseRatio > 60 ? '#F59E0B' : colors.income;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-      >
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.greeting}>Hola, {user?.name || 'Usuario'}</Text>
-        <Text style={styles.subtitle}>{getFormattedDate()}</Text>
-      </View>
-
-      {/* Patrimonio Neto */}
-      <View style={styles.netWorthCard}>
-        <Text style={styles.netWorthLabel}>Patrimonio Neto</Text>
-        <Text style={styles.netWorthAmount}>{formatCurrency(data?.netWorth || 0)}</Text>
-        <View style={styles.variationRow}>
-          <Text style={[styles.variation, { color: getVariationColor(data?.netWorthChange24h || 0) }]}>
-            24h: {data?.netWorthChange24h && data.netWorthChange24h >= 0 ? '+' : ''}{data?.netWorthChange24h.toFixed(2)}%
-          </Text>
-          <Text style={[styles.variation, { color: getVariationColor(data?.netWorthChange30d || 0) }]}>
-            30d: {data?.netWorthChange30d && data.netWorthChange30d >= 0 ? '+' : ''}{data?.netWorthChange30d.toFixed(2)}%
-          </Text>
-        </View>
-      </View>
-
-      {/* Sparkline Placeholder */}
-      <View style={styles.sparklineContainer}>
-        <Text style={styles.sectionTitle}>Últimos 30 días</Text>
-        <View style={styles.sparklineChart}>
-          <Text style={styles.chartPlaceholder}>📈 Gráfico aquí</Text>
-        </View>
-      </View>
-
-      {/* Top Accounts */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Cuentas Principales</Text>
-        <FlatList
-          data={data?.topAccounts || []}
-          keyExtractor={(item) => item.id}
-          horizontal
-          scrollEnabled={true}
-          showsHorizontalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <View style={styles.accountCard}>
-              <Text style={styles.accountName}>{item.name}</Text>
-              <Text style={styles.accountBalance}>{formatCurrency(item.balance)}</Text>
-            </View>
-          )}
-        />
-      </View>
-
-      {/* Monthly Expense */}
-      <View style={styles.section}>
-        <View style={styles.expenseHeader}>
-          <Text style={styles.sectionTitle}>Gasto del Mes</Text>
-          <Text style={styles.expenseAmount}>{formatCurrency(data?.monthlyExpense || 0)}</Text>
-        </View>
-        <View style={styles.progressBar}>
-          <View
-            style={[
-              styles.progressFill,
-              {
-                width: `${Math.min(((data?.monthlyExpense || 0) / (data?.monthlyBudget || 1)) * 100, 100)}%`,
-              },
-            ]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary}
           />
+        }
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.greeting}>Hola, {user?.name || 'Usuario'}</Text>
+          <Text style={styles.dateText}>{getFormattedDate()}</Text>
         </View>
-        <Text style={styles.budgetText}>
-          Presupuesto: {formatCurrency(data?.monthlyBudget || 0)}
-        </Text>
-      </View>
 
-      {/* Recent Transactions */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Últimos Movimientos</Text>
-        {data?.recentTransactions && data.recentTransactions.length > 0 ? (
-          data.recentTransactions.slice(0, 5).map((transaction, idx) => (
-            <View key={transaction.id || `tx-${idx}`} style={styles.transactionItem}>
-              <View style={styles.transactionInfo}>
-                <Text style={styles.transactionDescription}>{transaction.description}</Text>
-                <Text style={styles.transactionDate}>{new Date(transaction.date).toLocaleDateString()}</Text>
-              </View>
-              <Text style={[styles.transactionAmount, { color: transaction.type === 'income' ? '#10B981' : '#000' }]}>
-                {transaction.type === 'income' ? '+' : '-'}
-                {formatCurrency(Math.abs(transaction.amount))}
+        {/* Net Worth Card */}
+        <View style={styles.netWorthCard}>
+          <Text style={styles.netWorthLabel}>Patrimonio Neto</Text>
+          <Text style={styles.netWorthAmount}>{formatCurrency(data?.netWorth || 0)}</Text>
+          <View style={styles.variationRow}>
+            <View
+              style={[
+                styles.variationPill,
+                {
+                  backgroundColor: change24h >= 0 ? 'rgba(0,200,150,0.15)' : 'rgba(255,71,87,0.15)',
+                },
+              ]}
+            >
+              {change24h >= 0 ? (
+                <TrendingUp size={11} color={change24h >= 0 ? colors.income : colors.expense} />
+              ) : (
+                <TrendingDown size={11} color={colors.expense} />
+              )}
+              <Text
+                style={[
+                  styles.variationText,
+                  { color: change24h >= 0 ? colors.income : colors.expense },
+                ]}
+              >
+                {change24h >= 0 ? '+' : ''}
+                {change24h.toFixed(2)}% hoy
               </Text>
             </View>
-          ))
-        ) : (
-          <Text style={styles.emptyText}>No hay movimientos recientes</Text>
-        )}
-      </View>
+            <View
+              style={[
+                styles.variationPill,
+                {
+                  backgroundColor: change30d >= 0 ? 'rgba(0,200,150,0.15)' : 'rgba(255,71,87,0.15)',
+                },
+              ]}
+            >
+              {change30d >= 0 ? (
+                <TrendingUp size={11} color={colors.income} />
+              ) : (
+                <TrendingDown size={11} color={colors.expense} />
+              )}
+              <Text
+                style={[
+                  styles.variationText,
+                  { color: change30d >= 0 ? colors.income : colors.expense },
+                ]}
+              >
+                {change30d >= 0 ? '+' : ''}
+                {change30d.toFixed(2)}% mes
+              </Text>
+            </View>
+          </View>
+        </View>
 
-      <View style={{ height: 20 }} />
+        {/* Chart placeholder */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.sectionTitle}>Últimos 30 días</Text>
+          </View>
+          <View style={styles.chartArea}>
+            <View style={styles.chartBars}>
+              {[40, 65, 45, 80, 55, 90, 70, 85, 60, 95, 75, 88].map((h, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.chartBar,
+                    { height: h * 0.8, opacity: i === 11 ? 1 : 0.35 + i * 0.05 },
+                  ]}
+                />
+              ))}
+            </View>
+          </View>
+        </View>
+
+        {/* Accounts */}
+        <View style={styles.accountsSection}>
+          <Text style={[styles.sectionTitle, { paddingHorizontal: spacing.xl }]}>
+            Cuentas principales
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: spacing.md, paddingHorizontal: spacing.xl }}
+          >
+            {(data?.topAccounts || []).map((item) => (
+              <View key={item.id} style={styles.accountCard}>
+                <View style={styles.accountDot} />
+                <Text style={styles.accountName}>{item.name}</Text>
+                <Text style={styles.accountBalance}>{formatCurrency(item.balance)}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Monthly Expense */}
+        <View style={styles.card}>
+          <View style={styles.expenseHeader}>
+            <View>
+              <Text style={styles.sectionTitle}>Gasto del mes</Text>
+              <Text style={styles.budgetText}>
+                Presupuesto: {formatCurrency(data?.monthlyBudget || 0)}
+              </Text>
+            </View>
+            <Text style={[styles.expenseAmount, { color: expenseColor }]}>
+              {formatCurrency(data?.monthlyExpense || 0)}
+            </Text>
+          </View>
+          <View style={styles.progressTrack}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${expenseRatio}%`, backgroundColor: expenseColor },
+              ]}
+            />
+          </View>
+          <View style={styles.progressLabels}>
+            <Text style={styles.progressLabel}>0</Text>
+            <Text style={styles.progressLabel}>{Math.round(expenseRatio)}%</Text>
+            <Text style={styles.progressLabel}>{formatCurrency(data?.monthlyBudget || 0)}</Text>
+          </View>
+        </View>
+
+        {/* Recent Transactions */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Últimos movimientos</Text>
+          {data?.recentTransactions && data.recentTransactions.length > 0 ? (
+            data.recentTransactions.slice(0, 5).map((tx, idx) => (
+              <View
+                key={tx.id || `tx-${idx}`}
+                style={[styles.txRow, idx === 0 && { marginTop: spacing.md }]}
+              >
+                <View
+                  style={[
+                    styles.txIcon,
+                    {
+                      backgroundColor:
+                        tx.type === 'income' ? colors.incomeLight : colors.expenseLight,
+                    },
+                  ]}
+                >
+                  <Text style={styles.txIconText}>{tx.type === 'income' ? '↑' : '↓'}</Text>
+                </View>
+                <View style={styles.txInfo}>
+                  <Text style={styles.txDescription}>{tx.description}</Text>
+                  <Text style={styles.txDate}>{new Date(tx.date).toLocaleDateString('es-ES')}</Text>
+                </View>
+                <Text
+                  style={[
+                    styles.txAmount,
+                    { color: tx.type === 'income' ? colors.income : colors.expense },
+                  ]}
+                >
+                  {tx.type === 'income' ? '+' : '-'}
+                  {formatCurrency(Math.abs(tx.amount))}
+                </Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.emptyText}>No hay movimientos recientes</Text>
+          )}
+        </View>
+
+        <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -146,159 +252,218 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.bg,
   },
   contentContainer: {
     paddingBottom: 20,
   },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
-    backgroundColor: '#fff',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.lg,
   },
   greeting: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#000',
+    ...typography.title,
+    marginBottom: spacing.xs,
   },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
+  dateText: {
+    ...typography.caption,
+    textTransform: 'capitalize',
   },
   netWorthCard: {
-    marginHorizontal: 20,
-    marginTop: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    backgroundColor: '#0066CC',
-    borderRadius: 12,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxl,
+    backgroundColor: colors.primary,
+    borderRadius: radius.xl,
+    ...shadow.md,
   },
   netWorthLabel: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '500',
+    marginBottom: spacing.sm,
   },
   netWorthAmount: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#fff',
-    marginVertical: 8,
+    fontSize: 38,
+    fontWeight: '800',
+    color: colors.white,
+    letterSpacing: -1,
+    marginBottom: spacing.lg,
   },
   variationRow: {
     flexDirection: 'row',
-    gap: 16,
+    gap: spacing.sm,
   },
-  variation: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  sparklineContainer: {
-    marginHorizontal: 20,
-    marginTop: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-  },
-  sparklineChart: {
-    height: 120,
-    justifyContent: 'center',
+  variationPill: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    marginTop: 12,
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 5,
+    borderRadius: radius.full,
   },
-  chartPlaceholder: {
-    fontSize: 24,
+  variationText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  card: {
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.lg,
+    padding: spacing.xl,
+    backgroundColor: colors.card,
+    borderRadius: radius.xl,
+    ...shadow.sm,
+  },
+  cardHeader: {
+    marginBottom: spacing.md,
   },
   section: {
-    marginHorizontal: 20,
-    marginTop: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    marginBottom: spacing.lg,
+  },
+  accountsSection: {
+    marginBottom: spacing.lg,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    ...typography.subheading,
+    marginBottom: spacing.sm,
+  },
+  chartArea: {
+    height: 80,
+    justifyContent: 'flex-end',
+    marginTop: spacing.md,
+  },
+  chartBars: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 4,
+    height: 80,
+  },
+  chartBar: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    borderRadius: 3,
   },
   accountCard: {
-    marginTop: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    marginRight: 8,
-    minWidth: 120,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    minWidth: 140,
+    ...shadow.sm,
+  },
+  accountDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    marginBottom: spacing.sm,
   },
   accountName: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '500',
+    marginBottom: 4,
   },
   accountBalance: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 4,
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
   },
   expenseHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
   },
   expenseAmount: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#0066CC',
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
-  progressBar: {
-    height: 8,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 4,
-    marginTop: 12,
+  budgetText: {
+    ...typography.caption,
+    marginTop: 2,
+  },
+  progressTrack: {
+    height: 6,
+    backgroundColor: colors.border,
+    borderRadius: radius.full,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#10B981',
-    borderRadius: 4,
+    borderRadius: radius.full,
   },
-  budgetText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 8,
-  },
-  transactionItem: {
+  progressLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    marginTop: spacing.xs,
   },
-  transactionInfo: {
+  progressLabel: {
+    fontSize: 10,
+    color: colors.textTertiary,
+    fontWeight: '500',
+  },
+  txRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    gap: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  txIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  txIconText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  txInfo: {
     flex: 1,
   },
-  transactionDescription: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#000',
-  },
-  transactionDate: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-  },
-  transactionAmount: {
-    fontSize: 14,
+  txDescription: {
+    fontSize: 15,
     fontWeight: '600',
+    color: colors.text,
+  },
+  txDate: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  txAmount: {
+    fontSize: 15,
+    fontWeight: '700',
   },
   emptyText: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textTertiary,
     textAlign: 'center',
-    paddingVertical: 20,
+    paddingVertical: spacing.xl,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xxxl,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  errorSubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
 });
