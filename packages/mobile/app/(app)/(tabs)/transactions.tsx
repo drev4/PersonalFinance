@@ -42,11 +42,11 @@ const SwipeableRow = memo(({
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
+      // When row is already open, grab the touch immediately before TouchableOpacity claims it
+      onStartShouldSetPanResponder: () => offset.current !== 0,
       onMoveShouldSetPanResponder: (_, gs) => {
         if (Math.abs(gs.dy) > Math.abs(gs.dx)) return false;
-        // Accept left-swipe from closed, or right-swipe when already open
-        return gs.dx < -8 || (offset.current < 0 && gs.dx > 8);
+        return gs.dx < -8;
       },
       onPanResponderMove: (_, gs) => {
         const next = Math.max(-SWIPE_DELETE_WIDTH, Math.min(0, offset.current + gs.dx));
