@@ -18,7 +18,7 @@ import {
   User,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
-import { useLogout } from '../../hooks/useAuth';
+import { useLogout, useMe } from '../../hooks/useAuth';
 import { usePrefetchAccounts, usePrefetchTransactions } from '../../hooks/usePrefetch';
 import { Button } from '../ui/button';
 import { LanguageSelector } from '../ui/language-selector';
@@ -231,6 +231,7 @@ function Sidebar({ open, onClose }: SidebarProps): React.ReactElement {
 
 export default function AppLayout(): React.ReactElement {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  useMe(); // Sincroniza baseCurrency, locale y otros cambios de perfil hechos desde mobile
 
   return (
     <div className="flex h-screen bg-gray-50">
