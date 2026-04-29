@@ -22,7 +22,7 @@ interface QuickAddModalProps {
   onClose: () => void;
 }
 
-type TransactionType = 'income' | 'expense';
+type TransactionType = 'income' | 'expense' | 'transfer';
 
 export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
   const [type, setType] = useState<TransactionType>('expense');
@@ -31,8 +31,10 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+  const [selectedAccountIdTo, setSelectedAccountIdTo] = useState<string>('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [showAccountPickerTo, setShowAccountPickerTo] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -51,18 +53,22 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
     if (accounts.length > 0 && !selectedAccountId) {
       setSelectedAccountId(accounts[0]._id);
     }
+    if (accounts.length > 1 && !selectedAccountIdTo) {
+      setSelectedAccountIdTo(accounts[1]._id);
+    }
   }, [accounts]);
 
   useEffect(() => {
     const filteredCategories = categories.filter((cat) => cat.type === type && cat.isActive !== false);
     if (filteredCategories.length > 0) {
-      setSelectedCategoryId(filteredCategories[0].id);
+      setSelectedCategoryId(filteredCategories[0]._id);
     }
   }, [type, categories]);
 
   const handleTypeSelect = (newType: TransactionType) => {
     setType(newType);
     setSelectedCategoryId('');
+    setShowAccountPickerTo(false);
   };
 
   const filteredCategories = categories.filter(
@@ -70,7 +76,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
   );
 
   const selectedAccount = accounts.find((acc) => acc._id === selectedAccountId);
-  const selectedCategory = categories.find((cat) => cat.id === selectedCategoryId);
+  const selectedCategory = categories.find((cat) => cat._id === selectedCategoryId);
 
   const handleSubmit = async () => {
     if (!amount || !selectedAccountId || !description) {
@@ -78,9 +84,16 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
       return;
     }
 
-    if (!selectedCategoryId) {
-      Alert.alert('Error', 'Por favor selecciona una categoría');
-      return;
+    if (type === 'transfer') {
+      if (!selectedAccountIdTo) {
+        Alert.alert('Error', 'Por favor selecciona una cuenta de destino');
+        return;
+      }
+    } else {
+      if (!selectedCategoryId) {
+        Alert.alert('Error', 'Por favor selecciona una categoría');
+        return;
+      }
     }
 
     const amountInCents = Math.round(parseFloat(amount) * 100);
@@ -93,7 +106,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
         currency: selectedAccount?.currency || 'EUR',
         date,
         description,
-        categoryId: selectedCategoryId,
+        categoryId: type === 'transfer' ? selectedAccountIdTo : selectedCategoryId,
         notes: notes || undefined,
       },
       {
@@ -108,21 +121,12 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
     );
   };
 
-  const isValid = amount && selectedAccountId && description && selectedCategoryId;
-
-  // Debug: log validation state
-  useEffect(() => {
-    console.log('QuickAdd Validation:', {
-      amount: `"${amount}"`,
-      selectedAccountId: `"${selectedAccountId}"`,
-      description: `"${description}"`,
-      selectedCategoryId: `"${selectedCategoryId}"`,
-      isValid,
-    });
-  }, [amount, selectedAccountId, description, selectedCategoryId, isValid]);
+  const isValid =
+    amount && selectedAccountId && description &&
+    (type === 'transfer' ? selectedAccountIdTo : selectedCategoryId);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <Text style={styles.title}>Quick Add</Text>
         <TouchableOpacity onPress={handleClose}>
@@ -235,6 +239,52 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
         )}
       </View>
 
+      {/* Destination Account Selector (only for transfer) */}
+      {type === 'transfer' && (
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Cuenta Destino</Text>
+          <TouchableOpacity
+            style={styles.selectorButton}
+            onPress={() => setShowAccountPickerTo(!showAccountPickerTo)}
+          >
+            <Text style={styles.selectorButtonText}>
+              {accounts.find((acc) => acc._id === selectedAccountIdTo)?.name || 'Seleccionar cuenta'}
+            </Text>
+            <Text style={styles.selectorButtonValue}>
+              {accounts.find((acc) => acc._id === selectedAccountIdTo) &&
+                formatCurrency(accounts.find((acc) => acc._id === selectedAccountIdTo)?.currentBalance || 0)}
+            </Text>
+          </TouchableOpacity>
+
+          {showAccountPickerTo && (
+            <FlatList
+              data={accounts.filter((acc) => acc._id !== selectedAccountId)}
+              keyExtractor={(item) => item._id}
+              scrollEnabled={false}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.pickerItem,
+                    selectedAccountIdTo === item._id && styles.pickerItemSelected,
+                  ]}
+                  onPress={() => {
+                    setSelectedAccountIdTo(item._id);
+                    setShowAccountPickerTo(false);
+                  }}
+                >
+                  <View>
+                    <Text style={styles.pickerItemText}>{item.name}</Text>
+                    <Text style={styles.pickerItemSubtext}>
+                      {formatCurrency(item.currentBalance)}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
+          )}
+        </View>
+      )}
+
       {/* Category Selector (not for transfer) */}
       {type !== 'transfer' && (
         <View style={styles.section}>
@@ -251,16 +301,16 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
           {showCategoryPicker && (
             <FlatList
               data={filteredCategories}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => item._id}
               scrollEnabled={false}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[
                     styles.pickerItem,
-                    selectedCategoryId === item.id && styles.pickerItemSelected,
+                    selectedCategoryId === item._id && styles.pickerItemSelected,
                   ]}
                   onPress={() => {
-                    setSelectedCategoryId(item.id);
+                    setSelectedCategoryId(item._id);
                     setShowCategoryPicker(false);
                   }}
                 >

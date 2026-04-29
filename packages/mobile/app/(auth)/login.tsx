@@ -25,7 +25,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={{ paddingVertical: 20 }}>
         <Text style={styles.title}>Finanzas</Text>
         <Text style={styles.subtitle}>Manage your finances</Text>
