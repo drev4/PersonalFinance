@@ -29,7 +29,7 @@ export default function HomeScreen() {
 
   if (isLoading && !data) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <ScrollView contentContainerStyle={styles.contentContainer}>
         <View style={styles.header}>
           <Skeleton width="30%" height={16} marginBottom={8} />
@@ -45,7 +45,7 @@ export default function HomeScreen() {
   const getVariationColor = (change: number) => (change >= 0 ? '#10B981' : '#EF4444');
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
       >

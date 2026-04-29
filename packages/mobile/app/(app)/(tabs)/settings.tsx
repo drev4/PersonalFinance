@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useLogout } from '@/api/auth';
 import { useConfigStore } from '@/stores/configStore';
@@ -26,7 +27,8 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <ScrollView contentContainerStyle={styles.content}>
       <Text style={styles.title}>Ajustes</Text>
 
       <TouchableOpacity style={styles.button} onPress={handleLogout}>
@@ -57,7 +59,8 @@ export default function SettingsScreen() {
           <Text style={styles.debugInfo}>URL actual: {apiUrl}</Text>
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
