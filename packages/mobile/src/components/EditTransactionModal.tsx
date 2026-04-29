@@ -10,12 +10,16 @@ import {
   Alert,
   ScrollView,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type React from 'react';
-import { X, Calendar } from 'lucide-react-native';
+import { X, Calendar, ChevronLeft } from 'lucide-react-native';
 import { useUpdateTransaction, useCategories } from '@/api/transactions';
+import { radius, spacing, type ThemeColors, getShadow } from '@/theme';
+import { useTheme } from '@/theme/useTheme';
 import { DatePickerCalendar } from './DatePickerCalendar';
 import * as Haptics from 'expo-haptics';
 
@@ -25,13 +29,14 @@ interface EditTransactionModalProps {
   onClose: () => void;
 }
 
-type TransactionType = 'income' | 'expense';
-
 export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
   visible,
   transaction,
   onClose,
 }) => {
+  const { colors, shadow, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadow), [isDark]);
+
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
@@ -55,32 +60,31 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
       setNotes(transaction.notes || '');
       setDate(transaction.date);
       setSelectedCategoryId(transaction.categoryId || '');
+      setShowCategoryPicker(false);
+      setShowDatePicker(false);
     }
   }, [transaction, visible]);
 
   const filteredCategories = categories.filter(
-    (cat) =>
-      cat.type === transaction?.type && cat.isActive !== false,
+    (cat) => cat.type === transaction?.type && cat.isActive !== false,
   );
 
   const selectedCategory = categories.find((cat) => cat._id === selectedCategoryId);
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!amount || !description) {
       Alert.alert('Error', 'Por favor completa cantidad y descripción');
       return;
     }
-
     if (!selectedCategoryId) {
       Alert.alert('Error', 'Por favor selecciona una categoría');
       return;
     }
 
     const amountInCents = Math.round(parseFloat(amount) * 100);
-
     updateTransaction(
       {
-        id: transaction._id,
+        id: transaction._id || transaction.id,
         data: {
           amount: amountInCents,
           date,
@@ -104,277 +108,321 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
   const isValid = amount && description && selectedCategoryId;
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      onRequestClose={handleClose}
-    >
-      <SafeAreaView style={styles.container}>
-        <View style={styles.statusBarSpace} />
+    <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
+        {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Editar</Text>
-          <TouchableOpacity
-            onPress={handleClose}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <X size={24} color="#000" />
+          <TouchableOpacity onPress={handleClose} style={styles.backButton} hitSlop={8}>
+            <ChevronLeft size={20} color={colors.text} />
           </TouchableOpacity>
+          <Text style={styles.title}>Editar transacción</Text>
+          <View style={{ width: 36 }} />
         </View>
 
-        <ScrollView scrollEnabled={true} keyboardShouldPersistTaps="handled" style={styles.scrollView}>
-          {/* Amount Input */}
-          <View style={styles.amountSection}>
-            <Text style={styles.sectionLabel}>Cantidad</Text>
-            <View style={styles.amountInputContainer}>
-              <Text style={styles.currencySymbol}>€</Text>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Amount */}
+            <View style={styles.card}>
+              <Text style={styles.fieldLabel}>Cantidad</Text>
+              <View style={styles.amountRow}>
+                <Text style={styles.currencySymbol}>€</Text>
+                <TextInput
+                  style={styles.amountInput}
+                  placeholder="0.00"
+                  placeholderTextColor={colors.textTertiary}
+                  value={amount}
+                  onChangeText={setAmount}
+                  keyboardType="decimal-pad"
+                  selectionColor={colors.primary}
+                />
+              </View>
+            </View>
+
+            {/* Description */}
+            <View style={styles.card}>
+              <Text style={styles.fieldLabel}>Descripción</Text>
               <TextInput
-                style={styles.amountInput}
-                placeholder="0.00"
-                placeholderTextColor="#ccc"
-                value={amount}
-                onChangeText={setAmount}
-                keyboardType="decimal-pad"
+                style={styles.input}
+                placeholder="Descripción de la transacción"
+                placeholderTextColor={colors.textTertiary}
+                value={description}
+                onChangeText={setDescription}
+                selectionColor={colors.primary}
               />
             </View>
-          </View>
 
-          {/* Category Selector */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Categoría</Text>
-            <TouchableOpacity
-              style={styles.selectorButton}
-              onPress={() => setShowCategoryPicker(!showCategoryPicker)}
-            >
-              <Text style={styles.selectorButtonText}>
-                {selectedCategory?.name || 'Seleccionar categoría'}
-              </Text>
-            </TouchableOpacity>
+            {/* Category */}
+            <View style={styles.card}>
+              <Text style={styles.fieldLabel}>Categoría</Text>
+              <TouchableOpacity
+                style={styles.selectorBtn}
+                onPress={() => setShowCategoryPicker(!showCategoryPicker)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.selectorText, !selectedCategory && styles.placeholderText]}>
+                  {selectedCategory?.name || 'Seleccionar categoría'}
+                </Text>
+                <Text style={styles.selectorChevron}>{showCategoryPicker ? '▲' : '▼'}</Text>
+              </TouchableOpacity>
 
-            {showCategoryPicker && (
-              <FlatList
-                data={filteredCategories}
-                keyExtractor={(item) => item._id}
-                scrollEnabled={false}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[
-                      styles.pickerItem,
-                      selectedCategoryId === item._id && styles.pickerItemSelected,
-                    ]}
-                    onPress={() => {
-                      setSelectedCategoryId(item._id);
-                      setShowCategoryPicker(false);
+              {showCategoryPicker && (
+                <View style={styles.pickerList}>
+                  <FlatList
+                    data={filteredCategories}
+                    keyExtractor={(item) => item._id}
+                    scrollEnabled={false}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={[
+                          styles.pickerItem,
+                          selectedCategoryId === item._id && styles.pickerItemSelected,
+                        ]}
+                        onPress={() => {
+                          setSelectedCategoryId(item._id);
+                          setShowCategoryPicker(false);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        {item.color && (
+                          <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
+                        )}
+                        <Text
+                          style={[
+                            styles.pickerItemText,
+                            selectedCategoryId === item._id && styles.pickerItemTextSelected,
+                          ]}
+                        >
+                          {item.name}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  />
+                </View>
+              )}
+            </View>
+
+            {/* Date */}
+            <View style={styles.card}>
+              <Text style={styles.fieldLabel}>Fecha</Text>
+              <TouchableOpacity
+                style={styles.selectorBtn}
+                onPress={() => setShowDatePicker(!showDatePicker)}
+                activeOpacity={0.7}
+              >
+                <Calendar size={16} color={colors.primary} />
+                <Text style={styles.selectorText}>{date}</Text>
+              </TouchableOpacity>
+
+              {showDatePicker && (
+                <View style={styles.calendarWrap}>
+                  <DatePickerCalendar
+                    selectedDate={date}
+                    onDateSelect={(newDate) => {
+                      setDate(newDate);
+                      setShowDatePicker(false);
                     }}
-                  >
-                    <Text style={styles.pickerItemText}>{item.name}</Text>
-                  </TouchableOpacity>
-                )}
+                    colors={colors}
+                  />
+                </View>
+              )}
+            </View>
+
+            {/* Notes */}
+            <View style={styles.card}>
+              <Text style={styles.fieldLabel}>Notas</Text>
+              <TextInput
+                style={[styles.input, styles.notesInput]}
+                placeholder="Notas adicionales (opcional)"
+                placeholderTextColor={colors.textTertiary}
+                value={notes}
+                onChangeText={setNotes}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                selectionColor={colors.primary}
               />
-            )}
-          </View>
+            </View>
 
-          {/* Description Input */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Descripción</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Descripción"
-              placeholderTextColor="#ccc"
-              value={description}
-              onChangeText={setDescription}
-            />
-          </View>
-
-          {/* Date Picker */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Fecha</Text>
+            {/* Submit */}
             <TouchableOpacity
-              style={styles.dateButton}
-              onPress={() => setShowDatePicker(!showDatePicker)}
+              style={[styles.submitBtn, !isValid && styles.submitBtnDisabled]}
+              onPress={handleSubmit}
+              disabled={!isValid || isPending}
+              activeOpacity={0.8}
             >
-              <Calendar size={18} color="#0066CC" />
-              <Text style={styles.dateButtonText}>{date}</Text>
+              {isPending ? (
+                <ActivityIndicator color={colors.white} />
+              ) : (
+                <Text style={styles.submitText}>Guardar cambios</Text>
+              )}
             </TouchableOpacity>
-
-            {showDatePicker && (
-              <DatePickerCalendar
-                selectedDate={date}
-                onDateSelect={(newDate) => {
-                  setDate(newDate);
-                  setShowDatePicker(false);
-                }}
-              />
-            )}
-          </View>
-
-          {/* Notes Input */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Notas</Text>
-            <TextInput
-              style={[styles.input, styles.notesInput]}
-              placeholder="Notas adicionales (opcional)"
-              placeholderTextColor="#ccc"
-              value={notes}
-              onChangeText={setNotes}
-              multiline
-              numberOfLines={3}
-            />
-          </View>
-
-          {/* Submit Button */}
-          <TouchableOpacity
-            style={[styles.submitButton, !isValid && styles.submitButtonDisabled]}
-            onPress={handleSubmit}
-            disabled={!isValid || isPending}
-          >
-            {isPending ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.submitButtonText}>Guardar cambios</Text>
-            )}
-          </TouchableOpacity>
-        </ScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  statusBarSpace: {
-    height: 12,
-    backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    paddingTop: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff',
-  },
-  scrollView: {
-    paddingHorizontal: 16,
-    backgroundColor: '#fff',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-  },
-  amountSection: {
-    marginBottom: 24,
-    marginTop: 16,
-  },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-  },
-  amountInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#fafafa',
-  },
-  currencySymbol: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#0066CC',
-  },
-  amountInput: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#000',
-  },
-  section: {
-    marginBottom: 16,
-  },
-  selectorButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#fafafa',
-  },
-  selectorButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#000',
-  },
-  pickerItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  pickerItemSelected: {
-    backgroundColor: '#f0f8ff',
-  },
-  pickerItemText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#000',
-  },
-  input: {
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#fafafa',
-    fontSize: 14,
-    color: '#000',
-  },
-  notesInput: {
-    textAlignVertical: 'top',
-    paddingTop: 12,
-  },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#fafafa',
-    gap: 8,
-  },
-  dateButtonText: {
-    fontSize: 14,
-    color: '#000',
-  },
-  submitButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: '#0066CC',
-    borderRadius: 8,
-    marginTop: 24,
-    marginBottom: 24,
-  },
-  submitButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-    textAlign: 'center',
-  },
-});
+function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      backgroundColor: colors.bg,
+    },
+    backButton: {
+      width: 36,
+      height: 36,
+      borderRadius: radius.sm,
+      backgroundColor: colors.card,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...shadow.sm,
+    },
+    title: {
+      fontSize: 17,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: spacing.xl,
+      gap: spacing.md,
+      paddingBottom: spacing.xxxl,
+    },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: radius.lg,
+      padding: spacing.lg,
+      gap: spacing.sm,
+      ...shadow.sm,
+    },
+    fieldLabel: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.textTertiary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    amountRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    currencySymbol: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+    amountInput: {
+      flex: 1,
+      fontSize: 28,
+      fontWeight: '700',
+      color: colors.text,
+      paddingVertical: spacing.xs,
+    },
+    input: {
+      fontSize: 15,
+      color: colors.text,
+      paddingVertical: spacing.xs,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    notesInput: {
+      minHeight: 72,
+      paddingTop: spacing.xs,
+    },
+    selectorBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    selectorText: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: '500',
+      color: colors.text,
+    },
+    placeholderText: {
+      color: colors.textTertiary,
+    },
+    selectorChevron: {
+      fontSize: 10,
+      color: colors.textTertiary,
+    },
+    pickerList: {
+      marginTop: spacing.sm,
+      borderRadius: radius.sm,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    pickerItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      backgroundColor: colors.card,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    pickerItemSelected: {
+      backgroundColor: colors.primaryLight,
+    },
+    categoryDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+    },
+    pickerItemText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.text,
+    },
+    pickerItemTextSelected: {
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    calendarWrap: {
+      marginTop: spacing.sm,
+    },
+    submitBtn: {
+      paddingVertical: 16,
+      backgroundColor: colors.primary,
+      borderRadius: radius.lg,
+      alignItems: 'center',
+      marginTop: spacing.sm,
+    },
+    submitBtnDisabled: {
+      backgroundColor: colors.textTertiary,
+    },
+    submitText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.white,
+    },
+  });
+}
