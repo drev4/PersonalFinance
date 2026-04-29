@@ -13,7 +13,8 @@ import { ChevronDown, ChevronUp, ChevronLeft } from 'lucide-react-native';
 import { useState, useMemo } from 'react';
 import { useTransactions, useAccounts, useCategories } from '@/api/transactions';
 import { formatCurrency, formatDate } from '@/lib/formatters';
-import { colors, radius, spacing, typography, shadow } from '@/theme';
+import { radius, spacing, type ThemeColors, getShadow } from '@/theme';
+import { useTheme } from '@/theme/useTheme';
 
 function getMonthRange() {
   const today = new Date();
@@ -39,22 +40,23 @@ interface Transaction {
   date: string;
   description: string;
   categoryId?: string;
+  transferToAccountId?: string;
   tags?: string[];
   notes?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-function getTypeColor(type: string) {
-  if (type === 'income') return colors.income;
-  if (type === 'expense') return colors.expense;
-  return colors.transfer;
+function getTypeColor(type: string, c: ThemeColors) {
+  if (type === 'income') return c.income;
+  if (type === 'expense') return c.expense;
+  return c.transfer;
 }
 
-function getTypeBg(type: string) {
-  if (type === 'income') return colors.incomeLight;
-  if (type === 'expense') return colors.expenseLight;
-  return colors.transferLight;
+function getTypeBg(type: string, c: ThemeColors) {
+  if (type === 'income') return c.incomeLight;
+  if (type === 'expense') return c.expenseLight;
+  return c.transferLight;
 }
 
 function getTypeLabel(type: string) {
@@ -72,6 +74,9 @@ export default function TransactionsScreen() {
   const [type, setType] = useState('');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+
+  const { colors, shadow, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadow), [isDark]);
 
   const { data: accountsData = [] } = useAccounts();
   const { data: categoriesData = [] } = useCategories();
@@ -221,8 +226,8 @@ export default function TransactionsScreen() {
                 setDetailModalVisible(true);
               }}
             >
-              <View style={[styles.txIconWrap, { backgroundColor: getTypeBg(item.type) }]}>
-                <Text style={[styles.txIconText, { color: getTypeColor(item.type) }]}>
+              <View style={[styles.txIconWrap, { backgroundColor: getTypeBg(item.type, colors) }]}>
+                <Text style={[styles.txIconText, { color: getTypeColor(item.type, colors) }]}>
                   {getTypeLabel(item.type)}
                 </Text>
               </View>
@@ -250,7 +255,7 @@ export default function TransactionsScreen() {
                     </Text>
                   </View>
                 )}
-                <Text style={[styles.txAmount, { color: getTypeColor(item.type) }]}>
+                <Text style={[styles.txAmount, { color: getTypeColor(item.type, colors) }]}>
                   {item.type === 'expense' ? '-' : '+'}
                   {formatCurrency(item.amount, item.currency)}
                 </Text>
@@ -286,13 +291,13 @@ export default function TransactionsScreen() {
                   <View
                     style={[
                       styles.amountHeroIcon,
-                      { backgroundColor: getTypeBg(selectedTransaction.type) },
+                      { backgroundColor: getTypeBg(selectedTransaction.type, colors) },
                     ]}
                   >
                     <Text
                       style={[
                         styles.amountHeroIconText,
-                        { color: getTypeColor(selectedTransaction.type) },
+                        { color: getTypeColor(selectedTransaction.type, colors) },
                       ]}
                     >
                       {getTypeLabel(selectedTransaction.type)}
@@ -302,7 +307,7 @@ export default function TransactionsScreen() {
                   <Text
                     style={[
                       styles.amountHeroValue,
-                      { color: getTypeColor(selectedTransaction.type) },
+                      { color: getTypeColor(selectedTransaction.type, colors) },
                     ]}
                   >
                     {selectedTransaction.type === 'expense' ? '-' : '+'}
@@ -330,7 +335,7 @@ export default function TransactionsScreen() {
                       (a) => a._id === selectedTransaction.accountId,
                     );
                     const destAccount = isTransfer
-                      ? accountsData.find((a) => a._id === selectedTransaction.categoryId)
+                      ? accountsData.find((a) => a._id === selectedTransaction.transferToAccountId)
                       : null;
                     return (
                       <>
@@ -427,249 +432,258 @@ export default function TransactionsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  header: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.md,
-  },
-  title: {
-    ...typography.title,
-  },
-  subtitle: {
-    ...typography.caption,
-    marginTop: 4,
-  },
-  filtersPanel: {
-    backgroundColor: colors.bg,
-    paddingBottom: spacing.sm,
-  },
-  filtersToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-  },
-  filtersLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  filtersLabelActive: {
-    color: colors.primary,
-  },
-  filterChips: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.sm,
-    gap: spacing.sm,
-  },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
-    backgroundColor: colors.card,
-    borderRadius: radius.full,
-    ...shadow.sm,
-  },
-  chipActive: {
-    backgroundColor: colors.primaryLight,
-  },
-  chipLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textTertiary,
-    textTransform: 'uppercase',
-    marginBottom: 2,
-  },
-  chipLabelActive: {
-    color: colors.primary,
-  },
-  chipValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  chipValueActive: {
-    color: colors.primary,
-  },
-  chipClear: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
-    backgroundColor: colors.expenseLight,
-    borderRadius: radius.full,
-    justifyContent: 'center',
-  },
-  chipClearText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.expense,
-  },
-  listContent: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: 100,
-  },
-  txRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: spacing.md,
-  },
-  txIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  txIconText: {
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  txInfo: {
-    flex: 1,
-  },
-  txDate: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginBottom: 3,
-  },
-  txDescription: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  txRight: {
-    alignItems: 'flex-end',
-    gap: 6,
-  },
-  categoryPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: radius.full,
-  },
-  categoryPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  txAmount: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xxxl,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  modalSafe: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  modalNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.sm,
-    backgroundColor: colors.card,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...shadow.sm,
-  },
-  modalNavTitle: {
-    ...typography.subheading,
-  },
-  modalContent: {
-    flex: 1,
-    padding: spacing.xl,
-  },
-  amountHero: {
-    alignItems: 'center',
-    paddingVertical: spacing.xxl,
-    marginBottom: spacing.xl,
-  },
-  amountHeroIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.xl,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  amountHeroIconText: {
-    fontSize: 28,
-    fontWeight: '800',
-  },
-  amountHeroLabel: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    fontWeight: '500',
-    marginBottom: spacing.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  amountHeroValue: {
-    fontSize: 44,
-    fontWeight: '800',
-    letterSpacing: -1,
-  },
-  detailCard: {
-    backgroundColor: colors.card,
-    borderRadius: radius.xl,
-    padding: spacing.xl,
-    ...shadow.sm,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  detailDivider: {
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  detailLabel: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  detailValue: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  detailSub: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 2,
-    textAlign: 'right',
-  },
-  detailRight: {
-    alignItems: 'flex-end',
-  },
-});
+function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    header: {
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.md,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: '700',
+      letterSpacing: -0.3,
+      color: colors.text,
+    },
+    subtitle: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.textSecondary,
+      marginTop: 4,
+    },
+    filtersPanel: {
+      backgroundColor: colors.bg,
+      paddingBottom: spacing.sm,
+    },
+    filtersToggle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.sm,
+    },
+    filtersLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    filtersLabelActive: {
+      color: colors.primary,
+    },
+    filterChips: {
+      paddingHorizontal: spacing.xl,
+      paddingBottom: spacing.sm,
+      gap: spacing.sm,
+    },
+    chip: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: 8,
+      backgroundColor: colors.card,
+      borderRadius: radius.full,
+      ...shadow.sm,
+    },
+    chipActive: {
+      backgroundColor: colors.primaryLight,
+    },
+    chipLabel: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: colors.textTertiary,
+      textTransform: 'uppercase',
+      marginBottom: 2,
+    },
+    chipLabelActive: {
+      color: colors.primary,
+    },
+    chipValue: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    chipValueActive: {
+      color: colors.primary,
+    },
+    chipClear: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: 8,
+      backgroundColor: colors.expenseLight,
+      borderRadius: radius.full,
+      justifyContent: 'center',
+    },
+    chipClearText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.expense,
+    },
+    listContent: {
+      paddingHorizontal: spacing.xl,
+      paddingBottom: 100,
+    },
+    txRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      gap: spacing.md,
+    },
+    txIconWrap: {
+      width: 40,
+      height: 40,
+      borderRadius: radius.sm,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    txIconText: {
+      fontSize: 18,
+      fontWeight: '800',
+    },
+    txInfo: {
+      flex: 1,
+    },
+    txDate: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginBottom: 3,
+    },
+    txDescription: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    txRight: {
+      alignItems: 'flex-end',
+      gap: 6,
+    },
+    categoryPill: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: radius.full,
+    },
+    categoryPillText: {
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    txAmount: {
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    centerContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: spacing.xxxl,
+    },
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: spacing.sm,
+    },
+    emptySubtitle: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    modalSafe: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    modalNav: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+    },
+    backButton: {
+      width: 36,
+      height: 36,
+      borderRadius: radius.sm,
+      backgroundColor: colors.card,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...shadow.sm,
+    },
+    modalNavTitle: {
+      fontSize: 17,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    modalContent: {
+      flex: 1,
+      padding: spacing.xl,
+    },
+    amountHero: {
+      alignItems: 'center',
+      paddingVertical: spacing.xxl,
+      marginBottom: spacing.xl,
+    },
+    amountHeroIcon: {
+      width: 64,
+      height: 64,
+      borderRadius: radius.xl,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    amountHeroIconText: {
+      fontSize: 28,
+      fontWeight: '800',
+    },
+    amountHeroLabel: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      fontWeight: '500',
+      marginBottom: spacing.xs,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    amountHeroValue: {
+      fontSize: 44,
+      fontWeight: '800',
+      letterSpacing: -1,
+    },
+    detailCard: {
+      backgroundColor: colors.card,
+      borderRadius: radius.xl,
+      padding: spacing.xl,
+      ...shadow.sm,
+    },
+    detailRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+    },
+    detailDivider: {
+      height: 1,
+      backgroundColor: colors.border,
+    },
+    detailLabel: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      fontWeight: '500',
+      textTransform: 'uppercase',
+      letterSpacing: 0.3,
+    },
+    detailValue: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    detailSub: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
+      textAlign: 'right',
+    },
+    detailRight: {
+      alignItems: 'flex-end',
+    },
+  });
+}

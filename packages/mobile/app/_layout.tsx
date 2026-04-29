@@ -6,6 +6,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
 import { useAuthStore } from '@/stores/authStore';
 import { useConnectivityMonitor } from '@/stores/connectivityStore';
+import { useLoadConfig } from '@/stores/configStore';
 
 function RootLayoutNav() {
   const router = useRouter();
@@ -19,6 +20,7 @@ function RootLayoutNav() {
   const setIsLoading = useAuthStore((state) => state.setIsLoading);
 
   useConnectivityMonitor();
+  useLoadConfig();
 
   useEffect(() => {
     const initAuth = async () => {
