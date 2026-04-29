@@ -10,18 +10,18 @@ engineer is expected to follow.
 
 ## 1. OWASP Top 10 (2021) — Control Status
 
-| # | Risk | Status | Notes |
-|---|------|--------|-------|
-| A01 | Broken Access Control | Mitigated | Every route runs behind `requireAuth` (JWT). Repositories scope queries by `userId` to prevent IDOR. Ownership re-checked before updates/deletes (see `validateAccountOwnership`). |
-| A02 | Cryptographic Failures | Mitigated | AES-256-GCM for sensitive payloads (`utils/crypto.ts`). JWTs signed with distinct secrets per token type; bcrypt cost 12 for password hashing. HSTS with preload enabled. |
-| A03 | Injection | Mitigated | Mongoose schemas cast all inputs. `$regex` values passed through `escapeRegex()`. `__proto__`/`constructor`/`prototype` stripped from every request body by the `sanitize-plugin` preValidation hook. |
-| A04 | Insecure Design | Mitigated | Rate-limit tiers per risk (auth, heavy, search, global). Refresh-token rotation with whitelist+blacklist in Redis. Email-enumeration defended by constant-time responses in login/forgot-password. |
-| A05 | Security Misconfiguration | Mitigated | Helmet CSP strict (`default-src 'self'`). Production env boot guard rejects short/default secrets and missing `FRONTEND_URL`. CORS whitelist resolved at boot per `NODE_ENV`. |
-| A06 | Vulnerable & Outdated Components | Monitored | `pnpm audit --prod` runs in CI (see §4). Renovate/Dependabot PRs require green tests before merge. |
-| A07 | Identification & Auth Failures | Mitigated | `safeCompare()` for all token/hash checks (timing-safe). Account lockout enforced via IP-level ban after 3 bursts on auth routes. 2FA available; secrets stored encrypted with AES-GCM. |
-| A08 | Software & Data Integrity Failures | Mitigated | Lock-file committed (`pnpm-lock.yaml`). CI verifies integrity on install. No dynamic `eval`/`Function` usage. Webhooks validated via HMAC. |
-| A09 | Security Logging & Monitoring | Mitigated | `utils/logger.ts` with pino redaction of passwords, tokens, API secrets, 2FA codes, encryption IVs. Audit log retained 365 days (TTL). Access/error logs shipped via Fastify logger. |
-| A10 | Server-Side Request Forgery (SSRF) | Mitigated | Outbound HTTP limited to vetted integrations (CoinMarketCap, Finnhub, Binance, Plaid). No user-supplied URLs are fetched server-side. |
+| #   | Risk                               | Status    | Notes                                                                                                                                                                                                 |
+| --- | ---------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A01 | Broken Access Control              | Mitigated | Every route runs behind `requireAuth` (JWT). Repositories scope queries by `userId` to prevent IDOR. Ownership re-checked before updates/deletes (see `validateAccountOwnership`).                    |
+| A02 | Cryptographic Failures             | Mitigated | AES-256-GCM for sensitive payloads (`utils/crypto.ts`). JWTs signed with distinct secrets per token type; bcrypt cost 12 for password hashing. HSTS with preload enabled.                             |
+| A03 | Injection                          | Mitigated | Mongoose schemas cast all inputs. `$regex` values passed through `escapeRegex()`. `__proto__`/`constructor`/`prototype` stripped from every request body by the `sanitize-plugin` preValidation hook. |
+| A04 | Insecure Design                    | Mitigated | Rate-limit tiers per risk (auth, heavy, search, global). Refresh-token rotation with whitelist+blacklist in Redis. Email-enumeration defended by constant-time responses in login/forgot-password.    |
+| A05 | Security Misconfiguration          | Mitigated | Helmet CSP strict (`default-src 'self'`). Production env boot guard rejects short/default secrets and missing `FRONTEND_URL`. CORS whitelist resolved at boot per `NODE_ENV`.                         |
+| A06 | Vulnerable & Outdated Components   | Monitored | `pnpm audit --prod` runs in CI (see §4). Renovate/Dependabot PRs require green tests before merge.                                                                                                    |
+| A07 | Identification & Auth Failures     | Mitigated | `safeCompare()` for all token/hash checks (timing-safe). Account lockout enforced via IP-level ban after 3 bursts on auth routes. 2FA available; secrets stored encrypted with AES-GCM.               |
+| A08 | Software & Data Integrity Failures | Mitigated | Lock-file committed (`pnpm-lock.yaml`). CI verifies integrity on install. No dynamic `eval`/`Function` usage. Webhooks validated via HMAC.                                                            |
+| A09 | Security Logging & Monitoring      | Mitigated | `utils/logger.ts` with pino redaction of passwords, tokens, API secrets, 2FA codes, encryption IVs. Audit log retained 365 days (TTL). Access/error logs shipped via Fastify logger.                  |
+| A10 | Server-Side Request Forgery (SSRF) | Mitigated | Outbound HTTP limited to vetted integrations (CoinMarketCap, Finnhub, Binance, Plaid). No user-supplied URLs are fetched server-side.                                                                 |
 
 ---
 
@@ -29,15 +29,15 @@ engineer is expected to follow.
 
 ### 2.1 Inventory
 
-| Secret | Purpose | Min length (prod) | Rotation SLA |
-|--------|---------|-------------------|--------------|
-| `JWT_SECRET` | Signs access tokens | 64 chars | 90 days |
-| `JWT_REFRESH_SECRET` | Signs refresh tokens | 64 chars | 90 days |
-| `ENCRYPTION_KEY` | AES-256-GCM key for integrations / 2FA secrets | 64 hex chars (32 bytes) | 180 days or on suspected leak |
-| `BINANCE_API_KEY` / `_SECRET` | Exchange integration | Provider default | On rotation by provider |
-| `CMC_API_KEY` | Crypto prices | Provider default | On rotation by provider |
-| `FINNHUB_API_KEY` | Stock quotes | Provider default | On rotation by provider |
-| `PLAID_CLIENT_ID` / `PLAID_SECRET` | Bank linking | Provider default | On rotation by provider |
+| Secret                             | Purpose                                        | Min length (prod)       | Rotation SLA                  |
+| ---------------------------------- | ---------------------------------------------- | ----------------------- | ----------------------------- |
+| `JWT_SECRET`                       | Signs access tokens                            | 64 chars                | 90 days                       |
+| `JWT_REFRESH_SECRET`               | Signs refresh tokens                           | 64 chars                | 90 days                       |
+| `ENCRYPTION_KEY`                   | AES-256-GCM key for integrations / 2FA secrets | 64 hex chars (32 bytes) | 180 days or on suspected leak |
+| `BINANCE_API_KEY` / `_SECRET`      | Exchange integration                           | Provider default        | On rotation by provider       |
+| `CMC_API_KEY`                      | Crypto prices                                  | Provider default        | On rotation by provider       |
+| `FINNHUB_API_KEY`                  | Stock quotes                                   | Provider default        | On rotation by provider       |
+| `PLAID_CLIENT_ID` / `PLAID_SECRET` | Bank linking                                   | Provider default        | On rotation by provider       |
 
 ### 2.2 Procedure
 
@@ -101,15 +101,15 @@ website). A first response is guaranteed within **48 hours**, a triage within
 
 ## 4. Log & Data Retention
 
-| Collection | Retention | Mechanism |
-|------------|-----------|-----------|
-| `auditLog` | 90 days | Mongo TTL index on `createdAt` (`auditLog.model.ts`) |
-| `notification` | 90 days | Mongo TTL index on `createdAt` |
-| Access logs (stdout → log aggregator) | 90 days | Aggregator retention policy |
-| Error logs | 180 days | Aggregator retention policy |
-| Metrics | 400 days | Prometheus retention |
+| Collection                            | Retention | Mechanism                                            |
+| ------------------------------------- | --------- | ---------------------------------------------------- |
+| `auditLog`                            | 90 days   | Mongo TTL index on `createdAt` (`auditLog.model.ts`) |
+| `notification`                        | 90 days   | Mongo TTL index on `createdAt`                       |
+| Access logs (stdout → log aggregator) | 90 days   | Aggregator retention policy                          |
+| Error logs                            | 180 days  | Aggregator retention policy                          |
+| Metrics                               | 400 days  | Prometheus retention                                 |
 
-**Note:** The 90-day TTL is the *default* retention. Deployments subject to
+**Note:** The 90-day TTL is the _default_ retention. Deployments subject to
 local legal requirements (e.g. Spanish AEPD / PSD2 may require up to 5 years
 for financial-transaction audit trails) must raise the value in
 `auditLog.model.ts` and drop the existing `createdAt_1` index before the new

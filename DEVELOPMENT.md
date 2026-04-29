@@ -20,15 +20,18 @@ cp packages/api/.env.example packages/api/.env
 ## Iniciar el Desarrollo
 
 ### Opción 1: Ejecutar todo en paralelo
+
 ```bash
 pnpm dev
 ```
 
 Esto ejecutará simultáneamente:
+
 - API en http://localhost:3001
 - Web en http://localhost:5173
 
 ### Opción 2: Ejecutar servicios individuales
+
 ```bash
 # Terminal 1 - Backend
 pnpm --filter @finanzas/api dev
@@ -79,6 +82,7 @@ finanzas-app/
 ### Crear un nuevo Endpoint API
 
 1. **Define el schema en shared:**
+
    ```typescript
    // packages/shared/src/schemas/myEntity.schema.ts
    import { z } from 'zod';
@@ -93,11 +97,13 @@ finanzas-app/
    ```
 
 2. **Exporta desde shared/src/index.ts:**
+
    ```typescript
    export { MyEntitySchema, type MyEntity } from './schemas/myEntity.schema';
    ```
 
 3. **Crea la ruta en el API:**
+
    ```typescript
    // packages/api/src/routes/myEntity.routes.ts
    import { FastifyInstance } from 'fastify';
@@ -112,6 +118,7 @@ finanzas-app/
    ```
 
 4. **Registra la ruta en server.ts:**
+
    ```typescript
    import { registerMyEntityRoutes } from './routes/myEntity.routes.js';
 
@@ -187,18 +194,21 @@ pnpm list --depth=0
 ## Debugging
 
 ### API Debugging
+
 ```bash
 # El servidor Fastify log todo con pino
 # Los logs aparecerán en la terminal donde corriste: pnpm --filter @finanzas/api dev
 ```
 
 ### React DevTools
+
 ```bash
 # Instala la extensión Chrome: React Developer Tools
 # La app usa Zustand y React Query, también hay extensiones para estos
 ```
 
 ### TypeScript
+
 ```bash
 # Verificar tipos sin compilar
 pnpm typecheck
@@ -209,11 +219,13 @@ pnpm typecheck
 ## Git Hooks
 
 Los pre-commit hooks ejecutan automáticamente:
+
 1. ESLint --fix
 2. Prettier --write
 3. TypeScript --noEmit
 
 Si un commit falla por estos motivos:
+
 1. Los archivos se han modificado automáticamente (ESLint/Prettier)
 2. Re-stagea los cambios: `git add .`
 3. Intenta hacer commit nuevamente
@@ -263,6 +275,7 @@ pnpm test --coverage
 ## Buenas Prácticas
 
 1. **Tipos explícitos en funciones públicas:**
+
    ```typescript
    // ✅ Correcto
    export const getValue = (key: string): string | null => { ... }
@@ -272,12 +285,14 @@ pnpm test --coverage
    ```
 
 2. **Usar `type` para imports de tipos:**
+
    ```typescript
    import type { User } from '@finanzas/shared';
    import { UserSchema } from '@finanzas/shared';
    ```
 
 3. **Validación con Zod en APIs:**
+
    ```typescript
    const result = MySchema.safeParse(data);
    if (!result.success) {
@@ -286,6 +301,7 @@ pnpm test --coverage
    ```
 
 4. **Componentes con TypeScript estricto:**
+
    ```typescript
    interface Props {
      value: string;
@@ -300,6 +316,7 @@ pnpm test --coverage
 ## Troubleshooting
 
 ### "Module not found" error
+
 ```bash
 # Asegúrate de que el package esté listado en pnpm-workspace.yaml
 # y que hayas instalado las dependencias
@@ -307,6 +324,7 @@ pnpm install
 ```
 
 ### ESLint/Prettier no funciona
+
 ```bash
 # Reinstala devDependencies
 pnpm install
@@ -317,6 +335,7 @@ cat .prettierrc
 ```
 
 ### TypeScript errors
+
 ```bash
 # Ejecuta typecheck
 pnpm typecheck
@@ -325,6 +344,7 @@ pnpm typecheck
 ```
 
 ### Conflictos de dependencias
+
 ```bash
 # pnpm usa un enfoque estricto de dependencias
 # Verifica package.json de cada package

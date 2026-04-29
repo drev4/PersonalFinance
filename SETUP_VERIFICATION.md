@@ -3,6 +3,7 @@
 ## Estructura de Archivos Creados
 
 ### Root Configuration (Archivos de Configuración)
+
 - `pnpm-workspace.yaml` - Configuración del monorepo
 - `package.json` - Scripts y devDependencies globales
 - `tsconfig.base.json` - TypeScript base extendida por los packages
@@ -13,10 +14,12 @@
 - `.env.example` - Referencia (real está en packages/api/.env)
 
 ### Git Hooks (.husky/)
+
 - `.husky/pre-commit` - Hook que ejecuta lint-staged
-- `.husky/.gitignore` - Ignora directorio _
+- `.husky/.gitignore` - Ignora directorio \_
 
 ### Documentation
+
 - `README.md` - Visión general del proyecto
 - `DEVELOPMENT.md` - Guía detallada para desarrolladores
 - `QUICKSTART.md` - Guía rápida para empezar
@@ -25,6 +28,7 @@
 ## Packages
 
 ### @finanzas/shared - Tipos y Schemas Compartidos
+
 ```
 packages/shared/
 ├── package.json
@@ -48,6 +52,7 @@ packages/shared/
 ```
 
 Schemas incluidos:
+
 - UserSchema: Usuarios con idioma, timezone, notificaciones
 - AccountSchema: Cuentas (checking, savings, crypto, credit_card, mortgage, etc.)
 - TransactionSchema: Transacciones con soporte para recurrencia (daily, weekly, monthly, etc.)
@@ -61,11 +66,13 @@ Schemas incluidos:
 - NetWorthSnapshotSchema: Snapshots de patrimonio neto
 
 Constantes:
+
 - 20 monedas soportadas (USD, EUR, GBP, etc.)
 - 16 bolsas de valores (NYSE, NASDAQ, LSE, etc.)
 - 17 categorías predeterminadas (Alimentación, Transporte, Ocio, etc.)
 
 ### @finanzas/api - Backend Fastify
+
 ```
 packages/api/
 ├── package.json (Fastify, Mongoose, Redis, JWT, bcrypt)
@@ -84,6 +91,7 @@ packages/api/
 ```
 
 Dependencias principales:
+
 - fastify@^4 con plugins de seguridad
 - mongoose@^8 para MongoDB
 - redis@^4 para caché
@@ -93,6 +101,7 @@ Dependencias principales:
 - @finanzas/shared para tipos
 
 ### @finanzas/web - Frontend React + Vite
+
 ```
 packages/web/
 ├── package.json (React, Vite, TailwindCSS, React Query, Zustand)
@@ -117,6 +126,7 @@ packages/web/
 ```
 
 Dependencias principales:
+
 - react@^18 + react-dom@^18
 - vite@^5 + @vitejs/plugin-react
 - react-router-dom@^6 para navegación
@@ -134,37 +144,47 @@ Dependencias principales:
 ### ✅ Confirma que se creó todo correctamente
 
 1. **Verifica la estructura:**
+
    ```bash
    cd /Users/diego/Documents/Fintech/finanzas-app
    ls -la
    ```
+
    Debe mostrar: `.eslintrc.cjs`, `.prettierrc`, `.gitignore`, `package.json`, `tsconfig.base.json`, `pnpm-workspace.yaml`, `README.md`, `DEVELOPMENT.md`, `QUICKSTART.md`
 
 2. **Verifica los packages:**
+
    ```bash
    ls packages/
    ```
+
    Debe mostrar: `shared`, `api`, `web`
 
 3. **Verifica los schemas:**
+
    ```bash
    ls packages/shared/src/schemas/
    ```
+
    Debe mostrar 11 archivos `.ts` con todos los schemas
 
 4. **Instala las dependencias:**
+
    ```bash
    pnpm install
    ```
+
    Esto descargará todos los packages necesarios
 
 5. **Verifica que no haya errores:**
+
    ```bash
    pnpm typecheck
    pnpm lint
    ```
 
 6. **Configura las variables de entorno:**
+
    ```bash
    cp packages/api/.env.example packages/api/.env
    # Edita packages/api/.env con tus valores
