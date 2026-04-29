@@ -5,6 +5,11 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
+  baseCurrency?: string;
+  preferences?: {
+    locale?: string;
+    theme?: 'light' | 'dark';
+  };
 }
 
 interface AuthState {
