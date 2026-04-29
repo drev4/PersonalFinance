@@ -122,28 +122,30 @@ function PickerModal<T extends string>({
 }) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose} />
-      <View style={styles.sheet}>
-        <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>{title}</Text>
-          <TouchableOpacity onPress={onClose}><X size={20} color={colors.textSecondary} /></TouchableOpacity>
+      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+        <Pressable style={styles.overlay} onPress={onClose} />
+        <View style={styles.sheet}>
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>{title}</Text>
+            <TouchableOpacity onPress={onClose}><X size={20} color={colors.textSecondary} /></TouchableOpacity>
+          </View>
+          <FlatList
+            data={options}
+            keyExtractor={(item) => item.value}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.pickerRow}
+                onPress={() => { onSelect(item.value); onClose(); }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.pickerLabel, item.value === selected && { color: colors.primary, fontWeight: '700' }]}>
+                  {item.label}
+                </Text>
+                {item.value === selected && <Check size={16} color={colors.primary} />}
+              </TouchableOpacity>
+            )}
+          />
         </View>
-        <FlatList
-          data={options}
-          keyExtractor={(item) => item.value}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.pickerRow}
-              onPress={() => { onSelect(item.value); onClose(); }}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.pickerLabel, item.value === selected && { color: colors.primary, fontWeight: '700' }]}>
-                {item.label}
-              </Text>
-              {item.value === selected && <Check size={16} color={colors.primary} />}
-            </TouchableOpacity>
-          )}
-        />
       </View>
     </Modal>
   );
@@ -176,23 +178,25 @@ function TextEditModal({
 }) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose} />
-      <View style={styles.sheet}>
-        <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>{title}</Text>
-          <TouchableOpacity onPress={onClose}><X size={20} color={colors.textSecondary} /></TouchableOpacity>
+      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+        <Pressable style={styles.overlay} onPress={onClose} />
+        <View style={styles.sheet}>
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>{title}</Text>
+            <TouchableOpacity onPress={onClose}><X size={20} color={colors.textSecondary} /></TouchableOpacity>
+          </View>
+          <TextInput
+            style={styles.input}
+            value={value}
+            onChangeText={onChange}
+            placeholder={placeholder}
+            placeholderTextColor={colors.textTertiary}
+            autoFocus
+          />
+          <TouchableOpacity style={[styles.btn, isPending && styles.btnDisabled]} onPress={onSave} disabled={isPending} activeOpacity={0.85}>
+            {isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Guardar</Text>}
+          </TouchableOpacity>
         </View>
-        <TextInput
-          style={styles.input}
-          value={value}
-          onChangeText={onChange}
-          placeholder={placeholder}
-          placeholderTextColor={colors.textTertiary}
-          autoFocus
-        />
-        <TouchableOpacity style={[styles.btn, isPending && styles.btnDisabled]} onPress={onSave} disabled={isPending} activeOpacity={0.85}>
-          {isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Guardar</Text>}
-        </TouchableOpacity>
       </View>
     </Modal>
   );
@@ -256,21 +260,23 @@ function PasswordModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <Pressable style={styles.overlay} onPress={handleClose} />
-      <View style={styles.sheet}>
-        <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>Cambiar contraseña</Text>
-          <TouchableOpacity onPress={handleClose}><X size={20} color={colors.textSecondary} /></TouchableOpacity>
+      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+        <Pressable style={styles.overlay} onPress={handleClose} />
+        <View style={styles.sheet}>
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>Cambiar contraseña</Text>
+            <TouchableOpacity onPress={handleClose}><X size={20} color={colors.textSecondary} /></TouchableOpacity>
+          </View>
+          <Text style={styles.inputLabel}>Contraseña actual</Text>
+          <TextInput style={styles.input} value={current} onChangeText={setCurrent} secureTextEntry placeholder="••••••••" placeholderTextColor={colors.textTertiary} />
+          <Text style={styles.inputLabel}>Nueva contraseña</Text>
+          <TextInput style={styles.input} value={next} onChangeText={setNext} secureTextEntry placeholder="Mín. 8 caracteres, 1 mayúscula, 1 número" placeholderTextColor={colors.textTertiary} />
+          <Text style={styles.inputLabel}>Confirmar contraseña</Text>
+          <TextInput style={[styles.input, { marginBottom: spacing.xl }]} value={confirm} onChangeText={setConfirm} secureTextEntry placeholder="••••••••" placeholderTextColor={colors.textTertiary} />
+          <TouchableOpacity style={[styles.btn, isPending && styles.btnDisabled]} onPress={handleSave} disabled={isPending} activeOpacity={0.85}>
+            {isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Cambiar contraseña</Text>}
+          </TouchableOpacity>
         </View>
-        <Text style={styles.inputLabel}>Contraseña actual</Text>
-        <TextInput style={styles.input} value={current} onChangeText={setCurrent} secureTextEntry placeholder="••••••••" placeholderTextColor={colors.textTertiary} />
-        <Text style={styles.inputLabel}>Nueva contraseña</Text>
-        <TextInput style={styles.input} value={next} onChangeText={setNext} secureTextEntry placeholder="Mín. 8 caracteres, 1 mayúscula, 1 número" placeholderTextColor={colors.textTertiary} />
-        <Text style={styles.inputLabel}>Confirmar contraseña</Text>
-        <TextInput style={[styles.input, { marginBottom: spacing.xl }]} value={confirm} onChangeText={setConfirm} secureTextEntry placeholder="••••••••" placeholderTextColor={colors.textTertiary} />
-        <TouchableOpacity style={[styles.btn, isPending && styles.btnDisabled]} onPress={handleSave} disabled={isPending} activeOpacity={0.85}>
-          {isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Cambiar contraseña</Text>}
-        </TouchableOpacity>
       </View>
     </Modal>
   );
@@ -320,22 +326,24 @@ function BinanceModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <Pressable style={styles.overlay} onPress={handleClose} />
-      <View style={styles.sheet}>
-        <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>Conectar Binance</Text>
-          <TouchableOpacity onPress={handleClose}><X size={20} color={colors.textSecondary} /></TouchableOpacity>
+      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+        <Pressable style={styles.overlay} onPress={handleClose} />
+        <View style={styles.sheet}>
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>Conectar Binance</Text>
+            <TouchableOpacity onPress={handleClose}><X size={20} color={colors.textSecondary} /></TouchableOpacity>
+          </View>
+          <Text style={[styles.inputLabel, { marginBottom: spacing.sm }]}>
+            Solo necesitas permisos de lectura. Nunca se envían órdenes.
+          </Text>
+          <Text style={styles.inputLabel}>API Key</Text>
+          <TextInput style={styles.input} value={apiKey} onChangeText={setApiKey} autoCapitalize="none" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" placeholderTextColor={colors.textTertiary} />
+          <Text style={styles.inputLabel}>API Secret</Text>
+          <TextInput style={[styles.input, { marginBottom: spacing.xl }]} value={apiSecret} onChangeText={setApiSecret} secureTextEntry autoCapitalize="none" placeholder="••••••••••••••••••••••••••••••••••••••••" placeholderTextColor={colors.textTertiary} />
+          <TouchableOpacity style={[styles.btn, isPending && styles.btnDisabled]} onPress={handleConnect} disabled={isPending} activeOpacity={0.85}>
+            {isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Conectar</Text>}
+          </TouchableOpacity>
         </View>
-        <Text style={[styles.inputLabel, { marginBottom: spacing.sm }]}>
-          Solo necesitas permisos de lectura. Nunca se envían órdenes.
-        </Text>
-        <Text style={styles.inputLabel}>API Key</Text>
-        <TextInput style={styles.input} value={apiKey} onChangeText={setApiKey} autoCapitalize="none" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" placeholderTextColor={colors.textTertiary} />
-        <Text style={styles.inputLabel}>API Secret</Text>
-        <TextInput style={[styles.input, { marginBottom: spacing.xl }]} value={apiSecret} onChangeText={setApiSecret} secureTextEntry autoCapitalize="none" placeholder="••••••••••••••••••••••••••••••••••••••••" placeholderTextColor={colors.textTertiary} />
-        <TouchableOpacity style={[styles.btn, isPending && styles.btnDisabled]} onPress={handleConnect} disabled={isPending} activeOpacity={0.85}>
-          {isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Conectar</Text>}
-        </TouchableOpacity>
       </View>
     </Modal>
   );
@@ -370,9 +378,13 @@ export default function SettingsScreen() {
   const [passwordModal, setPasswordModal] = useState(false);
   const [binanceModal, setBinanceModal] = useState(false);
 
+  // Optimistic values so la UI actualiza antes de que el servidor confirme
+  const [optimisticCurrency, setOptimisticCurrency] = useState<string | null>(null);
+  const [optimisticLocale, setOptimisticLocale] = useState<string | null>(null);
+
   const displayName = profile?.name ?? user?.name ?? '';
-  const displayCurrency = profile?.baseCurrency ?? user?.baseCurrency ?? 'EUR';
-  const displayLocale = profile?.preferences?.locale ?? 'es';
+  const displayCurrency = optimisticCurrency ?? profile?.baseCurrency ?? user?.baseCurrency ?? 'EUR';
+  const displayLocale = optimisticLocale ?? profile?.preferences?.locale ?? 'es';
   const currentLanguage = LANGUAGES.find((l) => l.code === displayLocale)?.label ?? 'Español';
 
   const binance = integrations?.find((i) => i.provider === 'binance');
@@ -405,16 +417,30 @@ export default function SettingsScreen() {
   };
 
   const saveCurrency = (currency: string) => {
+    setOptimisticCurrency(currency);
     updateProfile(
       { baseCurrency: currency },
-      { onError: () => Alert.alert('Error', 'No se pudo actualizar la moneda.') },
+      {
+        onSuccess: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+        onError: () => {
+          setOptimisticCurrency(null);
+          Alert.alert('Error', 'No se pudo actualizar la moneda.');
+        },
+      },
     );
   };
 
   const saveLanguage = (locale: string) => {
+    setOptimisticLocale(locale);
     updateProfile(
       { preferences: { locale } },
-      { onError: () => Alert.alert('Error', 'No se pudo actualizar el idioma.') },
+      {
+        onSuccess: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+        onError: () => {
+          setOptimisticLocale(null);
+          Alert.alert('Error', 'No se pudo actualizar el idioma.');
+        },
+      },
     );
   };
 
@@ -734,7 +760,7 @@ function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>)
     iconBtn: { width: 32, height: 32, borderRadius: radius.xs, backgroundColor: colors.primaryLight, justifyContent: 'center', alignItems: 'center' },
 
     // Modal sheet
-    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+    overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
     sheet: { backgroundColor: colors.card, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.xl, paddingBottom: 40 },
     sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xl },
     sheetTitle: { fontSize: 18, fontWeight: '700', color: colors.text },

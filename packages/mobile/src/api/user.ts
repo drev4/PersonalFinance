@@ -60,6 +60,7 @@ export function useUpdateProfile() {
       return res.data.data.user;
     },
     onSuccess: (user) => {
+      if (!user) return;
       qc.setQueryData(userKeys.me, user);
       setUser({
         id: user.id,
