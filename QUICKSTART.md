@@ -22,6 +22,7 @@ pnpm dev
 ```
 
 Luego abre en tu navegador:
+
 - Frontend: http://localhost:5173
 - API: http://localhost:3001
 - Health check: http://localhost:3001/health
@@ -29,18 +30,21 @@ Luego abre en tu navegador:
 ## 3. Que se Incluye
 
 ### ✅ Configuración Completa
+
 - ESLint + Prettier (formateado automático)
 - TypeScript estricto (sin `any` permitido)
 - Husky + lint-staged (validación pre-commit)
 - Vitest para testing
 
 ### ✅ Backend (Fastify)
+
 - Servidor con CORS, helmet, rate-limiting
 - Validación de variables de entorno con Zod
 - Ejemplo de rutas y middlewares
 - Listo para MongoDB + Redis
 
 ### ✅ Frontend (React + Vite)
+
 - React Router para navegación
 - Zustand para estado global
 - TanStack React Query para data fetching
@@ -48,6 +52,7 @@ Luego abre en tu navegador:
 - Formatters y hooks listos
 
 ### ✅ Tipos Compartidos (@finanzas/shared)
+
 - Schemas Zod completos para:
   - Users, Accounts, Transactions
   - Categories, Rules, Budgets
@@ -75,12 +80,9 @@ import { FastifyInstance } from 'fastify';
 import { UserSchema, type User } from '@finanzas/shared';
 
 export const registerUserRoutes = async (fastify: FastifyInstance) => {
-  fastify.get<{ Reply: { message: string } }>(
-    '/users',
-    async (request, reply) => {
-      return reply.send({ message: 'Users endpoint' });
-    },
-  );
+  fastify.get<{ Reply: { message: string } }>('/users', async (request, reply) => {
+    return reply.send({ message: 'Users endpoint' });
+  });
 };
 ```
 
@@ -106,7 +108,9 @@ interface UserCardProps {
 
 export const UserCard: React.FC<UserCardProps> = ({ user }) => (
   <div className="p-4 border rounded-lg">
-    <h3 className="font-bold">{user.firstName} {user.lastName}</h3>
+    <h3 className="font-bold">
+      {user.firstName} {user.lastName}
+    </h3>
     <p className="text-sm text-gray-600">{user.email}</p>
   </div>
 );
@@ -115,15 +119,18 @@ export const UserCard: React.FC<UserCardProps> = ({ user }) => (
 ## 7. Próximos Pasos
 
 1. **Configura la BD:**
+
    - MongoDB local o MongoDB Atlas
    - Redis local o Redis Cloud
    - Actualiza `packages/api/.env`
 
 2. **Implements autenticación:**
+
    - Middleware en `packages/api/src/middleware/auth.ts`
    - Schemas de login en `@finanzas/shared`
 
 3. **Crea entidades:**
+
    - Schema en `packages/shared`
    - Rutas en `packages/api`
    - Componentes en `packages/web`
@@ -160,6 +167,7 @@ finanzas-app/
 Si no tienes MongoDB/Redis localmente:
 
 1. Usa Docker:
+
    ```bash
    docker-compose up -d
    ```

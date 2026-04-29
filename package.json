@@ -36,11 +36,17 @@
     "*.{ts,tsx}": [
       "eslint --fix",
       "prettier --write"
+    ],
+    "*.{md,json,yml,yaml}": [
+      "prettier --write"
     ]
   },
   "pnpm": {
     "overrides": {},
-    "nohoist": ["**/react-native", "**/expo*"]
+    "nohoist": [
+      "**/react-native",
+      "**/expo*"
+    ]
   },
   "dependencies": {}
 }

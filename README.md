@@ -65,6 +65,7 @@ pnpm build         # Compilar todos los packages
 ### Lint-staged + Husky
 
 Los pre-commit hooks ejecutan automáticamente:
+
 - ESLint con --fix
 - Prettier --write
 - TypeScript --noEmit
@@ -72,6 +73,7 @@ Los pre-commit hooks ejecutan automáticamente:
 ### ESLint
 
 Está configurado para:
+
 - Prohibir `any` completamente
 - Validar orden de imports
 - Validar hooks de React
@@ -80,6 +82,7 @@ Está configurado para:
 ### TypeScript
 
 Configuración estricta en `tsconfig.base.json`:
+
 - `strict: true`
 - `noUncheckedIndexedAccess: true`
 - `exactOptionalPropertyTypes: true`
@@ -92,6 +95,7 @@ Configuración estricta en `tsconfig.base.json`:
 Contiene todos los schemas Zod y tipos TypeScript compartidos.
 
 Schemas incluidos:
+
 - UserSchema
 - AccountSchema (checking, savings, crypto, investment, etc.)
 - TransactionSchema (con soporte para transacciones recurrentes)
@@ -105,6 +109,7 @@ Schemas incluidos:
 - NetWorthSnapshotSchema
 
 Constantes:
+
 - CURRENCIES (monedas soportadas)
 - SUPPORTED_EXCHANGES (bolsas de valores)
 - DEFAULT_CATEGORIES (categorías predeterminadas)
@@ -112,6 +117,7 @@ Constantes:
 ### @finanzas/api
 
 Backend Fastify con:
+
 - Rate limiting
 - CORS
 - Helmet (seguridad)
@@ -121,6 +127,7 @@ Backend Fastify con:
 ### @finanzas/web
 
 Frontend React + Vite con:
+
 - React Router
 - TanStack React Query
 - Zustand (state management)
@@ -133,6 +140,7 @@ Frontend React + Vite con:
 ## Variables de Entorno (packages/api/.env)
 
 Requeridas:
+
 - PORT=3001
 - NODE_ENV=development
 - MONGO_URI=mongodb://...
@@ -142,6 +150,7 @@ Requeridas:
 - ENCRYPTION_KEY (mínimo 64 caracteres hex)
 
 Opcionales (APIs externas):
+
 - BINANCE_API_KEY / BINANCE_API_SECRET
 - CMC_API_KEY
 - FINNHUB_API_KEY
