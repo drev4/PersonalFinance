@@ -4,7 +4,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  FlatList,
   ActivityIndicator,
   Keyboard,
   Alert,
@@ -17,12 +16,19 @@ import { useCreateTransaction, useCategories, useAccounts } from '@/api/transact
 import { formatCurrency } from '@/lib/formatters';
 import { DatePickerCalendar } from './DatePickerCalendar';
 import * as Haptics from 'expo-haptics';
+import { colors, radius, spacing, typography, shadow } from '@/theme';
 
 interface QuickAddModalProps {
   onClose: () => void;
 }
 
 type TransactionType = 'income' | 'expense' | 'transfer';
+
+const TYPE_CONFIG = {
+  expense: { label: 'Gasto', color: colors.expense, bg: colors.expenseLight },
+  income: { label: 'Ingreso', color: colors.income, bg: colors.incomeLight },
+  transfer: { label: 'Transferencia', color: colors.transfer, bg: colors.transferLight },
+};
 
 export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
   const [type, setType] = useState<TransactionType>('expense');
@@ -31,357 +37,358 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
-  const [selectedAccountIdTo, setSelectedAccountIdTo] = useState<string>('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+  const [selectedToAccountId, setSelectedToAccountId] = useState<string>('');
   const [showAccountPicker, setShowAccountPicker] = useState(false);
-  const [showAccountPickerTo, setShowAccountPickerTo] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [showToAccountPicker, setShowToAccountPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
-
-  const handleClose = () => {
-    Keyboard.dismiss();
-    onClose();
-  };
 
   const { data: categories = [] } = useCategories();
   const { data: accounts = [] } = useAccounts();
   const { mutate: createTransaction, isPending } = useCreateTransaction();
 
   useEffect(() => {
-    if (accounts.length > 0 && !selectedAccountId) {
-      setSelectedAccountId(accounts[0]._id);
-    }
-    if (accounts.length > 1 && !selectedAccountIdTo) {
-      setSelectedAccountIdTo(accounts[1]._id);
-    }
-  }, [accounts]);
+    if (accounts.length > 0 && !selectedAccountId) setSelectedAccountId(accounts[0]._id);
+  }, [accounts, selectedAccountId]);
 
   useEffect(() => {
-    const filteredCategories = categories.filter((cat) => cat.type === type && cat.isActive !== false);
-    if (filteredCategories.length > 0) {
-      setSelectedCategoryId(filteredCategories[0]._id);
+    if (categories.length === 0) return;
+    const filtered = categories.filter((c) => c.type === type && c.isActive !== false);
+    if (filtered.length > 0 && !selectedCategoryId) {
+      const catId = (filtered[0] as any).id || (filtered[0] as any)._id;
+      if (catId) setSelectedCategoryId(catId);
     }
-  }, [type, categories]);
+  }, [type, categories, selectedCategoryId]);
 
   const handleTypeSelect = (newType: TransactionType) => {
     setType(newType);
     setSelectedCategoryId('');
-    setShowAccountPickerTo(false);
+    setSelectedToAccountId('');
+    setShowToAccountPicker(false);
+    setShowCategoryPicker(false);
   };
 
-  const filteredCategories = categories.filter(
-    (cat) => cat.type === type && cat.isActive !== false,
-  );
-
-  const selectedAccount = accounts.find((acc) => acc._id === selectedAccountId);
-  const selectedCategory = categories.find((cat) => cat._id === selectedCategoryId);
+  const filteredCategories = categories.filter((c) => c.type === type && c.isActive !== false);
+  const selectedAccount = accounts.find((a) => a._id === selectedAccountId);
+  const selectedCategory = categories.find((c) => {
+    const cId = (c as any).id || (c as any)._id;
+    return cId === selectedCategoryId;
+  });
+  const selectedToAccount = accounts.find((a) => a._id === selectedToAccountId);
 
   const handleSubmit = async () => {
     if (!amount || !selectedAccountId || !description) {
       Alert.alert('Error', 'Por favor completa cantidad, cuenta y descripción');
       return;
     }
-
-    if (type === 'transfer') {
-      if (!selectedAccountIdTo) {
-        Alert.alert('Error', 'Por favor selecciona una cuenta de destino');
-        return;
-      }
-    } else {
-      if (!selectedCategoryId) {
-        Alert.alert('Error', 'Por favor selecciona una categoría');
-        return;
-      }
+    if (type === 'transfer' && !selectedToAccountId) {
+      Alert.alert('Error', 'Por favor selecciona una cuenta destino');
+      return;
     }
-
-    const amountInCents = Math.round(parseFloat(amount) * 100);
+    if (type !== 'transfer' && !selectedCategoryId) {
+      Alert.alert('Error', 'Por favor selecciona una categoría');
+      return;
+    }
 
     createTransaction(
       {
         accountId: selectedAccountId,
         type,
-        amount: amountInCents,
+        amount: Math.round(parseFloat(amount) * 100),
         currency: selectedAccount?.currency || 'EUR',
         date,
         description,
-        categoryId: type === 'transfer' ? selectedAccountIdTo : selectedCategoryId,
+        categoryId: type === 'transfer' ? undefined : selectedCategoryId,
+        toAccountId: type === 'transfer' ? selectedToAccountId : undefined,
         notes: notes || undefined,
       },
       {
         onSuccess: async () => {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          handleClose();
+          Keyboard.dismiss();
+          onClose();
         },
-        onError: () => {
-          Alert.alert('Error', 'No se pudo crear la transacción');
-        },
+        onError: () => Alert.alert('Error', 'No se pudo crear la transacción'),
       },
     );
   };
 
   const isValid =
-    amount && selectedAccountId && description &&
-    (type === 'transfer' ? selectedAccountIdTo : selectedCategoryId);
+    type === 'transfer'
+      ? !!(amount && selectedAccountId && description && selectedToAccountId)
+      : !!(amount && selectedAccountId && description && selectedCategoryId);
+
+  const activeColor = TYPE_CONFIG[type].color;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Quick Add</Text>
-        <TouchableOpacity onPress={handleClose}>
-          <X size={24} color="#000" />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView ref={scrollViewRef} scrollEnabled={true} keyboardShouldPersistTaps="handled">
-
-      {/* Type Selector */}
-      <View style={styles.typeSelector}>
+        <Text style={styles.title}>Añadir movimiento</Text>
         <TouchableOpacity
-          style={[styles.typeButton, type === 'expense' && styles.typeButtonActive]}
-          onPress={() => handleTypeSelect('expense')}
+          onPress={() => {
+            Keyboard.dismiss();
+            onClose();
+          }}
+          style={styles.closeBtn}
+          activeOpacity={0.7}
         >
-          <Text
-            style={[
-              styles.typeButtonText,
-              type === 'expense' && styles.typeButtonTextActive,
-            ]}
-          >
-            Gasto
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.typeButton, type === 'income' && styles.typeButtonActive]}
-          onPress={() => handleTypeSelect('income')}
-        >
-          <Text
-            style={[
-              styles.typeButtonText,
-              type === 'income' && styles.typeButtonTextActive,
-            ]}
-          >
-            Ingreso
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.typeButton, type === 'transfer' && styles.typeButtonActive]}
-          onPress={() => handleTypeSelect('transfer')}
-        >
-          <Text
-            style={[
-              styles.typeButtonText,
-              type === 'transfer' && styles.typeButtonTextActive,
-            ]}
-          >
-            Transferencia
-          </Text>
+          <X size={18} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
-      {/* Amount Input */}
-      <View style={styles.amountSection}>
-        <Text style={styles.sectionLabel}>Cantidad</Text>
-        <View style={styles.amountInputContainer}>
-          <Text style={styles.currencySymbol}>€</Text>
-          <TextInput
-            style={styles.amountInput}
-            placeholder="0.00"
-            placeholderTextColor="#ccc"
-            value={amount}
-            onChangeText={setAmount}
-            keyboardType="decimal-pad"
-            autoFocus
-          />
-        </View>
-      </View>
-
-      {/* Account Selector */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Cuenta</Text>
-        <TouchableOpacity
-          style={styles.selectorButton}
-          onPress={() => setShowAccountPicker(!showAccountPicker)}
-        >
-          <Text style={styles.selectorButtonText}>
-            {selectedAccount?.name || 'Seleccionar cuenta'}
-          </Text>
-          <Text style={styles.selectorButtonValue}>
-            {selectedAccount && formatCurrency(selectedAccount.currentBalance)}
-          </Text>
-        </TouchableOpacity>
-
-        {showAccountPicker && (
-          <FlatList
-            data={accounts}
-            keyExtractor={(item) => item._id}
-            scrollEnabled={false}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  styles.pickerItem,
-                  selectedAccountId === item._id && styles.pickerItemSelected,
-                ]}
-                onPress={() => {
-                  setSelectedAccountId(item._id);
-                  setShowAccountPicker(false);
-                }}
-              >
-                <View>
-                  <Text style={styles.pickerItemText}>{item.name}</Text>
-                  <Text style={styles.pickerItemSubtext}>
-                    {formatCurrency(item.currentBalance)}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            )}
-          />
-        )}
-      </View>
-
-      {/* Destination Account Selector (only for transfer) */}
-      {type === 'transfer' && (
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Cuenta Destino</Text>
-          <TouchableOpacity
-            style={styles.selectorButton}
-            onPress={() => setShowAccountPickerTo(!showAccountPickerTo)}
-          >
-            <Text style={styles.selectorButtonText}>
-              {accounts.find((acc) => acc._id === selectedAccountIdTo)?.name || 'Seleccionar cuenta'}
-            </Text>
-            <Text style={styles.selectorButtonValue}>
-              {accounts.find((acc) => acc._id === selectedAccountIdTo) &&
-                formatCurrency(accounts.find((acc) => acc._id === selectedAccountIdTo)?.currentBalance || 0)}
-            </Text>
-          </TouchableOpacity>
-
-          {showAccountPickerTo && (
-            <FlatList
-              data={accounts.filter((acc) => acc._id !== selectedAccountId)}
-              keyExtractor={(item) => item._id}
-              scrollEnabled={false}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.pickerItem,
-                    selectedAccountIdTo === item._id && styles.pickerItemSelected,
-                  ]}
-                  onPress={() => {
-                    setSelectedAccountIdTo(item._id);
-                    setShowAccountPickerTo(false);
-                  }}
-                >
-                  <View>
-                    <Text style={styles.pickerItemText}>{item.name}</Text>
-                    <Text style={styles.pickerItemSubtext}>
-                      {formatCurrency(item.currentBalance)}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              )}
-            />
-          )}
-        </View>
-      )}
-
-      {/* Category Selector (not for transfer) */}
-      {type !== 'transfer' && (
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Categoría</Text>
-          <TouchableOpacity
-            style={styles.selectorButton}
-            onPress={() => setShowCategoryPicker(!showCategoryPicker)}
-          >
-            <Text style={styles.selectorButtonText}>
-              {selectedCategory?.name || 'Seleccionar categoría'}
-            </Text>
-          </TouchableOpacity>
-
-          {showCategoryPicker && (
-            <FlatList
-              data={filteredCategories}
-              keyExtractor={(item) => item._id}
-              scrollEnabled={false}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.pickerItem,
-                    selectedCategoryId === item._id && styles.pickerItemSelected,
-                  ]}
-                  onPress={() => {
-                    setSelectedCategoryId(item._id);
-                    setShowCategoryPicker(false);
-                  }}
-                >
-                  <Text style={styles.pickerItemText}>{item.name}</Text>
-                </TouchableOpacity>
-              )}
-            />
-          )}
-        </View>
-      )}
-
-      {/* Description Input */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Descripción*</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Descripción obligatoria"
-          placeholderTextColor="#ccc"
-          value={description}
-          onChangeText={setDescription}
-        />
-      </View>
-
-      {/* Date Picker Calendar */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Fecha*</Text>
-        <TouchableOpacity
-          style={styles.dateButton}
-          onPress={() => setShowDatePicker(!showDatePicker)}
-        >
-          <Calendar size={18} color="#0066CC" />
-          <Text style={styles.dateButtonText}>{date}</Text>
-        </TouchableOpacity>
-
-        {showDatePicker && (
-          <DatePickerCalendar
-            selectedDate={date}
-            onDateSelect={(newDate) => {
-              setDate(newDate);
-              setShowDatePicker(false);
-            }}
-          />
-        )}
-      </View>
-
-      {/* Notes Input */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Notas</Text>
-        <TextInput
-          style={[styles.input, styles.notesInput]}
-          placeholder="Notas adicionales (opcional)"
-          placeholderTextColor="#ccc"
-          value={notes}
-          onChangeText={setNotes}
-          multiline
-          numberOfLines={3}
-        />
-      </View>
-
-      {/* Submit Button */}
-      <TouchableOpacity
-        style={[styles.submitButton, !isValid && styles.submitButtonDisabled]}
-        onPress={handleSubmit}
-        disabled={!isValid || isPending}
+      <ScrollView
+        ref={scrollViewRef}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {isPending ? (
-          <ActivityIndicator color="#fff" />
+        {/* Type selector */}
+        <View style={styles.typeRow}>
+          {(['expense', 'income', 'transfer'] as const).map((t) => (
+            <TouchableOpacity
+              key={t}
+              style={[
+                styles.typeBtn,
+                type === t && {
+                  backgroundColor: TYPE_CONFIG[t].color,
+                  borderColor: TYPE_CONFIG[t].color,
+                },
+              ]}
+              onPress={() => handleTypeSelect(t)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.typeBtnText, type === t && styles.typeBtnTextActive]}>
+                {TYPE_CONFIG[t].label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Amount */}
+        <View style={styles.amountSection}>
+          <Text style={styles.sectionLabel}>Cantidad</Text>
+          <View style={styles.amountRow}>
+            <Text style={[styles.currencySymbol, { color: activeColor }]}>€</Text>
+            <TextInput
+              style={styles.amountInput}
+              placeholder="0.00"
+              placeholderTextColor={colors.textTertiary}
+              value={amount}
+              onChangeText={setAmount}
+              keyboardType="decimal-pad"
+              autoFocus
+            />
+          </View>
+        </View>
+
+        {/* Account (from) */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>
+            {type === 'transfer' ? 'Cuenta origen' : 'Cuenta'}
+          </Text>
+          <TouchableOpacity
+            style={styles.selectorBtn}
+            onPress={() => setShowAccountPicker(!showAccountPicker)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.selectorText}>{selectedAccount?.name || 'Seleccionar cuenta'}</Text>
+            {selectedAccount && (
+              <Text style={styles.selectorSub}>
+                {formatCurrency(selectedAccount.currentBalance)}
+              </Text>
+            )}
+          </TouchableOpacity>
+          {showAccountPicker && (
+            <View style={styles.pickerList}>
+              {accounts.map((item) => (
+                <TouchableOpacity
+                  key={item._id}
+                  style={[
+                    styles.pickerItem,
+                    selectedAccountId === item._id && styles.pickerItemActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedAccountId(item._id);
+                    setShowAccountPicker(false);
+                    if (selectedToAccountId === item._id) setSelectedToAccountId('');
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.pickerItemText,
+                      selectedAccountId === item._id && { color: colors.primary },
+                    ]}
+                  >
+                    {item.name}
+                  </Text>
+                  <Text style={styles.pickerItemSub}>{formatCurrency(item.currentBalance)}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Category or To-Account */}
+        {type === 'transfer' ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Cuenta destino</Text>
+            <TouchableOpacity
+              style={styles.selectorBtn}
+              onPress={() => setShowToAccountPicker(!showToAccountPicker)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.selectorText}>
+                {selectedToAccount?.name || 'Seleccionar cuenta'}
+              </Text>
+              {selectedToAccount && (
+                <Text style={styles.selectorSub}>
+                  {formatCurrency(selectedToAccount.currentBalance)}
+                </Text>
+              )}
+            </TouchableOpacity>
+            {showToAccountPicker && (
+              <View style={styles.pickerList}>
+                {accounts
+                  .filter((a) => a._id !== selectedAccountId)
+                  .map((item) => (
+                    <TouchableOpacity
+                      key={item._id}
+                      style={[
+                        styles.pickerItem,
+                        selectedToAccountId === item._id && styles.pickerItemActive,
+                      ]}
+                      onPress={() => {
+                        setSelectedToAccountId(item._id);
+                        setShowToAccountPicker(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.pickerItemText,
+                          selectedToAccountId === item._id && { color: colors.primary },
+                        ]}
+                      >
+                        {item.name}
+                      </Text>
+                      <Text style={styles.pickerItemSub}>
+                        {formatCurrency(item.currentBalance)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+              </View>
+            )}
+          </View>
         ) : (
-          <Text style={styles.submitButtonText}>Guardar</Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Categoría</Text>
+            <TouchableOpacity
+              style={styles.selectorBtn}
+              onPress={() => setShowCategoryPicker(!showCategoryPicker)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.selectorText}>
+                {selectedCategory?.name || 'Seleccionar categoría'}
+              </Text>
+            </TouchableOpacity>
+            {showCategoryPicker && (
+              <View style={styles.pickerList}>
+                {filteredCategories.map((item) => {
+                  const catId = (item as any).id || (item as any)._id;
+                  return (
+                    <TouchableOpacity
+                      key={catId}
+                      style={[
+                        styles.pickerItem,
+                        selectedCategoryId === catId && styles.pickerItemActive,
+                      ]}
+                      onPress={() => {
+                        setSelectedCategoryId(catId);
+                        setShowCategoryPicker(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.pickerItemText,
+                          selectedCategoryId === catId && { color: colors.primary },
+                        ]}
+                      >
+                        {item.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </View>
         )}
-      </TouchableOpacity>
+
+        {/* Description */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Descripción *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Descripción obligatoria"
+            placeholderTextColor={colors.textTertiary}
+            value={description}
+            onChangeText={setDescription}
+          />
+        </View>
+
+        {/* Date */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Fecha *</Text>
+          <TouchableOpacity
+            style={styles.dateBtn}
+            onPress={() => setShowDatePicker(!showDatePicker)}
+            activeOpacity={0.8}
+          >
+            <Calendar size={16} color={activeColor} />
+            <Text style={styles.dateBtnText}>{date}</Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DatePickerCalendar
+              selectedDate={date}
+              onDateSelect={(d) => {
+                setDate(d);
+                setShowDatePicker(false);
+              }}
+            />
+          )}
+        </View>
+
+        {/* Notes */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Notas</Text>
+          <TextInput
+            style={[styles.input, styles.notesInput]}
+            placeholder="Notas adicionales (opcional)"
+            placeholderTextColor={colors.textTertiary}
+            value={notes}
+            onChangeText={setNotes}
+            multiline
+            numberOfLines={3}
+          />
+        </View>
+
+        {/* Submit */}
+        <TouchableOpacity
+          style={[
+            styles.submitBtn,
+            { backgroundColor: isValid ? activeColor : colors.textTertiary },
+          ]}
+          onPress={handleSubmit}
+          disabled={!isValid || isPending}
+          activeOpacity={0.85}
+        >
+          {isPending ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <Text style={styles.submitBtnText}>Guardar</Text>
+          )}
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -390,165 +397,173 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
+    backgroundColor: colors.bg,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#000',
+    ...typography.heading,
   },
-  typeSelector: {
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    backgroundColor: colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadow.sm,
+  },
+  typeRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 24,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    marginBottom: spacing.xl,
   },
-  typeButton: {
+  typeBtn: {
     flex: 1,
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    backgroundColor: '#fff',
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    alignItems: 'center',
   },
-  typeButtonActive: {
-    backgroundColor: '#0066CC',
-    borderColor: '#0066CC',
+  typeBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSecondary,
   },
-  typeButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    textAlign: 'center',
-  },
-  typeButtonTextActive: {
-    color: '#fff',
+  typeBtnTextActive: {
+    color: colors.white,
   },
   amountSection: {
-    marginBottom: 24,
+    paddingHorizontal: spacing.xl,
+    marginBottom: spacing.xl,
   },
   sectionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textTertiary,
     textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: spacing.sm,
   },
-  amountInputContainer: {
+  amountRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#fafafa',
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    ...shadow.sm,
   },
   currencySymbol: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#0066CC',
+    fontSize: 22,
+    fontWeight: '800',
+    marginRight: spacing.xs,
   },
   amountInput: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#000',
+    paddingVertical: 16,
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.5,
   },
   section: {
-    marginBottom: 16,
+    paddingHorizontal: spacing.xl,
+    marginBottom: spacing.lg,
   },
-  selectorButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#fafafa',
+  selectorBtn: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 15,
+    ...shadow.sm,
   },
-  selectorButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#000',
+  selectorText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
   },
-  selectorButtonValue: {
-    fontSize: 12,
-    color: '#666',
+  selectorSub: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  pickerList: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    ...shadow.sm,
   },
   pickerItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.border,
   },
-  pickerItemSelected: {
-    backgroundColor: '#f0f8ff',
+  pickerItemActive: {
+    backgroundColor: colors.primaryLight,
   },
   pickerItemText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#000',
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
   },
-  pickerItemSubtext: {
+  pickerItemSub: {
     fontSize: 12,
-    color: '#999',
-    marginTop: 4,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   input: {
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#fafafa',
-    fontSize: 14,
-    color: '#000',
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 15,
+    fontSize: 15,
+    color: colors.text,
+    fontWeight: '500',
+    ...shadow.sm,
   },
   notesInput: {
     textAlignVertical: 'top',
-    paddingTop: 12,
+    minHeight: 80,
+    paddingTop: spacing.md,
   },
-  dateButton: {
+  dateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#fafafa',
-    gap: 8,
+    gap: spacing.sm,
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 15,
+    ...shadow.sm,
   },
-  dateButtonText: {
-    fontSize: 14,
-    color: '#000',
-  },
-  submitButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: '#0066CC',
-    borderRadius: 8,
-    marginTop: 24,
-    marginBottom: 24,
-  },
-  submitButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  submitButtonText: {
-    fontSize: 16,
+  dateBtnText: {
+    fontSize: 15,
     fontWeight: '600',
-    color: '#fff',
-    textAlign: 'center',
+    color: colors.text,
+  },
+  submitBtn: {
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xxl,
+    paddingVertical: 17,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    ...shadow.md,
+  },
+  submitBtnText: {
+    color: colors.white,
+    fontSize: 17,
+    fontWeight: '700',
   },
 });

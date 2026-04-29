@@ -1,8 +1,21 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  ScrollView,
+  Alert,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useRegister } from '@/api/auth';
+import { ChevronLeft } from 'lucide-react-native';
+import { colors, radius, spacing, typography, shadow } from '@/theme';
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -14,94 +27,120 @@ export default function RegisterScreen() {
 
   const handleRegister = () => {
     if (!name || !email || !password || !confirmPassword) {
-      alert('Please fill in all fields');
+      Alert.alert('Error', 'Por favor rellena todos los campos');
+      return;
+    }
+    if (!EMAIL_REGEX.test(email)) {
+      Alert.alert('Error', 'El correo electrónico no es válido');
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
       return;
     }
     if (password !== confirmPassword) {
-      alert('Passwords do not match');
+      Alert.alert('Error', 'Las contraseñas no coinciden');
       return;
     }
     register({ name, email, password });
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.form}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.back}>← Back</Text>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+          <ChevronLeft size={20} color={colors.text} />
         </TouchableOpacity>
 
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Join us today</Text>
-
-        <View style={styles.inputContainer}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Full Name</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="John Doe"
-            value={name}
-            onChangeText={setName}
-            editable={!isPending}
-          />
+        <View style={styles.headerSection}>
+          <Text style={styles.title}>Crear cuenta</Text>
+          <Text style={styles.subtitle}>Empieza a gestionar tus finanzas</Text>
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="your@email.com"
-            value={email}
-            onChangeText={setEmail}
-            editable={!isPending}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-        </View>
+        <View style={styles.form}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Nombre completo</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Tu nombre"
+              placeholderTextColor={colors.textTertiary}
+              value={name}
+              onChangeText={setName}
+              editable={!isPending}
+            />
+          </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="••••••••"
-            value={password}
-            onChangeText={setPassword}
-            editable={!isPending}
-            secureTextEntry
-            autoCapitalize="none"
-          />
-        </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Correo electrónico</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="tu@email.com"
+              placeholderTextColor={colors.textTertiary}
+              value={email}
+              onChangeText={setEmail}
+              editable={!isPending}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Confirm Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="••••••••"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            editable={!isPending}
-            secureTextEntry
-            autoCapitalize="none"
-          />
-        </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Contraseña</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Mínimo 6 caracteres"
+              placeholderTextColor={colors.textTertiary}
+              value={password}
+              onChangeText={setPassword}
+              editable={!isPending}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+          </View>
 
-        {error && <Text style={styles.error}>{(error as any).message || 'Registration failed'}</Text>}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Confirmar contraseña</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="••••••••"
+              placeholderTextColor={colors.textTertiary}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              editable={!isPending}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+          </View>
 
-        <TouchableOpacity
-          style={[styles.button, isPending && styles.buttonDisabled]}
-          onPress={handleRegister}
-          disabled={isPending}
-        >
-          {isPending ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Create Account</Text>
+          {error && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>
+                {(error as Error).message || 'Error al crear la cuenta'}
+              </Text>
+            </View>
           )}
-        </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
-          <Text style={styles.link}>Already have an account? Sign in</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, isPending && styles.buttonDisabled]}
+            onPress={handleRegister}
+            disabled={isPending}
+            activeOpacity={0.85}
+          >
+            {isPending ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={styles.buttonText}>Crear cuenta</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.loginLink}
+            onPress={() => router.push('/(auth)/login')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.loginLinkText}>¿Ya tienes cuenta? </Text>
+            <Text style={styles.loginLinkBold}>Inicia sesión</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -111,69 +150,95 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.bg,
   },
-  form: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: spacing.xxl,
+    paddingBottom: spacing.xxl,
   },
-  inputContainer: {
-    gap: 16,
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: spacing.lg,
+    ...shadow.sm,
   },
-  back: {
-    fontSize: 16,
-    color: '#0066CC',
-    marginBottom: 24,
+  headerSection: {
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xxl,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 8,
+    ...typography.largeTitle,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 32,
+    ...typography.body,
+    color: colors.textSecondary,
+  },
+  form: {
+    gap: spacing.lg,
   },
   inputGroup: {
-    gap: 8,
+    gap: spacing.sm,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#000',
+    color: colors.text,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 16,
     fontSize: 16,
+    color: colors.text,
+    ...shadow.sm,
   },
   button: {
-    backgroundColor: '#0066CC',
-    borderRadius: 8,
-    paddingVertical: 12,
+    backgroundColor: colors.primary,
+    borderRadius: radius.full,
+    paddingVertical: 17,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
+    ...shadow.md,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.white,
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
-  error: {
-    color: '#EF4444',
-    fontSize: 14,
+  loginLink: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
   },
-  link: {
-    color: '#0066CC',
+  loginLinkText: {
+    fontSize: 15,
+    color: colors.textSecondary,
+  },
+  loginLinkBold: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  errorBox: {
+    backgroundColor: colors.expenseLight,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  errorText: {
+    color: colors.expense,
     fontSize: 14,
-    textAlign: 'center',
-    marginTop: 8,
+    fontWeight: '500',
   },
 });

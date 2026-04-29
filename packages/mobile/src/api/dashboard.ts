@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import client from './client';
 import { useAuthStore } from '@/stores/authStore';
+import type { Transaction as TransactionData, Account as TransactionAccount } from './transactions';
 
 export interface NetWorthData {
   total: number;
@@ -56,12 +57,26 @@ export const useDashboardSummary = () => {
         const [netWorthRes, spendingRes, accountsRes, transactionsRes] = await Promise.all([
           client.get<{ data: NetWorthData }>('/dashboard/net-worth'),
           client.get<{ data: SpendingCategory[] }>('/dashboard/spending-by-category'),
-          client.get<{ data: { _id: string; name: string; currentBalance: number }[] }>('/accounts'),
-          client.get<{ data: { data: { _id: string; description: string; amount: number; type: string; date: string; categoryId?: string }[]; meta: unknown } }>('/transactions?limit=5'),
+          client.get<{ data: { _id: string; name: string; currentBalance: number }[] }>(
+            '/accounts',
+          ),
+          client.get<{
+            data: {
+              data: {
+                _id: string;
+                description: string;
+                amount: number;
+                type: string;
+                date: string;
+                categoryId?: string;
+              }[];
+              meta: unknown;
+            };
+          }>('/transactions?limit=5'),
         ]);
 
-        const netWorthData = netWorthRes.data?.data as NetWorthData | undefined;
-        const spendingData = spendingRes.data?.data || [];
+        const netWorthData = netWorthRes.data?.data || {};
+        const spendingData = spendingRes.data?.data || {};
         const accountsData = accountsRes.data?.data || [];
         const transactionsData = transactionsRes.data?.data?.data || [];
 
@@ -70,7 +85,7 @@ export const useDashboardSummary = () => {
           : 0;
 
         return {
-          netWorth: netWorthData?.total || 0,
+          netWorth: netWorthData.total || 0,
           netWorthChange24h: 0,
           netWorthChange30d: 0,
           sparklineData: [],

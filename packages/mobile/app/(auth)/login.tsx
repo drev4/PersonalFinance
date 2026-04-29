@@ -1,9 +1,18 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { useLogin } from '@/api/auth';
 import { checkBackendHealth } from '@/api/health';
+import { colors, radius, spacing, typography, shadow } from '@/theme';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -18,75 +27,87 @@ export default function LoginScreen() {
 
   const handleLogin = () => {
     if (!email || !password) {
-      alert('Please enter email and password');
+      alert('Por favor introduce tu email y contraseña');
       return;
     }
     login({ email, password });
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
-      <ScrollView contentContainerStyle={{ paddingVertical: 20 }}>
-        <Text style={styles.title}>Finanzas</Text>
-        <Text style={styles.subtitle}>Manage your finances</Text>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.headerSection}>
+          <View style={styles.logoMark} />
+          <Text style={styles.appName}>Finanzas</Text>
+          <Text style={styles.tagline}>Gestiona tus finanzas</Text>
+        </View>
 
         {!backendStatus?.ok && (
           <View style={styles.warningBox}>
-          <Text style={styles.warningTitle}>⚠️ Backend no disponible</Text>
-          <Text style={styles.warningText}>
-            No se puede conectar a {process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001'}
-          </Text>
-          <Text style={styles.warningText}>Error: {backendStatus?.error}</Text>
-          <Text style={styles.warningHint}>Asegúrate de que el backend está corriendo:</Text>
-          <Text style={styles.warningCode}>cd packages/api && npm run dev</Text>
-        </View>
-      )}
+            <Text style={styles.warningTitle}>Backend no disponible</Text>
+            <Text style={styles.warningText}>{backendStatus?.error || 'Conectando...'}</Text>
+          </View>
+        )}
 
-      <View style={styles.form}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="your@email.com"
-            value={email}
-            onChangeText={setEmail}
-            editable={!isPending}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-        </View>
+        <View style={styles.form}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Correo electrónico</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="your@email.com"
+              placeholderTextColor={colors.textTertiary}
+              value={email}
+              onChangeText={setEmail}
+              editable={!isPending}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="••••••••"
-            value={password}
-            onChangeText={setPassword}
-            editable={!isPending}
-            secureTextEntry
-            autoCapitalize="none"
-          />
-        </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Contraseña</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="••••••••"
+              placeholderTextColor={colors.textTertiary}
+              value={password}
+              onChangeText={setPassword}
+              editable={!isPending}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+          </View>
 
-        {error && <Text style={styles.error}>{(error as any).message || 'Login failed'}</Text>}
-
-        <TouchableOpacity
-          style={[styles.button, isPending && styles.buttonDisabled]}
-          onPress={handleLogin}
-          disabled={isPending}
-        >
-          {isPending ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Sign In</Text>
+          {error && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>
+                {(error as Error).message || 'Error al iniciar sesión'}
+              </Text>
+            </View>
           )}
-        </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-          <Text style={styles.link}>Don&apos;t have an account? Sign up</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={[styles.button, isPending && styles.buttonDisabled]}
+            onPress={handleLogin}
+            disabled={isPending}
+            activeOpacity={0.85}
+          >
+            {isPending ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={styles.buttonText}>Iniciar sesión</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.registerLink}
+            onPress={() => router.push('/(auth)/register')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.registerLinkText}>¿No tienes cuenta? </Text>
+            <Text style={styles.registerLinkBold}>Regístrate</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -95,96 +116,114 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 24,
+    backgroundColor: colors.bg,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 8,
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: spacing.xxl,
+    paddingBottom: spacing.xxl,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 32,
+  headerSection: {
+    paddingTop: 64,
+    paddingBottom: 48,
+    alignItems: 'flex-start',
+  },
+  logoMark: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    marginBottom: spacing.lg,
+    ...shadow.md,
+  },
+  appName: {
+    ...typography.largeTitle,
+    marginBottom: spacing.xs,
+  },
+  tagline: {
+    ...typography.body,
+    color: colors.textSecondary,
   },
   form: {
-    gap: 16,
+    gap: spacing.lg,
   },
   inputGroup: {
-    gap: 8,
+    gap: spacing.sm,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#000',
+    color: colors.text,
+    letterSpacing: 0.1,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 16,
     fontSize: 16,
+    color: colors.text,
+    ...shadow.sm,
   },
   button: {
-    backgroundColor: '#0066CC',
-    borderRadius: 8,
-    paddingVertical: 12,
+    backgroundColor: colors.primary,
+    borderRadius: radius.full,
+    paddingVertical: 17,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
+    ...shadow.md,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.white,
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
-  error: {
-    color: '#EF4444',
-    fontSize: 14,
+  registerLink: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
   },
-  link: {
-    color: '#0066CC',
+  registerLinkText: {
+    fontSize: 15,
+    color: colors.textSecondary,
+  },
+  registerLinkBold: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  errorBox: {
+    backgroundColor: colors.expenseLight,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  errorText: {
+    color: colors.expense,
     fontSize: 14,
-    textAlign: 'center',
-    marginTop: 8,
+    fontWeight: '500',
   },
   warningBox: {
-    backgroundColor: '#FEF3C7',
-    borderLeftWidth: 4,
+    backgroundColor: '#FFFBEB',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    borderLeftWidth: 3,
     borderLeftColor: '#F59E0B',
-    padding: 12,
-    borderRadius: 6,
-    marginVertical: 16,
   },
   warningTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
     color: '#92400E',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   warningText: {
     fontSize: 12,
     color: '#92400E',
-    marginBottom: 6,
-  },
-  warningHint: {
-    fontSize: 12,
-    color: '#92400E',
-    marginTop: 8,
-    fontWeight: '500',
-  },
-  warningCode: {
-    fontSize: 11,
-    color: '#92400E',
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    marginTop: 6,
-    borderRadius: 4,
-    fontFamily: 'Courier New',
   },
 });

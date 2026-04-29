@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
 import { useAuthStore } from '@/stores/authStore';
+import { useConnectivityMonitor } from '@/stores/connectivityStore';
 
 function RootLayoutNav() {
   const router = useRouter();
@@ -16,6 +17,8 @@ function RootLayoutNav() {
   const refreshToken = useAuthStore((state) => state.refreshToken);
   const restoreTokens = useAuthStore((state) => state.restoreTokens);
   const setIsLoading = useAuthStore((state) => state.setIsLoading);
+
+  useConnectivityMonitor();
 
   useEffect(() => {
     const initAuth = async () => {
@@ -46,7 +49,9 @@ function RootLayoutNav() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+      <View
+        style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}
+      >
         <ActivityIndicator size="large" color="#0066CC" />
       </View>
     );
