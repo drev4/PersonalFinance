@@ -27,6 +27,7 @@ const IntegrationsPage = lazy(() => import('./pages/settings/IntegrationsPage'))
 const ProfilePage = lazy(() => import('./pages/settings/ProfilePage'));
 const CategoryRulesPage = lazy(() => import('./pages/settings/CategoryRulesPage'));
 const CategoriesPage = lazy(() => import('./pages/settings/CategoriesPage'));
+const RecurringPage = lazy(() => import('./pages/transactions/RecurringPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const AppLayout = lazy(() => import('./components/layout/AppLayout'));
 const SimulatorsPage = lazy(() => import('./pages/simulators/SimulatorsPage'));
@@ -80,6 +81,7 @@ export default function App(): React.ReactElement {
                     <Route path="/accounts" element={<AccountsPage />} />
                     <Route path="/accounts/:id" element={<AccountDetailPage />} />
                     <Route path="/transactions" element={<TransactionsPage />} />
+                    <Route path="/transactions/recurring" element={<RecurringPage />} />
                     <Route path="/budgets" element={<BudgetsPage />} />
                     <Route path="/goals" element={<GoalsPage />} />
                     <Route path="/holdings" element={<HoldingsPage />} />
