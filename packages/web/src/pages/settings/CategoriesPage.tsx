@@ -1,6 +1,48 @@
 import { useState, useEffect } from 'react';
 import type React from 'react';
-import { Tag, Plus, Trash2, Pencil, ChevronRight, AlertCircle } from 'lucide-react';
+import {
+  Tag,
+  Plus,
+  Trash2,
+  Pencil,
+  ChevronRight,
+  AlertCircle,
+  ShoppingCart,
+  Car,
+  Home,
+  Heart,
+  Gamepad2,
+  Shirt,
+  UtensilsCrossed,
+  BookOpen,
+  Plane,
+  Smartphone,
+  MoreHorizontal,
+  Briefcase,
+  Code,
+  TrendingUp,
+  Building,
+  Wallet,
+  Coffee,
+  Music,
+  Gift,
+  Zap,
+  Globe,
+  Baby,
+  Dumbbell,
+  Stethoscope,
+  GraduationCap,
+  ShoppingBag,
+  Fuel,
+  PiggyBank,
+  Utensils,
+  Wrench,
+  Bus,
+  DollarSign,
+  CreditCard,
+  Receipt,
+  type LucideIcon,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -23,18 +65,86 @@ import {
 } from '../../hooks/useCategories';
 import type { Category, CreateCategoryDTO } from '../../types/api';
 
-// The GET /categories API returns a tree with nested children
-interface CategoryNode extends Category {
-  children?: CategoryNode[];
+// ─── Icon registry ────────────────────────────────────────────────────────────
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  ShoppingCart, Car, Home, Heart, Gamepad2, Shirt, UtensilsCrossed,
+  BookOpen, Plane, Smartphone, MoreHorizontal, Briefcase, Code,
+  TrendingUp, Building, Wallet, Coffee, Music, Gift, Zap, Globe,
+  Baby, Dumbbell, Stethoscope, GraduationCap, ShoppingBag, Fuel,
+  PiggyBank, Utensils, Wrench, Bus, DollarSign, CreditCard,
+  Receipt, Plus, Tag,
+};
+
+const ICON_NAMES = Object.keys(ICON_MAP);
+
+function CategoryIcon({
+  name,
+  color,
+  size = 16,
+}: {
+  name: string;
+  color: string;
+  size?: number;
+}): React.ReactElement {
+  const Icon = ICON_MAP[name] ?? Tag;
+  return (
+    <div
+      className="flex items-center justify-center rounded-lg"
+      style={{
+        width: size + 16,
+        height: size + 16,
+        backgroundColor: color + '22',
+      }}
+    >
+      <Icon size={size} color={color} strokeWidth={1.8} aria-hidden="true" />
+    </div>
+  );
 }
 
 // ─── Preset colors ────────────────────────────────────────────────────────────
 
 const PRESET_COLORS = [
-  '#0052CC', '#00C896', '#FF4757', '#F59E0B',
-  '#8B5CF6', '#EC4899', '#06B6D4', '#F97316',
-  '#10B981', '#EF4444', '#6366F1', '#84CC16',
+  '#4CAF50', '#2196F3', '#FF9800', '#F44336',
+  '#9C27B0', '#E91E63', '#FF5722', '#3F51B5',
+  '#00BCD4', '#607D8B', '#795548', '#9E9E9E',
 ];
+
+// ─── Icon picker ──────────────────────────────────────────────────────────────
+
+interface IconPickerProps {
+  value: string;
+  color: string;
+  onChange: (name: string) => void;
+}
+
+function IconPicker({ value, color, onChange }: IconPickerProps): React.ReactElement {
+  return (
+    <div className="grid grid-cols-8 gap-1.5 rounded-lg border border-gray-200 bg-gray-50 p-2">
+      {ICON_NAMES.map((name) => {
+        const Icon = ICON_MAP[name]!;
+        const isSelected = value === name;
+        return (
+          <button
+            key={name}
+            type="button"
+            onClick={() => onChange(name)}
+            title={name}
+            className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+              isSelected
+                ? 'bg-primary-100 text-primary-600 ring-2 ring-primary-400'
+                : 'text-gray-500 hover:bg-gray-200'
+            }`}
+            aria-pressed={isSelected}
+            aria-label={name}
+          >
+            <Icon size={15} strokeWidth={1.8} aria-hidden="true" />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 // ─── Category form dialog ─────────────────────────────────────────────────────
 
@@ -50,7 +160,7 @@ const emptyForm = (type: 'income' | 'expense' = 'expense'): CategoryFormState =>
   name: '',
   type,
   color: PRESET_COLORS[0],
-  icon: '📦',
+  icon: 'ShoppingCart',
   parentId: '',
 });
 
@@ -100,9 +210,8 @@ function CategoryFormDialog({
     }
   }, [open, category, parentCategory, defaultType]);
 
-  const isValid = form.name.trim().length > 0 && form.color.match(/^#[0-9a-fA-F]{6}$/) && form.icon.trim().length > 0;
+  const isValid = form.name.trim().length > 0 && /^#[0-9a-fA-F]{6}$/.test(form.color) && form.icon.length > 0;
 
-  // Root categories for parent selector (exclude current and its descendants)
   const rootCategories = allCategories.filter(
     (c) => !c.parentId && c._id !== category?._id && c.type === form.type,
   );
@@ -116,17 +225,14 @@ function CategoryFormDialog({
       name: form.name.trim(),
       type: form.type,
       color: form.color,
-      icon: form.icon.trim(),
+      icon: form.icon,
       parentId: form.parentId || undefined,
     };
 
     if (isEditing && category) {
       updateMutation.mutate(
         { id: category._id, data: payload },
-        {
-          onSuccess: onClose,
-          onError: () => setApiError('No se pudo guardar la categoría'),
-        },
+        { onSuccess: onClose, onError: () => setApiError('No se pudo guardar la categoría') },
       );
     } else {
       createMutation.mutate(payload, {
@@ -141,11 +247,21 @@ function CategoryFormDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? 'Editar categoría' : parentCategory ? `Nueva subcategoría de "${parentCategory.name}"` : 'Nueva categoría'}
+            {isEditing
+              ? 'Editar categoría'
+              : parentCategory
+              ? `Nueva subcategoría de "${parentCategory.name}"`
+              : 'Nueva categoría'}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+          {/* Preview */}
+          <div className="flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2.5">
+            <CategoryIcon name={form.icon} color={form.color} size={18} />
+            <span className="text-sm font-semibold text-gray-700">{form.name || 'Nombre'}</span>
+          </div>
+
           {/* Name */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -159,7 +275,7 @@ function CategoryFormDialog({
             />
           </div>
 
-          {/* Type — only editable if creating a root category */}
+          {/* Type — only for new root categories */}
           {!isEditing && !parentCategory && (
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -167,7 +283,9 @@ function CategoryFormDialog({
               </label>
               <Select
                 value={form.type}
-                onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as 'income' | 'expense', parentId: '' }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, type: e.target.value as 'income' | 'expense', parentId: '' }))
+                }
               >
                 <option value="expense">Gasto</option>
                 <option value="income">Ingreso</option>
@@ -175,8 +293,8 @@ function CategoryFormDialog({
             </div>
           )}
 
-          {/* Parent — only for new subcategory or editing a child */}
-          {(isEditing ? !!category.parentId : !parentCategory) && rootCategories.length > 0 && !parentCategory && (
+          {/* Parent selector */}
+          {!parentCategory && rootCategories.length > 0 && (
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 Categoría padre (opcional)
@@ -193,26 +311,16 @@ function CategoryFormDialog({
             </div>
           )}
 
-          {/* Icon */}
+          {/* Icon picker */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Icono * <span className="normal-case font-normal text-gray-400">(emoji)</span>
+              Icono
             </label>
-            <div className="flex items-center gap-3">
-              <div
-                className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-xl"
-                style={{ backgroundColor: form.color + '22' }}
-              >
-                {form.icon || '?'}
-              </div>
-              <Input
-                value={form.icon}
-                onChange={(e) => setForm((f) => ({ ...f, icon: e.target.value }))}
-                placeholder="🍕"
-                className="flex-1"
-                maxLength={4}
-              />
-            </div>
+            <IconPicker
+              value={form.icon}
+              color={form.color}
+              onChange={(name) => setForm((f) => ({ ...f, icon: name }))}
+            />
           </div>
 
           {/* Color */}
@@ -220,7 +328,7 @@ function CategoryFormDialog({
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
               Color
             </label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {PRESET_COLORS.map((c) => (
                 <button
                   key={c}
@@ -327,6 +435,10 @@ function DeleteDialog({ open, category, onClose }: DeleteDialogProps): React.Rea
 
 // ─── Category row ─────────────────────────────────────────────────────────────
 
+interface CategoryNode extends Category {
+  children?: CategoryNode[];
+}
+
 interface CategoryRowProps {
   category: CategoryNode;
   allCategories: Category[];
@@ -350,7 +462,7 @@ function CategoryRow({
   return (
     <div>
       <div
-        className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-gray-50 group"
+        className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-50 group"
         style={{ paddingLeft: depth > 0 ? `${depth * 20 + 12}px` : '12px' }}
       >
         {/* Expand toggle */}
@@ -364,23 +476,14 @@ function CategoryRow({
           <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </button>
 
-        {/* Icon + color dot */}
-        <div
-          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-base"
-          style={{ backgroundColor: category.color + '22' }}
-        >
-          <span style={{ color: category.color }}>{category.icon}</span>
-        </div>
+        <CategoryIcon name={category.icon} color={category.color} size={15} />
 
-        {/* Name */}
         <span className="flex-1 text-sm font-medium text-gray-800">{category.name}</span>
 
-        {/* Default badge */}
         {category.isDefault && (
           <Badge variant="outline" className="text-[10px]">Por defecto</Badge>
         )}
 
-        {/* Actions — visible on hover */}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {!category.parentId && (
             <button
@@ -414,7 +517,6 @@ function CategoryRow({
         </div>
       </div>
 
-      {/* Children */}
       {hasChildren && expanded && (
         <div>
           {(category.children ?? []).map((child) => (
@@ -457,12 +559,13 @@ function Section({
   onDelete,
   onAddChild,
 }: SectionProps): React.ReactElement {
+  const total = roots.reduce((acc, r) => acc + 1 + (r.children?.length ?? 0), 0);
   return (
     <Card>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-            {title} ({roots.reduce((acc, r) => acc + 1 + (r.children?.length ?? 0), 0)})
+            {title} ({total})
           </CardTitle>
           <Button size="sm" variant="ghost" onClick={() => onNew(type)} className="gap-1.5 text-xs">
             <Plus className="h-3.5 w-3.5" aria-hidden="true" />
@@ -472,7 +575,9 @@ function Section({
       </CardHeader>
       <CardContent className="pb-3">
         {roots.length === 0 ? (
-          <p className="py-4 text-center text-sm text-gray-400">Sin categorías de {title.toLowerCase()}</p>
+          <p className="py-4 text-center text-sm text-gray-400">
+            Sin categorías de {title.toLowerCase()}
+          </p>
         ) : (
           <div className="divide-y divide-gray-50">
             {roots.map((cat) => (
@@ -506,10 +611,8 @@ export default function CategoriesPage(): React.ReactElement {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
 
-  // The API returns a tree; cast to CategoryNode[]
   const treeCategories = (rawCategories as CategoryNode[] | undefined) ?? [];
 
-  // Flat list for parent selectors
   const flatCategories: Category[] = [];
   function flatten(nodes: CategoryNode[]): void {
     for (const n of nodes) {
@@ -556,7 +659,6 @@ export default function CategoriesPage(): React.ReactElement {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-6">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100">
           <Tag className="h-5 w-5 text-primary-600" aria-hidden="true" />
@@ -569,7 +671,6 @@ export default function CategoriesPage(): React.ReactElement {
         </div>
       </div>
 
-      {/* Loading */}
       {isLoading && (
         <div className="space-y-3">
           <Skeleton className="h-40 w-full rounded-xl" />
@@ -577,7 +678,6 @@ export default function CategoriesPage(): React.ReactElement {
         </div>
       )}
 
-      {/* Sections */}
       {!isLoading && (
         <>
           <Section
@@ -603,7 +703,6 @@ export default function CategoriesPage(): React.ReactElement {
         </>
       )}
 
-      {/* Form dialog */}
       <CategoryFormDialog
         open={formOpen}
         category={editingCategory}
@@ -613,7 +712,6 @@ export default function CategoriesPage(): React.ReactElement {
         onClose={closeForm}
       />
 
-      {/* Delete dialog */}
       <DeleteDialog
         open={deleteOpen}
         category={deletingCategory}
