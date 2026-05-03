@@ -25,6 +25,7 @@ const GoalsPage = lazy(() => import('./pages/goals/GoalsPage'));
 const HoldingsPage = lazy(() => import('./pages/holdings/HoldingsPage'));
 const IntegrationsPage = lazy(() => import('./pages/settings/IntegrationsPage'));
 const ProfilePage = lazy(() => import('./pages/settings/ProfilePage'));
+const CategoryRulesPage = lazy(() => import('./pages/settings/CategoryRulesPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const AppLayout = lazy(() => import('./components/layout/AppLayout'));
 const SimulatorsPage = lazy(() => import('./pages/simulators/SimulatorsPage'));
@@ -83,6 +84,7 @@ export default function App(): React.ReactElement {
                     <Route path="/holdings" element={<HoldingsPage />} />
                     <Route path="/settings/integrations" element={<IntegrationsPage />} />
                     <Route path="/settings/profile" element={<ProfilePage />} />
+                    <Route path="/settings/category-rules" element={<CategoryRulesPage />} />
                     <Route path="/simulators" element={<SimulatorsPage />} />
                     <Route path="/simulators/mortgage" element={<MortgagePage />} />
                     <Route path="/simulators/loan" element={<LoanPage />} />
