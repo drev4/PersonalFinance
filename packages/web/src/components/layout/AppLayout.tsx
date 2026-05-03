@@ -17,6 +17,7 @@ import {
   Plug,
   User,
   Tag,
+  FolderTree,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useLogout, useMe } from '../../hooks/useAuth';
@@ -86,6 +87,11 @@ const SETTINGS_NAV_ITEMS: NavItem[] = [
     to: '/settings/profile',
     icon: <User className="h-5 w-5 flex-shrink-0" aria-hidden="true" />,
     label: 'Perfil',
+  },
+  {
+    to: '/settings/categories',
+    icon: <FolderTree className="h-5 w-5 flex-shrink-0" aria-hidden="true" />,
+    label: 'Categorías',
   },
   {
     to: '/settings/category-rules',
