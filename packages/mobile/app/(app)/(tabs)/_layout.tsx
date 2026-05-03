@@ -1,6 +1,6 @@
 import { Tabs, useRouter } from 'expo-router';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Home, ArrowRightLeft, Wallet, Settings, Plus } from 'lucide-react-native';
+import { Home, ArrowRightLeft, Wallet, Settings, Plus, PieChart } from 'lucide-react-native';
 import { colors, radius, shadow } from '@/theme';
 
 const createIcon = (Icon: React.ElementType) => {
@@ -34,6 +34,10 @@ export default function TabLayout() {
         <Tabs.Screen
           name="portfolio"
           options={{ title: 'Cartera', tabBarIcon: createIcon(Wallet) }}
+        />
+        <Tabs.Screen
+          name="budgets"
+          options={{ title: 'Presupuestos', tabBarIcon: createIcon(PieChart) }}
         />
         <Tabs.Screen
           name="settings"
