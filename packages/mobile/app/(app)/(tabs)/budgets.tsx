@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useMemo, memo } from 'react';
 import type React from 'react';
-import { Plus, Pencil, Trash2, PieChart, AlertTriangle } from 'lucide-react-native';
+import { Plus, Pencil, Trash2, ChartPie, AlertTriangle } from 'lucide-react-native';
 import { radius, spacing, type ThemeColors, getShadow } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
 import { Skeleton } from '@/components/Skeleton';
@@ -245,7 +245,7 @@ export default function BudgetsScreen() {
           // Empty state
           <View style={styles.emptyState}>
             <View style={styles.emptyIcon}>
-              <PieChart size={32} color={colors.textTertiary} />
+              <ChartPie size={32} color={colors.textTertiary} />
             </View>
             <Text style={styles.emptyTitle}>Sin presupuestos</Text>
             <Text style={styles.emptySubtitle}>
