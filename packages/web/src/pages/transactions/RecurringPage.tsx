@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type React from 'react';
-import { RepeatIcon, Pencil, Trash2, AlertCircle, CalendarClock } from 'lucide-react';
+import { RepeatIcon, Pencil, Trash2, AlertCircle, CalendarClock, Plus } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -15,11 +15,12 @@ import {
   DialogFooter,
   DialogClose,
 } from '../../components/ui/dialog';
-import { useRecurring, useUpdateRecurring, useDeleteRecurring } from '../../hooks/useRecurring';
+import { useRecurring, useCreateRecurring, useUpdateRecurring, useDeleteRecurring } from '../../hooks/useRecurring';
 import { useAccounts } from '../../hooks/useAccounts';
 import { useCategories } from '../../hooks/useCategories';
 import { formatCurrency, formatDate, getTransactionTypeColor } from '../../lib/formatters';
 import type { RecurringTransaction, RecurringFrequency } from '../../api/recurring.api';
+import type { Account } from '../../types/api';
 import { format, parseISO } from 'date-fns';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -47,6 +48,253 @@ function frequencyLabel(frequency: RecurringFrequency, interval: number): string
 
 function toDateInputValue(iso: string): string {
   return format(parseISO(iso), 'yyyy-MM-dd');
+}
+
+// ─── Create dialog ────────────────────────────────────────────────────────────
+
+interface CreateFormState {
+  accountId: string;
+  type: 'income' | 'expense';
+  amount: string;
+  currency: string;
+  description: string;
+  categoryId: string;
+  frequency: RecurringFrequency;
+  interval: string;
+  nextDate: string;
+  endDate: string;
+}
+
+const emptyCreateForm = (): CreateFormState => ({
+  accountId: '',
+  type: 'expense',
+  amount: '',
+  currency: 'EUR',
+  description: '',
+  categoryId: '',
+  frequency: 'monthly',
+  interval: '1',
+  nextDate: format(new Date(), 'yyyy-MM-dd'),
+  endDate: '',
+});
+
+interface CreateDialogProps {
+  open: boolean;
+  accounts: Account[];
+  onClose: () => void;
+}
+
+function CreateDialog({ open, accounts, onClose }: CreateDialogProps): React.ReactElement {
+  const createMutation = useCreateRecurring();
+  const { data: categories } = useCategories();
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [form, setForm] = useState<CreateFormState>(emptyCreateForm);
+
+  useEffect(() => {
+    if (open) {
+      setApiError(null);
+      const initial = emptyCreateForm();
+      if (accounts.length > 0) {
+        initial.accountId = accounts[0]._id;
+        initial.currency = accounts[0].currency;
+      }
+      setForm(initial);
+    }
+  }, [open, accounts]);
+
+  // Auto-fill currency when account changes
+  function handleAccountChange(accountId: string): void {
+    const acc = accounts.find((a) => a._id === accountId);
+    setForm((f) => ({ ...f, accountId, currency: acc?.currency ?? f.currency }));
+  }
+
+  const filteredCategories = (categories ?? []).filter((c) => c.type === form.type);
+
+  const isValid =
+    form.accountId !== '' &&
+    form.description.trim().length > 0 &&
+    form.amount !== '' &&
+    parseFloat(form.amount) > 0 &&
+    form.nextDate !== '';
+
+  function handleSubmit(e: React.FormEvent): void {
+    e.preventDefault();
+    if (!isValid || createMutation.isPending) return;
+    setApiError(null);
+
+    const amountCents = Math.round(parseFloat(form.amount.replace(',', '.')) * 100);
+
+    createMutation.mutate(
+      {
+        accountId: form.accountId,
+        type: form.type,
+        amount: amountCents,
+        currency: form.currency.toUpperCase(),
+        description: form.description.trim(),
+        categoryId: form.categoryId || undefined,
+        frequency: form.frequency,
+        interval: parseInt(form.interval, 10) || 1,
+        nextDate: new Date(form.nextDate).toISOString(),
+        endDate: form.endDate ? new Date(form.endDate).toISOString() : undefined,
+      },
+      {
+        onSuccess: onClose,
+        onError: () => setApiError('No se pudo crear la transacción recurrente'),
+      },
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Nueva transacción recurrente</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4 pt-1">
+          {/* Account */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Cuenta *</label>
+            <Select value={form.accountId} onChange={(e) => handleAccountChange(e.target.value)} required>
+              <option value="">Selecciona una cuenta</option>
+              {accounts.map((a) => (
+                <option key={a._id} value={a._id}>{a.name}</option>
+              ))}
+            </Select>
+          </div>
+
+          {/* Type */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Tipo *</label>
+            <Select
+              value={form.type}
+              onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as 'income' | 'expense', categoryId: '' }))}
+            >
+              <option value="expense">Gasto</option>
+              <option value="income">Ingreso</option>
+            </Select>
+          </div>
+
+          {/* Description */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Descripción *</label>
+            <Input
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              placeholder="Ej. Netflix, Hipoteca…"
+              autoFocus
+            />
+          </div>
+
+          {/* Amount + currency */}
+          <div className="flex gap-3">
+            <div className="flex-1 space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Importe *</label>
+              <Input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={form.amount}
+                onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="w-24 space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Moneda</label>
+              <Input
+                value={form.currency}
+                onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value.toUpperCase().slice(0, 3) }))}
+                maxLength={3}
+              />
+            </div>
+          </div>
+
+          {/* Category */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Categoría</label>
+            <Select value={form.categoryId} onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}>
+              <option value="">Sin categoría</option>
+              {filteredCategories.map((c) => (
+                <option key={c._id} value={c._id}>{c.name}</option>
+              ))}
+            </Select>
+          </div>
+
+          {/* Frequency + interval */}
+          <div className="flex gap-3">
+            <div className="flex-1 space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Frecuencia *</label>
+              <Select
+                value={form.frequency}
+                onChange={(e) => setForm((f) => ({ ...f, frequency: e.target.value as RecurringFrequency }))}
+              >
+                {FREQUENCY_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </Select>
+            </div>
+            <div className="w-28 space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Cada (nº {FREQUENCY_LABELS[form.frequency]}s)
+              </label>
+              <Input
+                type="number"
+                min={1}
+                max={365}
+                value={form.interval}
+                onChange={(e) => setForm((f) => ({ ...f, interval: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          {/* Next date */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Primera fecha *</label>
+            <Input
+              type="date"
+              value={form.nextDate}
+              onChange={(e) => setForm((f) => ({ ...f, nextDate: e.target.value }))}
+              required
+            />
+          </div>
+
+          {/* End date */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Fecha de fin (opcional)</label>
+            <div className="flex gap-2">
+              <Input
+                type="date"
+                value={form.endDate}
+                onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
+                className="flex-1"
+              />
+              {form.endDate && (
+                <Button type="button" variant="outline" size="sm" onClick={() => setForm((f) => ({ ...f, endDate: '' }))}>
+                  Quitar
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {apiError && (
+            <p className="flex items-center gap-1.5 text-sm text-red-600">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+              {apiError}
+            </p>
+          )}
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+            </DialogClose>
+            <Button type="submit" disabled={!isValid || createMutation.isPending}>
+              {createMutation.isPending ? 'Creando...' : 'Crear'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 // ─── Edit dialog ──────────────────────────────────────────────────────────────
@@ -371,6 +619,7 @@ export default function RecurringPage(): React.ReactElement {
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
 
+  const [createOpen, setCreateOpen] = useState(false);
   const [editTx, setEditTx] = useState<RecurringTransaction | null>(null);
   const [cancelTx, setCancelTx] = useState<RecurringTransaction | null>(null);
 
@@ -397,16 +646,22 @@ export default function RecurringPage(): React.ReactElement {
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100">
-          <RepeatIcon className="h-5 w-5 text-primary-600" aria-hidden="true" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100">
+            <RepeatIcon className="h-5 w-5 text-primary-600" aria-hidden="true" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Transacciones recurrentes</h1>
+            <p className="text-sm text-gray-500">
+              Plantillas que generan transacciones automáticamente.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Transacciones recurrentes</h1>
-          <p className="text-sm text-gray-500">
-            Plantillas que generan transacciones automáticamente.
-          </p>
-        </div>
+        <Button onClick={() => setCreateOpen(true)} className="gap-2">
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          Nueva
+        </Button>
       </div>
 
       {/* Loading */}
@@ -469,6 +724,11 @@ export default function RecurringPage(): React.ReactElement {
         </div>
       )}
 
+      <CreateDialog
+        open={createOpen}
+        accounts={accounts ?? []}
+        onClose={() => setCreateOpen(false)}
+      />
       <EditDialog
         open={editTx !== null}
         tx={editTx}
