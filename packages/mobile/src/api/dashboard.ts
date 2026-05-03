@@ -46,6 +46,30 @@ export interface DashboardSummary {
   recentTransactions: Transaction[];
 }
 
+export interface CashflowMonth {
+  month: string;
+  income: number;
+  expenses: number;
+  net: number;
+}
+
+export const useCashflow = (months: number) => {
+  const accessToken = useAuthStore((state) => state.accessToken);
+
+  return useQuery<CashflowMonth[]>({
+    queryKey: ['dashboard', 'cashflow', months],
+    enabled: !!accessToken,
+    queryFn: async () => {
+      const response = await client.get<{ data: CashflowMonth[] }>(
+        `/dashboard/cashflow?months=${months}`,
+      );
+      return response.data.data;
+    },
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+};
+
 export const useDashboardSummary = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
 

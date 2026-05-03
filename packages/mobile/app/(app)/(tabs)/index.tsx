@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDashboardSummary } from '@/api/dashboard';
+import { useDashboardSummary, useCashflow } from '@/api/dashboard';
 import { Skeleton, SkeletonGroup } from '@/components/Skeleton';
 import { useAuthStore } from '@/stores/authStore';
 import { formatCurrency } from '@/lib/formatters';
@@ -9,9 +9,12 @@ import { radius, spacing, type ThemeColors, getShadow } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
 import { TrendingUp, TrendingDown } from 'lucide-react-native';
 
+const MONTHS_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
 export default function HomeScreen() {
   const user = useAuthStore((state) => state.user);
   const { data, isLoading, error, refetch } = useDashboardSummary();
+  const { data: cashflow, isLoading: cashflowLoading, refetch: refetchCashflow } = useCashflow(6);
   const [refreshing, setRefreshing] = useState(false);
 
   const { colors, shadow, isDark } = useTheme();
@@ -19,7 +22,7 @@ export default function HomeScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await refetch();
+    await Promise.all([refetch(), refetchCashflow()]);
     setRefreshing(false);
   };
 
@@ -135,23 +138,55 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Chart placeholder */}
+        {/* Cashflow chart */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.sectionTitle}>Últimos 30 días</Text>
+            <Text style={styles.sectionTitle}>Últimos 6 meses</Text>
           </View>
           <View style={styles.chartArea}>
-            <View style={styles.chartBars}>
-              {[40, 65, 45, 80, 55, 90, 70, 85, 60, 95, 75, 88].map((h, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.chartBar,
-                    { height: h * 0.8, opacity: i === 11 ? 1 : 0.35 + i * 0.05 },
-                  ]}
-                />
-              ))}
-            </View>
+            {cashflowLoading || !cashflow ? (
+              <Skeleton height={76} borderRadius={3} marginBottom={0} />
+            ) : cashflow.length === 0 ? (
+              <View style={styles.chartEmpty}>
+                <Text style={styles.chartEmptyText}>Sin datos</Text>
+              </View>
+            ) : (() => {
+              const maxExp = Math.max(...cashflow.map((m) => m.expenses), 1);
+              return (
+                <>
+                  <View style={styles.chartBars}>
+                    {cashflow.map((m, i) => {
+                      const barH = Math.max(4, Math.round((m.expenses / maxExp) * 76));
+                      const isLast = i === cashflow.length - 1;
+                      const barColor = m.net < 0 ? colors.expense : colors.primary;
+                      return (
+                        <View
+                          key={m.month}
+                          style={[
+                            styles.chartBar,
+                            {
+                              height: barH,
+                              backgroundColor: barColor,
+                              opacity: isLast ? 1 : 0.35 + (i / Math.max(cashflow.length - 1, 1)) * 0.5,
+                            },
+                          ]}
+                        />
+                      );
+                    })}
+                  </View>
+                  <View style={styles.chartLabels}>
+                    {cashflow.map((m) => {
+                      const monthIdx = parseInt(m.month.split('-')[1], 10) - 1;
+                      return (
+                        <Text key={m.month} style={styles.chartLabel}>
+                          {MONTHS_ES[monthIdx]}
+                        </Text>
+                      );
+                    })}
+                  </View>
+                </>
+              );
+            })()}
           </View>
         </View>
 
@@ -335,20 +370,39 @@ function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>)
       marginBottom: spacing.sm,
     },
     chartArea: {
-      height: 80,
-      justifyContent: 'flex-end',
       marginTop: spacing.md,
     },
     chartBars: {
       flexDirection: 'row',
       alignItems: 'flex-end',
       gap: 4,
-      height: 80,
+      height: 76,
     },
     chartBar: {
       flex: 1,
-      backgroundColor: colors.primary,
       borderRadius: 3,
+    },
+    chartLabels: {
+      flexDirection: 'row',
+      gap: 4,
+      marginTop: 6,
+    },
+    chartLabel: {
+      flex: 1,
+      textAlign: 'center',
+      fontSize: 9,
+      fontWeight: '600',
+      color: colors.textTertiary,
+      textTransform: 'capitalize',
+    },
+    chartEmpty: {
+      height: 76,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    chartEmptyText: {
+      fontSize: 13,
+      color: colors.textTertiary,
     },
     accountCard: {
       paddingHorizontal: spacing.lg,
