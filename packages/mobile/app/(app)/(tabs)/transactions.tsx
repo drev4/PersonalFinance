@@ -13,7 +13,8 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
-import { ChevronDown, ChevronUp, ChevronLeft, X, Pencil, Trash2 } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { ChevronDown, ChevronUp, ChevronLeft, X, Pencil, Trash2, Plus } from 'lucide-react-native';
 import { useState, useMemo, useRef, useCallback, memo, type ReactNode } from 'react';
 import * as Haptics from 'expo-haptics';
 import { useTransactions, useAccounts, useCategories, useDeleteTransaction } from '@/api/transactions';
@@ -179,6 +180,7 @@ export default function TransactionsScreen() {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [datePickerFor, setDatePickerFor] = useState<'from' | 'to' | null>(null);
 
+  const router = useRouter();
   const { colors, shadow, isDark } = useTheme();
   const { mutate: deleteTransaction } = useDeleteTransaction();
   const styles = useMemo(() => createStyles(colors, shadow), [isDark]);
@@ -265,6 +267,13 @@ export default function TransactionsScreen() {
               : 'Historial de movimientos'}
           </Text>
         </View>
+        <TouchableOpacity
+          style={styles.addBtn}
+          onPress={() => router.push('/(modals)/quick-add')}
+          activeOpacity={0.8}
+        >
+          <Plus size={20} color="#fff" />
+        </TouchableOpacity>
       </View>
 
       {/* Filters */}
@@ -667,9 +676,21 @@ function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>)
       backgroundColor: colors.bg,
     },
     header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
       paddingHorizontal: spacing.xl,
       paddingTop: spacing.xl,
       paddingBottom: spacing.md,
+    },
+    addBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: radius.full,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...shadow.sm,
     },
     title: {
       fontSize: 28,
