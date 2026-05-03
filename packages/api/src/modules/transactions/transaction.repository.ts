@@ -253,6 +253,47 @@ export async function getSpendingByCategory(
   return TransactionModel.aggregate<CategorySpending>(pipeline).exec();
 }
 
+export interface CreateRecurringTemplateDTO {
+  userId: string;
+  accountId: string;
+  type: TransactionType;
+  amount: number;
+  currency: string;
+  description: string;
+  categoryId?: string;
+  tags?: string[];
+  frequency: RecurringFrequency;
+  interval: number;
+  nextDate: Date;
+  endDate?: Date;
+}
+
+export async function createRecurringTemplate(
+  data: CreateRecurringTemplateDTO,
+): Promise<ITransaction> {
+  const tx = new TransactionModel({
+    userId: new mongoose.Types.ObjectId(data.userId),
+    accountId: new mongoose.Types.ObjectId(data.accountId),
+    type: data.type,
+    amount: data.amount,
+    currency: data.currency,
+    date: data.nextDate,
+    description: data.description,
+    categoryId: data.categoryId !== undefined
+      ? new mongoose.Types.ObjectId(data.categoryId)
+      : undefined,
+    tags: data.tags ?? [],
+    source: 'manual',
+    recurring: {
+      frequency: data.frequency,
+      interval: data.interval,
+      nextDate: data.nextDate,
+      endDate: data.endDate,
+    },
+  });
+  return tx.save();
+}
+
 export async function findRecurring(userId: string): Promise<ITransaction[]> {
   return TransactionModel.find({
     userId: new mongoose.Types.ObjectId(userId),
