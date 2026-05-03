@@ -33,31 +33,31 @@ Tres ficheros con código obsoleto que no se usan y pueden confundir:
 
 El API tiene CRUD completo en `/budgets` + progreso + alertas. No hay ninguna pantalla en mobile.
 
-- [ ] Crear `app/(app)/(tabs)/budgets.tsx` con lista de presupuestos
-- [ ] Añadir la tab al layout `app/(app)/(tabs)/_layout.tsx`
-- [ ] Añadir `src/api/budgets.ts` con `getBudgets`, `createBudget`, `getBudgetProgress`, `getBudgetAlerts`
-- [ ] Modal de creación/edición de presupuesto
-- [ ] Barra de progreso por categoría con alerta visual si supera el 80%
+- [x] Crear `app/(app)/(tabs)/budgets.tsx` con lista de presupuestos
+- [x] Añadir la tab al layout `app/(app)/(tabs)/_layout.tsx`
+- [x] Añadir `src/api/budgets.ts` con `getBudgets`, `createBudget`, `getBudgetProgress`, `getBudgetAlerts`
+- [x] Modal de creación/edición de presupuesto
+- [x] Barra de progreso por categoría con alerta visual si supera el 80%
 
 #### 4. Pantalla de Metas de ahorro `[MOB]`
 
 El API tiene CRUD en `/goals` + sugerencia de aportación mensual. No hay pantalla en mobile.
 
-- [ ] Crear `app/(app)/(tabs)/goals.tsx` con lista de metas
-- [ ] Añadir la tab al layout
-- [ ] Añadir `src/api/goals.ts` con `getGoals`, `createGoal`, `updateGoal`, `deleteGoal`
-- [ ] Tarjeta por meta con barra de progreso circular y sugerencia mensual
-- [ ] Acción rápida "Aportar" (ver tarea #19)
+- [x] Crear `app/(app)/(tabs)/goals.tsx` con lista de metas
+- [x] Añadir la tab al layout
+- [x] Añadir `src/api/goals.ts` con `getGoals`, `createGoal`, `updateGoal`, `deleteGoal`
+- [x] Tarjeta por meta con barra de progreso circular y sugerencia mensual
+- [x] Acción rápida "Aportar" (ver tarea #19)
 
 #### 5. Pantalla de Cuentas `[MOB]`
 
 Las cuentas solo aparecen como scroll horizontal en el home, sin gestión.
 
-- [ ] Crear `app/(app)/(tabs)/accounts.tsx` con lista completa
-- [ ] Añadir `src/api/accounts.ts` con `getAccounts`, `createAccount`, `updateAccount`, `adjustBalance`, `archiveAccount`
-- [ ] Formulario de crear/editar cuenta (tipo, moneda, saldo inicial, color, institución)
-- [ ] Acción de ajustar saldo
-- [ ] Swipe to archive (acción destructiva con confirmación haptic)
+- [x] Crear `app/(app)/(tabs)/accounts.tsx` con lista completa
+- [x] Añadir `src/api/accounts.ts` con `getAccounts`, `createAccount`, `updateAccount`, `adjustBalance`, `archiveAccount`
+- [x] Formulario de crear/editar cuenta (tipo, moneda, saldo inicial, color, institución)
+- [x] Acción de ajustar saldo
+- [x] Swipe to archive (acción destructiva con confirmación haptic)
 
 #### 6. Pantalla / Tab de Notificaciones `[MOB]`
 
@@ -100,16 +100,15 @@ El modal de detalle solo muestra información. `EditTransactionModal.tsx` existe
 
 No hay acceso directo para añadir transacción desde la pantalla de transacciones; solo existe el FAB del layout.
 
-- [ ] Añadir botón "+" en el header de `transactions.tsx` que abre el quick-add modal
-- [ ] O integrar el formulario directamente en la tab
+- [x] Añadir botón "+" en el header de `transactions.tsx` que abre el quick-add modal
+- [x] O integrar el formulario directamente en la tab
 
 #### 11. Gráfico del home es hardcoded `[MOB]`
 
 Las barras de "Últimos 30 días" usan valores fijos `[40, 65, 45, 80, 55, 90, 70, 85, 60, 95, 75, 88]`.
 
-- [ ] Reemplazar con datos reales de `GET /dashboard/cashflow?months=1`
-- [ ] Alternativamente, usar `GET /dashboard/net-worth/history?period=1m` para evolución del patrimonio
-- [ ] Mantener el skeleton mientras carga
+- [x] Reemplazar con datos reales de `GET /dashboard/cashflow?months=6`
+- [x] Mantener el skeleton mientras carga
 
 ### Web — páginas/features faltantes
 
@@ -117,30 +116,30 @@ Las barras de "Últimos 30 días" usan valores fijos `[40, 65, 45, 80, 55, 90, 7
 
 El API tiene CRUD completo en `/category-rules`. Sin UI, el auto-categorizado es inaccesible.
 
-- [ ] Crear `src/api/categoryRules.api.ts`
-- [ ] Crear `src/hooks/useCategoryRules.ts`
-- [ ] Crear página `src/pages/settings/CategoryRulesPage.tsx`
-- [ ] Añadir ruta `/settings/category-rules` en `App.tsx`
-- [ ] Añadir enlace en el sidebar de settings en `AppLayout.tsx`
-- [ ] Componente para crear regla: campo `field` (descripción / monto), operador, valor, categoría destino
+- [x] Crear `src/api/categoryRules.api.ts`
+- [x] Crear `src/hooks/useCategoryRules.ts`
+- [x] Crear página `src/pages/settings/CategoryRulesPage.tsx`
+- [x] Añadir ruta `/settings/category-rules` en `App.tsx`
+- [x] Añadir enlace en el sidebar de settings en `AppLayout.tsx`
+- [x] Componente para crear regla: keywords (palabras clave contra descripción), categoría destino, prioridad
 
 #### 13. No hay UI para gestionar Categorías `[WEB]`
 
 Las categorías son solo seleccionables en formularios. No hay página dedicada.
 
-- [ ] Crear `src/pages/settings/CategoriesPage.tsx`
-- [ ] Añadir ruta `/settings/categories`
-- [ ] Añadir al sidebar
-- [ ] Lista con árbol (soporte `parentId`) — crear, editar nombre/color/icono, eliminar
+- [x] Crear `src/pages/settings/CategoriesPage.tsx`
+- [x] Añadir ruta `/settings/categories`
+- [x] Añadir al sidebar
+- [x] Lista con árbol (soporte `parentId`) — crear, editar nombre/color/icono, eliminar
 
 #### 14. No hay UI para Transacciones Recurrentes `[WEB]`
 
 El API expone `GET /transactions/recurring`, `PATCH` y `DELETE` pero no hay ninguna página.
 
-- [ ] Añadir `src/hooks/useRecurring.ts`
-- [ ] Crear `src/pages/transactions/RecurringPage.tsx` o sección dentro de `TransactionsPage`
-- [ ] Lista de plantillas activas con frecuencia, próxima fecha, importe
-- [ ] Acciones de pausa / editar frecuencia / cancelar
+- [x] Añadir `src/hooks/useRecurring.ts`
+- [x] Crear `src/pages/transactions/RecurringPage.tsx` (enlazada desde TransactionsPage)
+- [x] Lista de plantillas activas con frecuencia, próxima fecha, importe
+- [x] Acciones de crear / editar frecuencia / cancelar
 
 #### 15. Dark mode web — preferencia guardada pero sin efecto `[WEB]`
 
@@ -166,8 +165,8 @@ El API expone `GET /transactions/recurring`, `PATCH` y `DELETE` pero no hay ning
 
 Solo existen `PATCH` y `DELETE` en `/transactions/recurring`. Para crear una plantilla hay que pasar el campo `recurring` al crear una transacción, lo que genera siempre una primera transacción inmediata.
 
-- [ ] Añadir `POST /transactions/recurring` con los campos de la plantilla (sin crear transacción real)
-- [ ] Útil para programar pagos futuros sin que exista una transacción "hoy"
+- [x] Añadir `POST /transactions/recurring` con los campos de la plantilla (sin crear transacción real)
+- [x] Útil para programar pagos futuros sin que exista una transacción "hoy"
 
 ---
 
@@ -268,33 +267,33 @@ El módulo de holdings solo rastrea PnL por precio. No hay seguimiento de divide
 
 ## Resumen ejecutivo
 
-| #   | Tarea                                 | Paquetes        | Prioridad |
-| --- | ------------------------------------- | --------------- | --------- |
-| 1   | Push notification endpoint            | API             | 🔴        |
-| 2   | Eliminar ficheros placeholder         | API             | 🔴        |
-| 3   | Pantalla Presupuestos mobile          | MOB             | 🟡        |
-| 4   | Pantalla Metas mobile                 | MOB             | 🟡        |
-| 5   | Pantalla Cuentas mobile               | MOB             | 🟡        |
-| 6   | Pantalla Notificaciones mobile        | MOB             | 🟡        |
-| 7   | Settings mobile completo              | MOB             | 🟡        |
-| 8   | Filtro de fechas interactivo mobile   | MOB             | 🟡        |
-| 9   | Editar/eliminar transacciones mobile  | MOB             | 🟡        |
-| 10  | Botón "+" en tab Transacciones mobile | MOB             | 🟡        |
-| 11  | Gráfico home con datos reales         | MOB             | 🟡        |
-| 12  | UI Reglas de categorización           | WEB             | 🟡        |
-| 13  | UI Gestión de categorías              | WEB             | 🟡        |
-| 14  | UI Transacciones recurrentes          | WEB             | 🟡        |
-| 15  | Dark mode web funcional               | WEB             | 🟡        |
-| 16  | 2FA implementación                    | API             | 🟡        |
-| 17  | POST /transactions/recurring          | API             | 🟡        |
-| 18  | Importar transacciones CSV            | API + WEB + MOB | 🟢        |
-| 19  | Depósito rápido a meta                | API + WEB + MOB | 🟢        |
-| 20  | Gestión y filtro de tags              | WEB + MOB       | 🟢        |
-| 21  | Calendario de recurrentes             | WEB + MOB       | 🟢        |
-| 22  | Gráfico presupuesto vs real           | WEB + MOB       | 🟢        |
-| 23  | Página de seguridad web               | WEB             | 🟢        |
-| 24  | Score de salud financiera             | API + WEB + MOB | 🟢        |
-| 25  | Integración Plaid                     | API             | 🟢        |
-| 26  | Búsqueda global                       | WEB + MOB       | 🟢        |
-| 27  | Simuladores mobile                    | MOB             | 🟢        |
-| 28  | Dividendos y rendimientos             | API + WEB + MOB | 🟢        |
+| #   | Tarea                                 | Paquetes        | Prioridad | Estado |
+| --- | ------------------------------------- | --------------- | --------- | ------ |
+| 1   | Push notification endpoint            | API             | 🔴        | ⏳     |
+| 2   | Eliminar ficheros placeholder         | API             | 🔴        | ✅     |
+| 3   | Pantalla Presupuestos mobile          | MOB             | 🟡        | ✅     |
+| 4   | Pantalla Metas mobile                 | MOB             | 🟡        | ✅     |
+| 5   | Pantalla Cuentas mobile               | MOB             | 🟡        | ✅     |
+| 6   | Pantalla Notificaciones mobile        | MOB             | 🟡        | ⏳     |
+| 7   | Settings mobile completo              | MOB             | 🟡        | ✅     |
+| 8   | Filtro de fechas interactivo mobile   | MOB             | 🟡        | ✅     |
+| 9   | Editar/eliminar transacciones mobile  | MOB             | 🟡        | ✅     |
+| 10  | Botón "+" en tab Transacciones mobile | MOB             | 🟡        | ✅     |
+| 11  | Gráfico home con datos reales         | MOB             | 🟡        | ✅     |
+| 12  | UI Reglas de categorización           | WEB             | 🟡        | ✅     |
+| 13  | UI Gestión de categorías              | WEB             | 🟡        | ✅     |
+| 14  | UI Transacciones recurrentes          | WEB             | 🟡        | ✅     |
+| 15  | Dark mode web funcional               | WEB             | 🟡        | ⏳     |
+| 16  | 2FA implementación                    | API             | 🟡        | ⏳     |
+| 17  | POST /transactions/recurring          | API             | 🟡        | ✅     |
+| 18  | Importar transacciones CSV            | API + WEB + MOB | 🟢        | ⏳     |
+| 19  | Depósito rápido a meta                | API + WEB + MOB | 🟢        | ⏳     |
+| 20  | Gestión y filtro de tags              | WEB + MOB       | 🟢        | ⏳     |
+| 21  | Calendario de recurrentes             | WEB + MOB       | 🟢        | ⏳     |
+| 22  | Gráfico presupuesto vs real           | WEB + MOB       | 🟢        | ⏳     |
+| 23  | Página de seguridad web               | WEB             | 🟢        | ⏳     |
+| 24  | Score de salud financiera             | API + WEB + MOB | 🟢        | ⏳     |
+| 25  | Integración Plaid                     | API             | 🟢        | ⏳     |
+| 26  | Búsqueda global                       | WEB + MOB       | 🟢        | ⏳     |
+| 27  | Simuladores mobile                    | MOB             | 🟢        | ⏳     |
+| 28  | Dividendos y rendimientos             | API + WEB + MOB | 🟢        | ⏳     |
