@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type React from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import {
   Plus,
   ChevronDown,
@@ -9,6 +9,7 @@ import {
   ChevronRight,
   ArrowLeftRight,
   X,
+  Repeat,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -163,6 +164,12 @@ export default function TransactionsPage(): React.ReactElement {
             >
               <ArrowLeftRight className="h-4 w-4" aria-hidden="true" />
               Transferencia
+            </Button>
+            <Button size="sm" variant="outline" asChild className="gap-1.5">
+              <Link to="/transactions/recurring">
+                <Repeat className="h-4 w-4" aria-hidden="true" />
+                Recurrentes
+              </Link>
             </Button>
           </div>
         </div>
