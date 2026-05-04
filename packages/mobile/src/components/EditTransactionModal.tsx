@@ -13,7 +13,7 @@ import {
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useState, useEffect, useMemo } from 'react';
 import type React from 'react';
-import { X, Calendar } from 'lucide-react-native';
+import { X, Calendar, Tag } from 'lucide-react-native';
 import { useUpdateTransaction, useCategories } from '@/api/transactions';
 import { formatDate } from '@/lib/formatters';
 import { radius, spacing, type ThemeColors, getShadow } from '@/theme';
@@ -51,6 +51,8 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
   const [date, setDate] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
@@ -64,12 +66,22 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
       setAmount(String(transaction.amount / 100));
       setDescription(transaction.description);
       setNotes(transaction.notes || '');
+      setTags(transaction.tags ?? []);
+      setTagInput('');
       setDate(transaction.date);
       setSelectedCategoryId(transaction.categoryId || '');
       setShowCategoryPicker(false);
       setShowDatePicker(false);
     }
   }, [transaction, visible]);
+
+  const addTag = (value: string) => {
+    const trimmed = value.trim().replace(/,/g, '');
+    if (trimmed && !tags.includes(trimmed)) setTags((prev) => [...prev, trimmed]);
+    setTagInput('');
+  };
+
+  const removeTag = (tag: string) => setTags((prev) => prev.filter((t) => t !== tag));
 
   const filteredCategories = categories.filter(
     (cat) => cat.type === transaction?.type && cat.isActive !== false,
@@ -88,6 +100,8 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
     }
 
     const amountInCents = Math.round(parseFloat(amount.replace(',', '.')) * 100);
+    const pendingTag = tagInput.trim().replace(/,/g, '');
+    const finalTags = pendingTag && !tags.includes(pendingTag) ? [...tags, pendingTag] : tags;
     updateTransaction(
       {
         id: transaction._id || transaction.id,
@@ -96,6 +110,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
           date,
           description,
           categoryId: selectedCategoryId || undefined,
+          tags: finalTags,
           notes: notes || undefined,
         },
       },
@@ -242,6 +257,38 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
                   colors={colors}
                 />
               ) : null}
+            </View>
+
+            {/* Tags */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Etiquetas</Text>
+              <View
+                style={[
+                  styles.input,
+                  { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs, minHeight: 50, paddingVertical: spacing.sm },
+                ]}
+              >
+                {tags.map((tag) => (
+                  <View key={tag} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: typeColor + '20', paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.full }}>
+                    <Tag size={10} color={typeColor} />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: typeColor }}>{tag}</Text>
+                    <TouchableOpacity onPress={() => removeTag(tag)} hitSlop={6}>
+                      <X size={12} color={typeColor} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                <TextInput
+                  style={{ flex: 1, minWidth: 100, fontSize: 14, color: colors.text, paddingVertical: 0 }}
+                  placeholder={tags.length === 0 ? 'Etiqueta, Enter...' : ''}
+                  placeholderTextColor={colors.textTertiary}
+                  value={tagInput}
+                  onChangeText={setTagInput}
+                  onSubmitEditing={() => addTag(tagInput)}
+                  blurOnSubmit={false}
+                  returnKeyType="done"
+                  selectionColor={colors.primary}
+                />
+              </View>
             </View>
 
             {/* Notes */}

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { X, Calendar } from 'lucide-react-native';
+import { X, Calendar, Tag } from 'lucide-react-native';
 import { useCreateTransaction, useCategories, useAccounts } from '@/api/transactions';
 import { formatCurrency } from '@/lib/formatters';
 import { DatePickerCalendar } from './DatePickerCalendar';
@@ -30,6 +30,8 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
@@ -78,6 +80,14 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
     setShowCategoryPicker(false);
   };
 
+  const addTag = (value: string) => {
+    const trimmed = value.trim().replace(/,/g, '');
+    if (trimmed && !tags.includes(trimmed)) setTags((prev) => [...prev, trimmed]);
+    setTagInput('');
+  };
+
+  const removeTag = (tag: string) => setTags((prev) => prev.filter((t) => t !== tag));
+
   const filteredCategories = categories.filter((c) => c.type === type && c.isActive !== false);
   const selectedAccount = accounts.find((a) => a._id === selectedAccountId);
   const selectedCategory = categories.find((c) => {
@@ -100,6 +110,9 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
       return;
     }
 
+    const pendingTag = tagInput.trim().replace(/,/g, '');
+    const finalTags = pendingTag && !tags.includes(pendingTag) ? [...tags, pendingTag] : tags;
+
     createTransaction(
       {
         accountId: selectedAccountId,
@@ -110,6 +123,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
         description,
         categoryId: type === 'transfer' ? undefined : selectedCategoryId,
         toAccountId: type === 'transfer' ? selectedToAccountId : undefined,
+        tags: finalTags.length > 0 ? finalTags : undefined,
         notes: notes || undefined,
       },
       {
@@ -364,6 +378,37 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
               }}
             />
           )}
+        </View>
+
+        {/* Tags */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Etiquetas</Text>
+          <View
+            style={[
+              styles.input,
+              { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs, minHeight: 50, paddingVertical: spacing.sm },
+            ]}
+          >
+            {tags.map((tag) => (
+              <View key={tag} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primaryLight, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.full }}>
+                <Tag size={10} color={colors.primary} />
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>{tag}</Text>
+                <TouchableOpacity onPress={() => removeTag(tag)} hitSlop={6}>
+                  <X size={12} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+            ))}
+            <TextInput
+              style={{ flex: 1, minWidth: 100, fontSize: 14, color: colors.text, paddingVertical: 0 }}
+              placeholder={tags.length === 0 ? 'Etiqueta, Enter...' : ''}
+              placeholderTextColor={colors.textTertiary}
+              value={tagInput}
+              onChangeText={setTagInput}
+              onSubmitEditing={() => addTag(tagInput)}
+              blurOnSubmit={false}
+              returnKeyType="done"
+            />
+          </View>
         </View>
 
         {/* Notes */}

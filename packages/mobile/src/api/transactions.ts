@@ -51,6 +51,7 @@ export interface CreateTransactionDTO {
   notes?: string;
 }
 
+
 export const useCategories = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
 
@@ -83,6 +84,7 @@ export interface TransactionFilters {
   accountId?: string;
   categoryId?: string;
   type?: string;
+  tags?: string[];
   page?: number;
   limit?: number;
 }
@@ -96,18 +98,36 @@ export interface TransactionResponse {
   };
 }
 
+export const useTransactionTags = () => {
+  const accessToken = useAuthStore((state) => state.accessToken);
+
+  return useQuery<string[]>({
+    queryKey: ['transactions', 'tags'],
+    enabled: !!accessToken,
+    queryFn: async () => {
+      const response = await client.get<{ data: string[] }>('/transactions/tags');
+      return response.data.data ?? [];
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+};
+
 export const useTransactions = (filters: TransactionFilters) => {
   const accessToken = useAuthStore((state) => state.accessToken);
 
   return useQuery({
     queryKey: ['transactions', filters],
     queryFn: async () => {
+      const { tags, ...rest } = filters;
       const params = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
+      Object.entries(rest).forEach(([key, value]) => {
         if (value !== undefined && value !== '') {
           params.append(key, String(value));
         }
       });
+      if (tags && tags.length > 0) {
+        params.append('tags', tags.join(','));
+      }
 
       try {
         const response = await client.get<{ data: TransactionResponse }>(
@@ -129,6 +149,7 @@ export interface UpdateTransactionDTO {
   date?: string;
   description?: string;
   categoryId?: string;
+  tags?: string[];
   notes?: string;
 }
 

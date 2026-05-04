@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDashboardSummary, useCashflow } from '@/api/dashboard';
+import { useDashboardSummary, useCashflow, useHealthScore } from '@/api/dashboard';
 import { Skeleton, SkeletonGroup } from '@/components/Skeleton';
 import { useAuthStore } from '@/stores/authStore';
 import { formatCurrency } from '@/lib/formatters';
@@ -15,6 +15,7 @@ export default function HomeScreen() {
   const user = useAuthStore((state) => state.user);
   const { data, isLoading, error, refetch } = useDashboardSummary();
   const { data: cashflow, isLoading: cashflowLoading, refetch: refetchCashflow } = useCashflow(6);
+  const { data: healthScore, refetch: refetchHealth } = useHealthScore();
   const [refreshing, setRefreshing] = useState(false);
 
   const { colors, shadow, isDark } = useTheme();
@@ -22,7 +23,7 @@ export default function HomeScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refetch(), refetchCashflow()]);
+    await Promise.all([refetch(), refetchCashflow(), refetchHealth()]);
     setRefreshing(false);
   };
 
@@ -236,6 +237,48 @@ export default function HomeScreen() {
             <Text style={styles.progressLabel}>{Math.round(expenseRatio)}%</Text>
             <Text style={styles.progressLabel}>{formatCurrency(data?.monthlyBudget || 0)}</Text>
           </View>
+        </View>
+
+        {/* Health Score */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Salud financiera</Text>
+          {!healthScore ? (
+            <Skeleton height={14} width="60%" marginBottom={12} />
+          ) : (
+            <>
+              <View style={styles.healthHeader}>
+                <View style={styles.healthScoreCircle}>
+                  <Text style={[styles.healthScoreNumber, { color: healthScore.color }]}>
+                    {healthScore.score}
+                  </Text>
+                  <Text style={styles.healthScoreMax}>/100</Text>
+                </View>
+                <View style={styles.healthLabelWrap}>
+                  <Text style={[styles.healthLabel, { color: healthScore.color }]}>
+                    {healthScore.label}
+                  </Text>
+                  <Text style={styles.healthSub}>Índice de salud financiera</Text>
+                </View>
+              </View>
+              {healthScore.areas.map((area) => {
+                const pct = Math.round((area.score / area.max) * 100);
+                const barColor =
+                  pct >= 80 ? '#22c55e' : pct >= 60 ? '#84cc16' : pct >= 40 ? '#f59e0b' : pct >= 20 ? '#f97316' : '#ef4444';
+                return (
+                  <View key={area.key} style={styles.areaRow}>
+                    <View style={styles.areaLabelRow}>
+                      <Text style={styles.areaLabel}>{area.label}</Text>
+                      <Text style={styles.areaScore}>{area.score}/{area.max}</Text>
+                    </View>
+                    <View style={styles.areaTrack}>
+                      <View style={[styles.areaFill, { width: `${pct}%`, backgroundColor: barColor }]} />
+                    </View>
+                    <Text style={styles.areaDetail}>{area.detail}</Text>
+                  </View>
+                );
+              })}
+            </>
+          )}
         </View>
 
         {/* Recent Transactions */}
@@ -526,6 +569,77 @@ function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>)
       fontSize: 14,
       color: colors.textSecondary,
       textAlign: 'center',
+    },
+    healthHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.lg,
+      marginBottom: spacing.lg,
+    },
+    healthScoreCircle: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      borderWidth: 4,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    healthScoreNumber: {
+      fontSize: 22,
+      fontWeight: '800',
+      letterSpacing: -0.5,
+    },
+    healthScoreMax: {
+      fontSize: 10,
+      color: colors.textTertiary,
+      fontWeight: '600',
+    },
+    healthLabelWrap: {
+      flex: 1,
+    },
+    healthLabel: {
+      fontSize: 20,
+      fontWeight: '800',
+      letterSpacing: -0.3,
+    },
+    healthSub: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    areaRow: {
+      marginBottom: spacing.md,
+    },
+    areaLabelRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 4,
+    },
+    areaLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    areaScore: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      fontWeight: '500',
+    },
+    areaTrack: {
+      height: 5,
+      backgroundColor: colors.border,
+      borderRadius: radius.full,
+      overflow: 'hidden',
+      marginBottom: 3,
+    },
+    areaFill: {
+      height: '100%',
+      borderRadius: radius.full,
+    },
+    areaDetail: {
+      fontSize: 11,
+      color: colors.textTertiary,
     },
   });
 }

@@ -13,9 +13,17 @@ import type {
 export async function getTransactions(
   filters: TransactionFilters,
 ): Promise<PaginatedResponse<Transaction>> {
+  const { tags, ...rest } = filters;
+  const params: Record<string, unknown> = { ...rest };
+  if (tags && tags.length > 0) params['tags'] = tags.join(',');
   const response = await apiClient.get<{ data: PaginatedResponse<Transaction> }>('/transactions', {
-    params: filters,
+    params,
   });
+  return response.data.data;
+}
+
+export async function getTransactionTags(): Promise<string[]> {
+  const response = await apiClient.get<{ data: string[] }>('/transactions/tags');
   return response.data.data;
 }
 

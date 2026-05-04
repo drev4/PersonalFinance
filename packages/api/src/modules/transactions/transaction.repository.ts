@@ -294,6 +294,16 @@ export async function createRecurringTemplate(
   return tx.save();
 }
 
+export async function findDistinctTags(userId: string): Promise<string[]> {
+  const result = await TransactionModel.distinct('tags', {
+    userId: new mongoose.Types.ObjectId(userId),
+    tags: { $exists: true, $ne: [] },
+  });
+  return (result as unknown[])
+    .filter((t): t is string => typeof t === 'string' && t.length > 0)
+    .sort();
+}
+
 export async function findRecurring(userId: string): Promise<ITransaction[]> {
   return TransactionModel.find({
     userId: new mongoose.Types.ObjectId(userId),

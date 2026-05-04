@@ -14,10 +14,10 @@ import {
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronDown, ChevronUp, ChevronLeft, X, Pencil, Trash2, Plus } from 'lucide-react-native';
+import { ChevronDown, ChevronUp, ChevronLeft, X, Pencil, Trash2, Plus, Tag } from 'lucide-react-native';
 import { useState, useMemo, useRef, useCallback, memo, type ReactNode } from 'react';
 import * as Haptics from 'expo-haptics';
-import { useTransactions, useAccounts, useCategories, useDeleteTransaction } from '@/api/transactions';
+import { useTransactions, useAccounts, useCategories, useDeleteTransaction, useTransactionTags } from '@/api/transactions';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { radius, spacing, type ThemeColors, getShadow } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
@@ -175,6 +175,8 @@ export default function TransactionsScreen() {
   const [accountId, setAccountId] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [type, setType] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [tagsModalVisible, setTagsModalVisible] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -187,6 +189,7 @@ export default function TransactionsScreen() {
 
   const { data: accountsData = [] } = useAccounts();
   const { data: categoriesData = [] } = useCategories();
+  const { data: availableTags = [] } = useTransactionTags();
 
   const filters = {
     from,
@@ -194,6 +197,7 @@ export default function TransactionsScreen() {
     ...(accountId && { accountId }),
     ...(categoryId && { categoryId }),
     ...(type && { type }),
+    ...(selectedTags.length > 0 && { tags: selectedTags }),
     page: 1,
     limit: 100,
   };
@@ -207,7 +211,7 @@ export default function TransactionsScreen() {
 
   const transactions: Transaction[] = response?.data || [];
   const hasActiveFilters =
-    from !== DEFAULT_FROM || to !== DEFAULT_TO || accountId || categoryId || type;
+    from !== DEFAULT_FROM || to !== DEFAULT_TO || accountId || categoryId || type || selectedTags.length > 0;
 
   const handleClearFilters = () => {
     setFrom(DEFAULT_FROM);
@@ -215,6 +219,7 @@ export default function TransactionsScreen() {
     setAccountId('');
     setCategoryId('');
     setType('');
+    setSelectedTags([]);
   };
 
   const handleDateSelect = (date: string) => {
@@ -352,6 +357,21 @@ export default function TransactionsScreen() {
                   : 'Todos'}
               </Text>
             </TouchableOpacity>
+            {availableTags.length > 0 && (
+              <TouchableOpacity
+                style={[styles.chip, selectedTags.length > 0 && styles.chipActive]}
+                onPress={() => setTagsModalVisible(true)}
+              >
+                <Text style={[styles.chipLabel, selectedTags.length > 0 && styles.chipLabelActive]}>Etiquetas</Text>
+                <Text style={[styles.chipValue, selectedTags.length > 0 && styles.chipValueActive]}>
+                  {selectedTags.length === 0
+                    ? 'Todas'
+                    : selectedTags.length === 1
+                    ? selectedTags[0]
+                    : `${selectedTags.length} sel.`}
+                </Text>
+              </TouchableOpacity>
+            )}
             {hasActiveFilters && (
               <TouchableOpacity style={styles.chipClear} onPress={handleClearFilters}>
                 <Text style={styles.chipClearText}>Limpiar</Text>
@@ -458,6 +478,76 @@ export default function TransactionsScreen() {
                 onDateSelect={handleDateSelect}
                 colors={colors}
               />
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Tags filter modal */}
+      <Modal
+        visible={tagsModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setTagsModalVisible(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <Pressable
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' }}
+            onPress={() => setTagsModalVisible(false)}
+          />
+          <View style={styles.dateSheet}>
+            <View style={styles.dateSheetHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <Tag size={16} color={colors.primary} />
+                <Text style={styles.dateSheetTitle}>Filtrar por etiquetas</Text>
+              </View>
+              <TouchableOpacity onPress={() => setTagsModalVisible(false)} hitSlop={8}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
+              {availableTags.map((tag) => {
+                const active = selectedTags.includes(tag);
+                return (
+                  <TouchableOpacity
+                    key={tag}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+                      paddingVertical: 14, paddingHorizontal: spacing.sm,
+                      borderBottomWidth: 1, borderBottomColor: colors.border,
+                    }}
+                    onPress={() =>
+                      setSelectedTags((prev) =>
+                        active ? prev.filter((t) => t !== tag) : [...prev, tag],
+                      )
+                    }
+                    activeOpacity={0.7}
+                  >
+                    <View
+                      style={{
+                        width: 22, height: 22, borderRadius: 4,
+                        borderWidth: 1.5,
+                        borderColor: active ? colors.primary : colors.border,
+                        backgroundColor: active ? colors.primary : 'transparent',
+                        justifyContent: 'center', alignItems: 'center',
+                      }}
+                    >
+                      {active && <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>✓</Text>}
+                    </View>
+                    <Text style={{ fontSize: 15, fontWeight: '600', color: active ? colors.primary : colors.text }}>
+                      {tag}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            {selectedTags.length > 0 && (
+              <TouchableOpacity
+                style={{ marginTop: spacing.md, paddingVertical: spacing.sm, alignItems: 'center' }}
+                onPress={() => setSelectedTags([])}
+              >
+                <Text style={{ fontSize: 14, color: colors.expense, fontWeight: '600' }}>Limpiar etiquetas</Text>
+              </TouchableOpacity>
             )}
           </View>
         </View>

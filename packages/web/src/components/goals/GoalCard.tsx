@@ -17,7 +17,7 @@ import {
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { GoalProgressDialog } from './GoalProgressDialog';
+import { GoalDepositDialog } from './GoalDepositDialog';
 import { GoalFormDialog } from './GoalFormDialog';
 import { useDeleteGoal } from '../../hooks/useGoals';
 import type { Goal } from '../../types/api';
@@ -261,13 +261,13 @@ export function GoalCard({ goal }: GoalCardProps): React.ReactElement {
               className="w-full"
               style={{ borderColor: `${color}60`, color }}
             >
-              Actualizar progreso
+              Aportar
             </Button>
           )}
         </CardContent>
       </Card>
 
-      <GoalProgressDialog
+      <GoalDepositDialog
         goal={goal}
         open={progressOpen}
         onOpenChange={setProgressOpen}

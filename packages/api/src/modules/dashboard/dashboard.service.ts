@@ -4,6 +4,8 @@ import { AccountModel } from '../accounts/account.model.js';
 import { TransactionModel, type ITransaction } from '../transactions/transaction.model.js';
 import { getRates, convertWithRates, type ExchangeRates } from '../../services/currency.service.js';
 import { CategoryModel } from '../categories/category.model.js';
+import { BudgetModel } from '../budgets/budget.model.js';
+import { GoalModel } from '../goals/goal.model.js';
 import {
   getCashflow as repoCashflow,
   getSpendingByCategory as repoSpendingByCategory,
@@ -399,6 +401,133 @@ export async function takeNetWorthSnapshot(userId: string): Promise<void> {
     },
     { upsert: true, new: true, runValidators: true },
   ).exec();
+}
+
+// ---------------------------------------------------------------------------
+// Health score
+// ---------------------------------------------------------------------------
+
+export interface HealthScoreArea {
+  key: string;
+  label: string;
+  score: number;
+  max: number;
+  detail: string;
+}
+
+export interface HealthScore {
+  score: number;
+  label: string;
+  color: string;
+  areas: HealthScoreArea[];
+}
+
+/**
+ * Computes a 0–100 financial health score from four equally-weighted areas
+ * (25 pts each): cashflow/savings rate, budget adherence, goal progress, and
+ * debt ratio. Missing data yields a neutral mid-point rather than a penalty.
+ */
+export async function getHealthScore(userId: string): Promise<HealthScore> {
+  const uid = new mongoose.Types.ObjectId(userId);
+  const areas: HealthScoreArea[] = [];
+  let total = 0;
+
+  // ── 1. Cashflow: savings rate over the last 3 months ──────────────────────
+  const cashflow = await repoCashflow(userId, 3);
+  const totalIncome = cashflow.reduce((s, m) => s + m.income, 0);
+  const totalExpenses = cashflow.reduce((s, m) => s + m.expenses, 0);
+
+  let cashflowScore: number;
+  let cashflowDetail: string;
+
+  if (totalIncome === 0) {
+    cashflowScore = 12;
+    cashflowDetail = 'Sin datos de ingresos';
+  } else {
+    const rate = (totalIncome - totalExpenses) / totalIncome;
+    cashflowScore = rate >= 0.3 ? 25 : rate >= 0.2 ? 20 : rate >= 0.1 ? 13 : rate >= 0 ? 6 : 0;
+    const pct = Math.round(Math.abs(rate) * 100);
+    cashflowDetail = rate >= 0
+      ? `Tasa de ahorro: ${pct}%`
+      : `Gastos superan ingresos un ${pct}%`;
+  }
+  areas.push({ key: 'cashflow', label: 'Flujo de caja', score: cashflowScore, max: 25, detail: cashflowDetail });
+  total += cashflowScore;
+
+  // ── 2. Budget adherence: current-month expense vs total active budgets ─────
+  const budgets = await BudgetModel.find({ userId: uid, isActive: true }).lean().exec();
+
+  let budgetScore: number;
+  let budgetDetail: string;
+
+  if (budgets.length === 0) {
+    budgetScore = 12;
+    budgetDetail = 'Sin presupuestos activos';
+  } else {
+    const totalBudget = budgets.reduce(
+      (s, b) => s + b.items.reduce((si, item) => si + item.amount, 0),
+      0,
+    );
+    const currentMonthData = await repoCashflow(userId, 1);
+    const currentExpense = currentMonthData.reduce((s, m) => s + m.expenses, 0);
+    const usage = totalBudget > 0 ? currentExpense / totalBudget : 0;
+    budgetScore = usage < 0.7 ? 25 : usage < 0.85 ? 18 : usage <= 1 ? 10 : 0;
+    budgetDetail = `${Math.round(usage * 100)}% del presupuesto mensual usado`;
+  }
+  areas.push({ key: 'budgets', label: 'Presupuestos', score: budgetScore, max: 25, detail: budgetDetail });
+  total += budgetScore;
+
+  // ── 3. Goal progress: average progress across active incomplete goals ──────
+  const goals = await GoalModel.find({ userId: uid, isActive: true, isCompleted: false }).lean().exec();
+
+  let goalScore: number;
+  let goalDetail: string;
+
+  if (goals.length === 0) {
+    goalScore = 12;
+    goalDetail = 'Sin metas activas';
+  } else {
+    const avgProgress = goals.reduce((s, g) => {
+      return s + (g.targetAmount > 0 ? g.currentAmount / g.targetAmount : 0);
+    }, 0) / goals.length;
+    goalScore = avgProgress >= 0.75 ? 25 : avgProgress >= 0.5 ? 18 : avgProgress >= 0.25 ? 12 : 5;
+    goalDetail = `${goals.length} meta${goals.length > 1 ? 's' : ''} · Progreso medio: ${Math.round(avgProgress * 100)}%`;
+  }
+  areas.push({ key: 'goals', label: 'Metas de ahorro', score: goalScore, max: 25, detail: goalDetail });
+  total += goalScore;
+
+  // ── 4. Debt ratio: liabilities / (assets + liabilities) ───────────────────
+  const netWorth = await getNetWorth(userId);
+  const gross = netWorth.assets + netWorth.liabilities;
+
+  let debtScore: number;
+  let debtDetail: string;
+
+  if (gross === 0) {
+    debtScore = 12;
+    debtDetail = 'Sin datos de activos o deudas';
+  } else {
+    const ratio = netWorth.liabilities / gross;
+    debtScore = ratio < 0.2 ? 25 : ratio < 0.4 ? 18 : ratio < 0.6 ? 10 : ratio < 0.8 ? 5 : 0;
+    debtDetail = `Ratio de deuda: ${Math.round(ratio * 100)}%`;
+  }
+  areas.push({ key: 'debt', label: 'Nivel de deuda', score: debtScore, max: 25, detail: debtDetail });
+  total += debtScore;
+
+  // ── Final score ────────────────────────────────────────────────────────────
+  const label =
+    total >= 80 ? 'Excelente' :
+    total >= 60 ? 'Buena' :
+    total >= 40 ? 'Regular' :
+    total >= 20 ? 'Mejorable' : 'Crítica';
+
+  const color =
+    total >= 80 ? '#22c55e' :
+    total >= 60 ? '#84cc16' :
+    total >= 40 ? '#f59e0b' :
+    total >= 20 ? '#f97316' : '#ef4444';
+
+  return { score: total, label, color, areas };
 }
 
 /**

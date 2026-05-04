@@ -11,6 +11,7 @@ import {
   bulkCreate,
   getSpendingByCategory,
   getCashflow,
+  getDistinctTags,
   TransactionError,
 } from './transaction.service.js';
 
@@ -146,6 +147,17 @@ export async function registerTransactionRoutes(
         : query.months;
       const data = await getCashflow(userId, months);
       return reply.send({ data });
+    },
+  );
+
+  // GET /transactions/tags
+  fastify.get(
+    '/transactions/tags',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { userId } = request.user;
+      const tags = await getDistinctTags(userId);
+      return reply.send({ data: tags });
     },
   );
 

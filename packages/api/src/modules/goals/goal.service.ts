@@ -118,3 +118,31 @@ export async function getGoal(
   }
   return goal;
 }
+
+export async function depositGoal(
+  userId: string,
+  goalId: string,
+  amount: number,
+): Promise<IGoal> {
+  const existing = await findById(goalId, userId);
+  if (existing === null) {
+    throw new GoalError('GOAL_NOT_FOUND', 'Goal not found', 404);
+  }
+  if (amount <= 0) {
+    throw new GoalError('INVALID_AMOUNT', 'Amount must be positive', 400);
+  }
+
+  const newCurrentAmount = existing.currentAmount + amount;
+  const isCompleted = newCurrentAmount >= existing.targetAmount;
+
+  const updated = await update(goalId, userId, {
+    currentAmount: newCurrentAmount,
+    isCompleted,
+  });
+
+  if (updated === null) {
+    throw new GoalError('GOAL_NOT_FOUND', 'Goal not found', 404);
+  }
+
+  return updated;
+}

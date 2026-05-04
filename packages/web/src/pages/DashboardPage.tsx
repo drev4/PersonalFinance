@@ -11,6 +11,7 @@ import CashflowChart from '../components/dashboard/CashflowChart';
 import UpcomingRecurringWidget from '../components/dashboard/UpcomingRecurringWidget';
 import TopAccountsWidget from '../components/dashboard/TopAccountsWidget';
 import TopHoldingsWidget from '../components/dashboard/TopHoldingsWidget';
+import HealthScoreWidget from '../components/dashboard/HealthScoreWidget';
 
 // ─── Date header ──────────────────────────────────────────────────────────────
 
@@ -77,9 +78,10 @@ export default function DashboardPage(): React.ReactElement {
           <TopAccountsWidget />
         </div>
 
-        {/* ─── Top holdings (full width) ────────────────────────────────────── */}
+        {/* ─── Holdings + Health score ──────────────────────────────────────── */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <TopHoldingsWidget />
+          <HealthScoreWidget />
         </div>
 
       </div>

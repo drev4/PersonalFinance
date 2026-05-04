@@ -96,6 +96,21 @@ export const useUpdateGoal = () => {
   });
 };
 
+export const useDepositGoal = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, amount }: { id: string; amount: number }) => {
+      const response = await client.post<{ data: Goal }>(`/goals/${id}/deposit`, { amount });
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+};
+
 export const useDeleteGoal = () => {
   const queryClient = useQueryClient();
 
