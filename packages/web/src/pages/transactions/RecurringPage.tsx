@@ -1,12 +1,20 @@
+import { format, parseISO } from 'date-fns';
+import {
+  RepeatIcon,
+  Pencil,
+  Trash2,
+  AlertCircle,
+  CalendarClock,
+  Plus,
+  CalendarDays,
+} from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type React from 'react';
-import { RepeatIcon, Pencil, Trash2, AlertCircle, CalendarClock, Plus } from 'lucide-react';
-import { Card, CardContent } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
+import { Link } from 'react-router-dom';
+import type { RecurringTransaction, RecurringFrequency } from '../../api/recurring.api';
 import { Badge } from '../../components/ui/badge';
-import { Select } from '../../components/ui/select';
-import { Skeleton } from '../../components/ui/skeleton';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent } from '../../components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -15,13 +23,19 @@ import {
   DialogFooter,
   DialogClose,
 } from '../../components/ui/dialog';
-import { useRecurring, useCreateRecurring, useUpdateRecurring, useDeleteRecurring } from '../../hooks/useRecurring';
+import { Input } from '../../components/ui/input';
+import { Select } from '../../components/ui/select';
+import { Skeleton } from '../../components/ui/skeleton';
 import { useAccounts } from '../../hooks/useAccounts';
 import { useCategories } from '../../hooks/useCategories';
+import {
+  useRecurring,
+  useCreateRecurring,
+  useUpdateRecurring,
+  useDeleteRecurring,
+} from '../../hooks/useRecurring';
 import { formatCurrency, formatDate, getTransactionTypeColor } from '../../lib/formatters';
-import type { RecurringTransaction, RecurringFrequency } from '../../api/recurring.api';
 import type { Account } from '../../types/api';
-import { format, parseISO } from 'date-fns';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -145,7 +159,12 @@ function CreateDialog({ open, accounts, onClose }: CreateDialogProps): React.Rea
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Nueva transacción recurrente</DialogTitle>
@@ -154,21 +173,37 @@ function CreateDialog({ open, accounts, onClose }: CreateDialogProps): React.Rea
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           {/* Account */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Cuenta *</label>
-            <Select value={form.accountId} onChange={(e) => handleAccountChange(e.target.value)} required>
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Cuenta *
+            </label>
+            <Select
+              value={form.accountId}
+              onChange={(e) => handleAccountChange(e.target.value)}
+              required
+            >
               <option value="">Selecciona una cuenta</option>
               {accounts.map((a) => (
-                <option key={a._id} value={a._id}>{a.name}</option>
+                <option key={a._id} value={a._id}>
+                  {a.name}
+                </option>
               ))}
             </Select>
           </div>
 
           {/* Type */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Tipo *</label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Tipo *
+            </label>
             <Select
               value={form.type}
-              onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as 'income' | 'expense', categoryId: '' }))}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  type: e.target.value as 'income' | 'expense',
+                  categoryId: '',
+                }))
+              }
             >
               <option value="expense">Gasto</option>
               <option value="income">Ingreso</option>
@@ -177,7 +212,9 @@ function CreateDialog({ open, accounts, onClose }: CreateDialogProps): React.Rea
 
           {/* Description */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Descripción *</label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Descripción *
+            </label>
             <Input
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
@@ -189,7 +226,9 @@ function CreateDialog({ open, accounts, onClose }: CreateDialogProps): React.Rea
           {/* Amount + currency */}
           <div className="flex gap-3">
             <div className="flex-1 space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Importe *</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Importe *
+              </label>
               <Input
                 type="number"
                 min="0.01"
@@ -200,10 +239,14 @@ function CreateDialog({ open, accounts, onClose }: CreateDialogProps): React.Rea
               />
             </div>
             <div className="w-24 space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Moneda</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Moneda
+              </label>
               <Input
                 value={form.currency}
-                onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value.toUpperCase().slice(0, 3) }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, currency: e.target.value.toUpperCase().slice(0, 3) }))
+                }
                 maxLength={3}
               />
             </div>
@@ -211,11 +254,18 @@ function CreateDialog({ open, accounts, onClose }: CreateDialogProps): React.Rea
 
           {/* Category */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Categoría</label>
-            <Select value={form.categoryId} onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}>
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Categoría
+            </label>
+            <Select
+              value={form.categoryId}
+              onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
+            >
               <option value="">Sin categoría</option>
               {filteredCategories.map((c) => (
-                <option key={c._id} value={c._id}>{c.name}</option>
+                <option key={c._id} value={c._id}>
+                  {c.name}
+                </option>
               ))}
             </Select>
           </div>
@@ -223,13 +273,19 @@ function CreateDialog({ open, accounts, onClose }: CreateDialogProps): React.Rea
           {/* Frequency + interval */}
           <div className="flex gap-3">
             <div className="flex-1 space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Frecuencia *</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Frecuencia *
+              </label>
               <Select
                 value={form.frequency}
-                onChange={(e) => setForm((f) => ({ ...f, frequency: e.target.value as RecurringFrequency }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, frequency: e.target.value as RecurringFrequency }))
+                }
               >
                 {FREQUENCY_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
                 ))}
               </Select>
             </div>
@@ -249,7 +305,9 @@ function CreateDialog({ open, accounts, onClose }: CreateDialogProps): React.Rea
 
           {/* Next date */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Primera fecha *</label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Primera fecha *
+            </label>
             <Input
               type="date"
               value={form.nextDate}
@@ -260,7 +318,9 @@ function CreateDialog({ open, accounts, onClose }: CreateDialogProps): React.Rea
 
           {/* End date */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Fecha de fin (opcional)</label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Fecha de fin (opcional)
+            </label>
             <div className="flex gap-2">
               <Input
                 type="date"
@@ -269,7 +329,12 @@ function CreateDialog({ open, accounts, onClose }: CreateDialogProps): React.Rea
                 className="flex-1"
               />
               {form.endDate && (
-                <Button type="button" variant="outline" size="sm" onClick={() => setForm((f) => ({ ...f, endDate: '' }))}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setForm((f) => ({ ...f, endDate: '' }))}
+                >
                   Quitar
                 </Button>
               )}
@@ -285,7 +350,9 @@ function CreateDialog({ open, accounts, onClose }: CreateDialogProps): React.Rea
 
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancelar
+              </Button>
             </DialogClose>
             <Button type="submit" disabled={!isValid || createMutation.isPending}>
               {createMutation.isPending ? 'Creando...' : 'Crear'}
@@ -334,9 +401,7 @@ function EditDialog({ open, tx, onClose }: EditDialogProps): React.ReactElement 
     }
   }, [open, tx]);
 
-  const isValid =
-    form.nextDate !== '' &&
-    parseInt(form.interval, 10) >= 1;
+  const isValid = form.nextDate !== '' && parseInt(form.interval, 10) >= 1;
 
   function handleSubmit(e: React.FormEvent): void {
     e.preventDefault();
@@ -361,7 +426,12 @@ function EditDialog({ open, tx, onClose }: EditDialogProps): React.ReactElement 
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Editar recurrencia</DialogTitle>
@@ -369,7 +439,10 @@ function EditDialog({ open, tx, onClose }: EditDialogProps): React.ReactElement 
 
         {tx && (
           <p className="text-sm text-gray-500 truncate">
-            {tx.description} — <span className={getTransactionTypeColor(tx.type)}>{formatCurrency(tx.amount, tx.currency)}</span>
+            {tx.description} —{' '}
+            <span className={getTransactionTypeColor(tx.type)}>
+              {formatCurrency(tx.amount, tx.currency)}
+            </span>
           </p>
         )}
 
@@ -381,10 +454,14 @@ function EditDialog({ open, tx, onClose }: EditDialogProps): React.ReactElement 
             </label>
             <Select
               value={form.frequency}
-              onChange={(e) => setForm((f) => ({ ...f, frequency: e.target.value as RecurringFrequency }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, frequency: e.target.value as RecurringFrequency }))
+              }
             >
               {FREQUENCY_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
               ))}
             </Select>
           </div>
@@ -450,7 +527,9 @@ function EditDialog({ open, tx, onClose }: EditDialogProps): React.ReactElement 
 
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancelar
+              </Button>
             </DialogClose>
             <Button type="submit" disabled={!isValid || updateMutation.isPending}>
               {updateMutation.isPending ? 'Guardando...' : 'Guardar cambios'}
@@ -487,14 +566,19 @@ function CancelDialog({ open, tx, onClose }: CancelDialogProps): React.ReactElem
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Cancelar recurrencia</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-gray-600">
-          ¿Seguro que quieres cancelar la recurrencia de <strong>{tx?.description}</strong>?
-          La transacción existente no se eliminará.
+          ¿Seguro que quieres cancelar la recurrencia de <strong>{tx?.description}</strong>? La
+          transacción existente no se eliminará.
         </p>
         {apiError && (
           <p className="flex items-center gap-1.5 text-sm text-red-600">
@@ -503,7 +587,9 @@ function CancelDialog({ open, tx, onClose }: CancelDialogProps): React.ReactElem
           </p>
         )}
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Volver</Button>
+          <Button variant="outline" onClick={onClose}>
+            Volver
+          </Button>
           <Button variant="destructive" onClick={handleConfirm} disabled={deleteMutation.isPending}>
             {deleteMutation.isPending ? 'Cancelando...' : 'Cancelar recurrencia'}
           </Button>
@@ -532,8 +618,7 @@ function RecurringRow({
   onEdit,
   onCancel,
 }: RecurringRowProps): React.ReactElement {
-  const isExpired =
-    tx.recurring.endDate != null && new Date(tx.recurring.endDate) < new Date();
+  const isExpired = tx.recurring.endDate != null && new Date(tx.recurring.endDate) < new Date();
 
   return (
     <div className="flex items-start gap-4 rounded-lg border border-gray-100 bg-white p-4 shadow-sm">
@@ -547,7 +632,9 @@ function RecurringRow({
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-semibold text-gray-900 truncate">{tx.description}</span>
           {isExpired && (
-            <Badge variant="warning" className="text-[10px]">Expirada</Badge>
+            <Badge variant="warning" className="text-[10px]">
+              Expirada
+            </Badge>
           )}
         </div>
 
@@ -564,7 +651,11 @@ function RecurringRow({
           {categoryName && (
             <Badge
               className="text-[11px] font-medium"
-              style={{ backgroundColor: categoryColor + '20', color: categoryColor, borderColor: 'transparent' }}
+              style={{
+                backgroundColor: categoryColor + '20',
+                color: categoryColor,
+                borderColor: 'transparent',
+              }}
             >
               {categoryName}
             </Badge>
@@ -581,11 +672,7 @@ function RecurringRow({
             <CalendarClock className="h-3 w-3" aria-hidden="true" />
             Próxima: <strong className="text-gray-700">{formatDate(tx.recurring.nextDate)}</strong>
           </span>
-          {tx.recurring.endDate && (
-            <span>
-              Fin: {formatDate(tx.recurring.endDate)}
-            </span>
-          )}
+          {tx.recurring.endDate && <span>Fin: {formatDate(tx.recurring.endDate)}</span>}
         </div>
       </div>
 
@@ -658,10 +745,19 @@ export default function RecurringPage(): React.ReactElement {
             </p>
           </div>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Nueva
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/transactions/calendar"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+          >
+            <CalendarDays className="h-4 w-4" aria-hidden="true" />
+            Calendario
+          </Link>
+          <Button onClick={() => setCreateOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Nueva
+          </Button>
+        </div>
       </div>
 
       {/* Loading */}
@@ -729,16 +825,8 @@ export default function RecurringPage(): React.ReactElement {
         accounts={accounts ?? []}
         onClose={() => setCreateOpen(false)}
       />
-      <EditDialog
-        open={editTx !== null}
-        tx={editTx}
-        onClose={() => setEditTx(null)}
-      />
-      <CancelDialog
-        open={cancelTx !== null}
-        tx={cancelTx}
-        onClose={() => setCancelTx(null)}
-      />
+      <EditDialog open={editTx !== null} tx={editTx} onClose={() => setEditTx(null)} />
+      <CancelDialog open={cancelTx !== null} tx={cancelTx} onClose={() => setCancelTx(null)} />
     </div>
   );
 }

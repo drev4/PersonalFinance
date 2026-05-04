@@ -202,8 +202,8 @@ Las transacciones guardan `tags[]` en BD pero no hay UI para gestionarlos ni fil
 
 El endpoint `GET /dashboard/upcoming-recurring` existe. El widget del dashboard solo muestra una lista plana.
 
-- [ ] `[WEB]` Página o modal de calendario mensual (`/transactions/calendar`) donde cada día muestre los pagos programados
-- [ ] `[MOB]` Vista de semana/mes en la futura pantalla de recurrentes
+- [x] `[WEB]` Página o modal de calendario mensual (`/transactions/calendar`) donde cada día muestre los pagos programados
+- [x] `[MOB]` Vista de semana/mes en la futura pantalla de recurrentes
 
 #### 22. Comparativa presupuesto vs real `[WEB]` `[MOB]`
 
@@ -289,10 +289,10 @@ El módulo de holdings solo rastrea PnL por precio. No hay seguimiento de divide
 | 18  | Importar transacciones CSV            | API + WEB + MOB | 🟢        | ⏳     |
 | 19  | Depósito rápido a meta                | API + WEB + MOB | 🟢        | ✅     |
 | 20  | Gestión y filtro de tags              | WEB + MOB       | 🟢        | ✅     |
-| 21  | Calendario de recurrentes             | WEB + MOB       | 🟢        | ⏳     |
+| 21  | Calendario de recurrentes             | WEB + MOB       | 🟢        | ✅     |
 | 22  | Gráfico presupuesto vs real           | WEB + MOB       | 🟢        | ⏳     |
 | 23  | Página de seguridad web               | WEB             | 🟢        | ⏳     |
-| 24  | Score de salud financiera             | API + WEB + MOB | 🟢        | ⏳     |
+| 24  | Score de salud financiera             | API + WEB + MOB | 🟢        | ✅     |
 | 25  | Integración Plaid                     | API             | 🟢        | ⏳     |
 | 26  | Búsqueda global                       | WEB + MOB       | 🟢        | ⏳     |
 | 27  | Simuladores mobile                    | MOB             | 🟢        | ⏳     |

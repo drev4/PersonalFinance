@@ -1,14 +1,14 @@
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { lazy, Suspense } from 'react';
 import type React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import ProtectedRoute from './routes/ProtectedRoute';
-import PublicRoute from './routes/PublicRoute';
-import { SkipLink } from './components/ui/skip-link';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RouteErrorBoundary } from './components/RouteErrorBoundary';
+import { SkipLink } from './components/ui/skip-link';
 import { queryClient } from './lib/queryClient';
+import ProtectedRoute from './routes/ProtectedRoute';
+import PublicRoute from './routes/PublicRoute';
 
 // Lazy-loaded pages for code splitting
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
@@ -28,6 +28,7 @@ const ProfilePage = lazy(() => import('./pages/settings/ProfilePage'));
 const CategoryRulesPage = lazy(() => import('./pages/settings/CategoryRulesPage'));
 const CategoriesPage = lazy(() => import('./pages/settings/CategoriesPage'));
 const RecurringPage = lazy(() => import('./pages/transactions/RecurringPage'));
+const CalendarPage = lazy(() => import('./pages/transactions/CalendarPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const AppLayout = lazy(() => import('./components/layout/AppLayout'));
 const SimulatorsPage = lazy(() => import('./pages/simulators/SimulatorsPage'));
@@ -82,6 +83,7 @@ export default function App(): React.ReactElement {
                     <Route path="/accounts/:id" element={<AccountDetailPage />} />
                     <Route path="/transactions" element={<TransactionsPage />} />
                     <Route path="/transactions/recurring" element={<RecurringPage />} />
+                    <Route path="/transactions/calendar" element={<CalendarPage />} />
                     <Route path="/budgets" element={<BudgetsPage />} />
                     <Route path="/goals" element={<GoalsPage />} />
                     <Route path="/holdings" element={<HoldingsPage />} />

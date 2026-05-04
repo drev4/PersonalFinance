@@ -99,6 +99,37 @@ export const useHealthScore = () => {
   });
 };
 
+export interface UpcomingTransaction {
+  _id: string;
+  description: string;
+  amount: number;
+  currency: string;
+  type: 'income' | 'expense' | 'transfer';
+  accountId: string;
+  categoryId?: string;
+  recurring: {
+    nextDate: string;
+    frequency: string;
+    interval: number;
+  };
+}
+
+export const useUpcomingRecurring = (days = 60) => {
+  const accessToken = useAuthStore((state) => state.accessToken);
+
+  return useQuery<UpcomingTransaction[]>({
+    queryKey: ['dashboard', 'upcoming-recurring', days],
+    enabled: !!accessToken,
+    queryFn: async () => {
+      const response = await client.get<{ data: UpcomingTransaction[] }>(
+        `/dashboard/upcoming-recurring?days=${days}`,
+      );
+      return response.data.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
 export const useDashboardSummary = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
 
@@ -109,9 +140,7 @@ export const useDashboardSummary = () => {
       const [netWorthRes, spendingRes, accountsRes, transactionsRes] = await Promise.all([
         client.get<{ data: NetWorthData }>('/dashboard/net-worth'),
         client.get<{ data: SpendingCategory[] }>('/dashboard/spending-by-category'),
-        client.get<{ data: { _id: string; name: string; currentBalance: number }[] }>(
-          '/accounts',
-        ),
+        client.get<{ data: { _id: string; name: string; currentBalance: number }[] }>('/accounts'),
         client.get<{
           data: {
             data: {
