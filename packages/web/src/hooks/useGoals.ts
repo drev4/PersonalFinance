@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { UseQueryResult, UseMutationResult } from '@tanstack/react-query';
-import { getGoals, createGoal, updateGoal, deleteGoal } from '../api/goals.api';
+import { getGoals, createGoal, updateGoal, depositGoal, deleteGoal } from '../api/goals.api';
 import type { Goal, CreateGoalDTO, UpdateGoalDTO } from '../types/api';
 
 const STALE_TIME = 1000 * 60 * 5;
@@ -37,6 +37,16 @@ export function useUpdateGoal(): UseMutationResult<
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }) => updateGoal(id, data),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: goalKeys.all });
+    },
+  });
+}
+
+export function useDepositGoal(): UseMutationResult<Goal, Error, { id: string; amount: number }> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, amount }) => depositGoal(id, amount),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: goalKeys.all });
     },

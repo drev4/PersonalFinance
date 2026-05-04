@@ -6,6 +6,8 @@ import {
   getDashboardCashflow,
   getDashboardSpendingByCategory,
   getUpcomingRecurring,
+  getDashboardHealthScore,
+  type HealthScore,
 } from '../api/dashboard.api';
 import type {
   NetWorthSummary,
@@ -28,6 +30,7 @@ export const dashboardKeys = {
     [...dashboardKeys.all, 'spending', from, to] as const,
   upcomingRecurring: (days: number) =>
     [...dashboardKeys.all, 'upcoming-recurring', days] as const,
+  healthScore: () => [...dashboardKeys.all, 'health-score'] as const,
 };
 
 export function useNetWorthSummary(): UseQueryResult<NetWorthSummary> {
@@ -72,6 +75,14 @@ export function useUpcomingRecurring(days = 30): UseQueryResult<Transaction[]> {
   return useQuery({
     queryKey: dashboardKeys.upcomingRecurring(days),
     queryFn: () => getUpcomingRecurring(days),
+    staleTime: STALE_TIME,
+  });
+}
+
+export function useHealthScore(): UseQueryResult<HealthScore> {
+  return useQuery({
+    queryKey: dashboardKeys.healthScore(),
+    queryFn: getDashboardHealthScore,
     staleTime: STALE_TIME,
   });
 }

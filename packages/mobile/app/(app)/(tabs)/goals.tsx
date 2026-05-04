@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/Skeleton';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import {
   useGoals,
-  useUpdateGoal,
+  useDepositGoal,
   useDeleteGoal,
   calculateMonthlySuggestion,
   type Goal,
@@ -40,15 +40,14 @@ interface DepositSheetProps {
 function DepositSheet({ goal, colors, shadow, onClose }: DepositSheetProps) {
   const styles = useMemo(() => createDepositStyles(colors, shadow), [colors, shadow]);
   const [amount, setAmount] = useState('');
-  const { mutate: updateGoal, isPending } = useUpdateGoal();
+  const { mutate: depositGoal, isPending } = useDepositGoal();
 
   const handleDeposit = () => {
     if (!goal || !amount) return;
     const cents = Math.round(parseFloat(amount.replace(',', '.')) * 100);
     if (!cents || cents <= 0) return;
-    const newTotal = goal.currentAmount + cents;
-    updateGoal(
-      { id: goal._id, data: { currentAmount: newTotal } },
+    depositGoal(
+      { id: goal._id, amount: cents },
       {
         onSuccess: async () => {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

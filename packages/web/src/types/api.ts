@@ -129,6 +129,7 @@ export interface TransactionFilters {
   from?: string;
   to?: string;
   search?: string;
+  tags?: string[];
   page?: number;
   limit?: number;
 }

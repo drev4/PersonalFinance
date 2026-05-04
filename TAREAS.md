@@ -185,18 +185,18 @@ Existe exportación CSV (`GET /reports/export`) pero no importación.
 
 Actualizar `currentAmount` de una meta requiere editar el objeto completo. No hay acción de "aportar".
 
-- [ ] `[API]` Añadir `POST /goals/:id/deposit` con body `{ amount: number }` — incrementa `currentAmount`, marca `isCompleted` si llega al objetivo
-- [ ] `[WEB]` Botón "Aportar" en `GoalCard.tsx` que abre un input rápido de importe
-- [ ] `[MOB]` Acción rápida "Aportar" en la futura pantalla de metas
+- [x] `[API]` Añadir `POST /goals/:id/deposit` con body `{ amount: number }` — incrementa `currentAmount`, marca `isCompleted` si llega al objetivo
+- [x] `[WEB]` Botón "Aportar" en `GoalCard.tsx` que abre un input rápido de importe
+- [x] `[MOB]` Acción rápida "Aportar" en la futura pantalla de metas
 
 #### 20. Gestión y filtro de etiquetas (tags) `[WEB]` `[MOB]`
 
 Las transacciones guardan `tags[]` en BD pero no hay UI para gestionarlos ni filtrar por ellos.
 
-- [ ] `[WEB]` Añadir filtro por `tags` en `TransactionsPage` con combobox multi-selección
-- [ ] `[WEB]` Mostrar tags como chips en `TransactionRow`
-- [ ] `[MOB]` Añadir filtro de tags en la pantalla de transacciones
-- [ ] `[WEB]` `[MOB]` Input de tags en el formulario de creación/edición de transacción (autocompletado con tags existentes)
+- [x] `[WEB]` Añadir filtro por `tags` en `TransactionsPage` con combobox multi-selección
+- [x] `[WEB]` Mostrar tags como chips en `TransactionRow`
+- [x] `[MOB]` Añadir filtro de tags en la pantalla de transacciones
+- [x] `[WEB]` `[MOB]` Input de tags en el formulario de creación/edición de transacción (autocompletado con tags existentes)
 
 #### 21. Vista de calendario de recurrentes `[WEB]` `[MOB]`
 
@@ -225,9 +225,9 @@ Los datos existen (budgets + spending by category) pero no hay gráfico de barra
 
 Los datos para calcularlo ya están disponibles: ratio gasto/ingreso, % de presupuesto usado, progreso de metas, deuda/activos.
 
-- [ ] `[API]` Añadir `GET /dashboard/health-score` — devuelve puntuación 0–100 con desglose por área
-- [ ] `[WEB]` Widget en el dashboard con el score y colores semáforo
-- [ ] `[MOB]` Tarjeta en el home entre el patrimonio neto y el gráfico
+- [x] `[API]` Añadir `GET /dashboard/health-score` — devuelve puntuación 0–100 con desglose por área
+- [x] `[WEB]` Widget en el dashboard con el score y colores semáforo
+- [x] `[MOB]` Tarjeta en el home entre el patrimonio neto y el gráfico
 
 #### 25. Importación desde Plaid (Open Banking) `[API]`
 
@@ -287,8 +287,8 @@ El módulo de holdings solo rastrea PnL por precio. No hay seguimiento de divide
 | 16  | 2FA implementación                    | API             | 🟡        | ⏳     |
 | 17  | POST /transactions/recurring          | API             | 🟡        | ✅     |
 | 18  | Importar transacciones CSV            | API + WEB + MOB | 🟢        | ⏳     |
-| 19  | Depósito rápido a meta                | API + WEB + MOB | 🟢        | ⏳     |
-| 20  | Gestión y filtro de tags              | WEB + MOB       | 🟢        | ⏳     |
+| 19  | Depósito rápido a meta                | API + WEB + MOB | 🟢        | ✅     |
+| 20  | Gestión y filtro de tags              | WEB + MOB       | 🟢        | ✅     |
 | 21  | Calendario de recurrentes             | WEB + MOB       | 🟢        | ⏳     |
 | 22  | Gráfico presupuesto vs real           | WEB + MOB       | 🟢        | ⏳     |
 | 23  | Página de seguridad web               | WEB             | 🟢        | ⏳     |

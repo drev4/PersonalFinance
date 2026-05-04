@@ -7,6 +7,7 @@ import {
   createMany,
   update,
   hardDelete,
+  findDistinctTags,
   getSpendingByCategory as repoGetSpendingByCategory,
   getCashflow as repoGetCashflow,
   type TransactionFilters,
@@ -440,4 +441,8 @@ export async function getCashflow(
   months: number,
 ): Promise<CashflowData[]> {
   return repoGetCashflow(userId, months);
+}
+
+export async function getDistinctTags(userId: string): Promise<string[]> {
+  return findDistinctTags(userId);
 }

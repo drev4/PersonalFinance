@@ -70,6 +70,35 @@ export const useCashflow = (months: number) => {
   });
 };
 
+export interface HealthScoreArea {
+  key: string;
+  label: string;
+  score: number;
+  max: number;
+  detail: string;
+}
+
+export interface HealthScore {
+  score: number;
+  label: string;
+  color: string;
+  areas: HealthScoreArea[];
+}
+
+export const useHealthScore = () => {
+  const accessToken = useAuthStore((state) => state.accessToken);
+
+  return useQuery<HealthScore>({
+    queryKey: ['dashboard', 'health-score'],
+    enabled: !!accessToken,
+    queryFn: async () => {
+      const response = await client.get<{ data: HealthScore }>('/dashboard/health-score');
+      return response.data.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
 export const useDashboardSummary = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
 

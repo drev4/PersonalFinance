@@ -48,3 +48,23 @@ export async function getUpcomingRecurring(days = 30): Promise<Transaction[]> {
   );
   return response.data.data;
 }
+
+export interface HealthScoreArea {
+  key: string;
+  label: string;
+  score: number;
+  max: number;
+  detail: string;
+}
+
+export interface HealthScore {
+  score: number;
+  label: string;
+  color: string;
+  areas: HealthScoreArea[];
+}
+
+export async function getDashboardHealthScore(): Promise<HealthScore> {
+  const response = await apiClient.get<{ data: HealthScore }>('/dashboard/health-score');
+  return response.data.data;
+}

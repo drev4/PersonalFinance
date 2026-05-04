@@ -10,6 +10,7 @@ import {
   ArrowLeftRight,
   X,
   Repeat,
+  Tag,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -27,7 +28,7 @@ import {
 import { TransactionRow } from '../../components/transactions/TransactionRow';
 import { TransactionFormDialog } from '../../components/transactions/TransactionFormDialog';
 import { TransferFormDialog } from '../../components/transactions/TransferFormDialog';
-import { useTransactions } from '../../hooks/useTransactions';
+import { useTransactions, useTransactionTags } from '../../hooks/useTransactions';
 import { useAccounts } from '../../hooks/useAccounts';
 import { useCategories } from '../../hooks/useCategories';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -72,10 +73,14 @@ export default function TransactionsPage(): React.ReactElement {
   const [type, setType] = useState('');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [tagsOpen, setTagsOpen] = useState(false);
+  const [tagSearch, setTagSearch] = useState('');
   const [page, setPage] = useState(1);
 
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
+  const { data: availableTags = [] } = useTransactionTags();
 
   // Debounce search
   useEffect(() => {
@@ -89,7 +94,7 @@ export default function TransactionsPage(): React.ReactElement {
   // Reset page on filter change
   useEffect(() => {
     setPage(1);
-  }, [from, to, accountId, categoryId, type]);
+  }, [from, to, accountId, categoryId, type, selectedTags]);
 
   const filters = {
     from,
@@ -98,6 +103,7 @@ export default function TransactionsPage(): React.ReactElement {
     ...(categoryId && { categoryId }),
     ...(type && { type: type as 'income' | 'expense' | 'transfer' | 'adjustment' }),
     ...(debouncedSearch && { search: debouncedSearch }),
+    ...(selectedTags.length > 0 && { tags: selectedTags }),
     page,
     limit: 20,
   };
@@ -115,6 +121,7 @@ export default function TransactionsPage(): React.ReactElement {
     setCategoryId('');
     setType('');
     setSearch('');
+    setSelectedTags([]);
     setPage(1);
   }, []);
 
@@ -124,7 +131,12 @@ export default function TransactionsPage(): React.ReactElement {
     accountId !== '' ||
     categoryId !== '' ||
     type !== '' ||
-    search !== '';
+    search !== '' ||
+    selectedTags.length > 0;
+
+  const filteredTagOptions = availableTags.filter((t) =>
+    t.toLowerCase().includes(tagSearch.toLowerCase()),
+  );
 
   return (
     <div className="p-6">
@@ -281,6 +293,81 @@ export default function TransactionsPage(): React.ReactElement {
                     placeholder="Descripcion, notas..."
                     className="h-9 text-sm"
                   />
+                </div>
+
+                {/* Tags multi-select */}
+                <div className="space-y-1 sm:col-span-2 lg:col-span-3">
+                  <label className="text-xs font-medium text-gray-600">Etiquetas</label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className="flex h-9 w-full items-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm text-left hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                      onClick={() => { setTagsOpen((v) => !v); setTagSearch(''); }}
+                    >
+                      <Tag className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
+                      {selectedTags.length === 0 ? (
+                        <span className="text-gray-400">Todas las etiquetas</span>
+                      ) : (
+                        <span className="flex flex-wrap gap-1">
+                          {selectedTags.map((t) => (
+                            <span key={t} className="inline-flex items-center gap-0.5 rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700">
+                              {t}
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setSelectedTags((prev) => prev.filter((x) => x !== t)); }}
+                                aria-label={`Quitar ${t}`}
+                              >
+                                <X className="h-3 w-3" aria-hidden="true" />
+                              </button>
+                            </span>
+                          ))}
+                        </span>
+                      )}
+                    </button>
+                    {tagsOpen && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setTagsOpen(false)} aria-hidden="true" />
+                        <div className="absolute left-0 top-10 z-20 w-64 rounded-lg border border-gray-200 bg-white shadow-lg">
+                          <div className="p-2">
+                            <Input
+                              type="text"
+                              placeholder="Buscar etiqueta..."
+                              value={tagSearch}
+                              onChange={(e) => setTagSearch(e.target.value)}
+                              className="h-7 text-xs"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="max-h-48 overflow-y-auto py-1">
+                            {filteredTagOptions.length === 0 ? (
+                              <p className="px-3 py-2 text-xs text-gray-400">Sin etiquetas</p>
+                            ) : (
+                              filteredTagOptions.map((tag) => {
+                                const active = selectedTags.includes(tag);
+                                return (
+                                  <button
+                                    key={tag}
+                                    type="button"
+                                    className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 ${active ? 'font-medium text-primary-700' : 'text-gray-700'}`}
+                                    onClick={() => {
+                                      setSelectedTags((prev) =>
+                                        active ? prev.filter((t) => t !== tag) : [...prev, tag],
+                                      );
+                                    }}
+                                  >
+                                    <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${active ? 'border-primary-500 bg-primary-500' : 'border-gray-300'}`}>
+                                      {active && <span className="text-white text-xs leading-none">✓</span>}
+                                    </span>
+                                    {tag}
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 

@@ -7,6 +7,7 @@ import {
   updateGoal,
   deleteGoal,
   getGoal,
+  depositGoal,
   calculateMonthlySuggestion,
   GoalError,
 } from './goal.service.js';
@@ -43,6 +44,13 @@ const CreateGoalSchema = z.object({
     .regex(/^#[0-9a-fA-F]{6}$/, 'Color must be a valid hex code')
     .optional(),
   icon: z.string().optional(),
+});
+
+const DepositGoalSchema = z.object({
+  amount: z
+    .number()
+    .int('Amount must be an integer (cents)')
+    .positive('Amount must be positive'),
 });
 
 const UpdateGoalSchema = z.object({
@@ -143,6 +151,25 @@ export async function registerGoalRoutes(
 
       try {
         const goal = await updateGoal(userId, id, body);
+        const monthlySuggestion = calculateMonthlySuggestion(goal);
+        return reply.send({ data: goal, meta: { monthlySuggestion } });
+      } catch (err) {
+        return handleGoalError(err, reply);
+      }
+    },
+  );
+
+  // POST /goals/:id/deposit
+  fastify.post(
+    '/goals/:id/deposit',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { userId } = request.user;
+      const { id } = request.params as { id: string };
+      const body = DepositGoalSchema.parse(request.body);
+
+      try {
+        const goal = await depositGoal(userId, id, body.amount);
         const monthlySuggestion = calculateMonthlySuggestion(goal);
         return reply.send({ data: goal, meta: { monthlySuggestion } });
       } catch (err) {

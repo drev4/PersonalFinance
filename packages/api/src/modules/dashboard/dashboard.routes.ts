@@ -8,6 +8,7 @@ import {
   getSpendingByCategory,
   getUpcomingRecurring,
   takeNetWorthSnapshot,
+  getHealthScore,
   type NetWorthPeriod,
 } from './dashboard.service.js';
 
@@ -107,6 +108,17 @@ export async function registerDashboardRoutes(
       const { userId } = request.user;
       const { days } = UpcomingQuerySchema.parse(request.query);
       const data = await getUpcomingRecurring(userId, days);
+      return reply.send({ data });
+    },
+  );
+
+  // GET /dashboard/health-score
+  fastify.get(
+    '/dashboard/health-score',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { userId } = request.user;
+      const data = await getHealthScore(userId);
       return reply.send({ data });
     },
   );
