@@ -10,12 +10,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useMemo, memo } from 'react';
 import type React from 'react';
-import { Plus, Pencil, Trash2, ChartPie, AlertTriangle } from 'lucide-react-native';
+import { Plus, Pencil, Trash2, ChartPie, AlertTriangle, BarChart2 } from 'lucide-react-native';
 import { radius, spacing, type ThemeColors, getShadow } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
 import { Skeleton } from '@/components/Skeleton';
 import { formatCurrency } from '@/lib/formatters';
-import { useBudgets, useBudgetProgress, useDeleteBudget, type Budget } from '@/api/budgets';
+import {
+  useBudgets,
+  useBudgetProgress,
+  useDeleteBudget,
+  type Budget,
+  type BudgetItemProgress,
+} from '@/api/budgets';
 import { BudgetFormModal } from '@/components/BudgetFormModal';
 import * as Haptics from 'expo-haptics';
 
@@ -34,131 +40,409 @@ interface BudgetCardProps {
   onDelete: (id: string) => void;
 }
 
-const BudgetCard: React.FC<BudgetCardProps> = memo(({ budget, colors, shadow, onEdit, onDelete }) => {
-  const styles = useMemo(() => createCardStyles(colors, shadow), [colors, shadow]);
-  const { data: progress, isLoading } = useBudgetProgress(budget._id);
+const BudgetCard: React.FC<BudgetCardProps> = memo(
+  ({ budget, colors, shadow, onEdit, onDelete }) => {
+    const styles = useMemo(() => createCardStyles(colors, shadow), [colors, shadow]);
+    const { data: progress, isLoading } = useBudgetProgress(budget._id);
 
-  const overallPct = progress ? Math.min(progress.percentageUsed, 100) : 0;
-  const overallColor =
-    !progress || progress.percentageUsed <= 60
-      ? colors.income
-      : progress.percentageUsed <= 85
-      ? '#F59E0B'
-      : colors.expense;
+    const overallPct = progress ? Math.min(progress.percentageUsed, 100) : 0;
+    const overallColor =
+      !progress || progress.percentageUsed <= 60
+        ? colors.income
+        : progress.percentageUsed <= 85
+        ? '#F59E0B'
+        : colors.expense;
 
-  return (
-    <View style={styles.card}>
-      {/* Card header */}
-      <View style={styles.cardHeader}>
-        <View style={styles.cardTitleRow}>
-          <Text style={styles.budgetName} numberOfLines={1}>
-            {budget.name}
-          </Text>
-          <View style={styles.periodPill}>
-            <Text style={styles.periodPillText}>{PERIOD_LABEL[budget.period] ?? budget.period}</Text>
+    return (
+      <View style={styles.card}>
+        {/* Card header */}
+        <View style={styles.cardHeader}>
+          <View style={styles.cardTitleRow}>
+            <Text style={styles.budgetName} numberOfLines={1}>
+              {budget.name}
+            </Text>
+            <View style={styles.periodPill}>
+              <Text style={styles.periodPillText}>
+                {PERIOD_LABEL[budget.period] ?? budget.period}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.cardActions}>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => onEdit(budget)}
+              activeOpacity={0.7}
+            >
+              <Pencil size={14} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.deleteBtn]}
+              onPress={() => onDelete(budget._id)}
+              activeOpacity={0.7}
+            >
+              <Trash2 size={14} color={colors.expense} />
+            </TouchableOpacity>
           </View>
         </View>
 
-        <View style={styles.cardActions}>
-          <TouchableOpacity
-            style={styles.actionBtn}
-            onPress={() => onEdit(budget)}
-            activeOpacity={0.7}
-          >
-            <Pencil size={14} color={colors.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.deleteBtn]}
-            onPress={() => onDelete(budget._id)}
-            activeOpacity={0.7}
-          >
-            <Trash2 size={14} color={colors.expense} />
-          </TouchableOpacity>
+        {isLoading || !progress ? (
+          <View style={styles.skeletonArea}>
+            <Skeleton height={8} borderRadius={4} marginBottom={8} />
+            <Skeleton width="60%" height={12} marginBottom={12} />
+            <Skeleton height={8} borderRadius={4} marginBottom={6} />
+            <Skeleton height={8} borderRadius={4} marginBottom={0} />
+          </View>
+        ) : (
+          <>
+            {/* Overall totals */}
+            <View style={styles.totalsRow}>
+              <Text style={styles.spentAmount}>
+                {formatCurrency(progress.totalSpent)}{' '}
+                <Text style={styles.budgetedAmount}>
+                  / {formatCurrency(progress.totalBudgeted)}
+                </Text>
+              </Text>
+              <Text style={[styles.pctLabel, { color: overallColor }]}>
+                {progress.percentageUsed.toFixed(0)}%
+              </Text>
+            </View>
+
+            {/* Overall bar */}
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${overallPct}%`, backgroundColor: overallColor },
+                ]}
+              />
+            </View>
+
+            {/* Items breakdown */}
+            {progress.items.length > 0 && (
+              <View style={styles.itemsArea}>
+                {progress.items.map((item) => {
+                  const itemPct = Math.min(item.percentageUsed, 100);
+                  const itemColor =
+                    item.status === 'ok'
+                      ? colors.income
+                      : item.status === 'warning'
+                      ? '#F59E0B'
+                      : colors.expense;
+
+                  return (
+                    <View key={item.categoryId} style={styles.itemRow}>
+                      <View style={styles.itemMeta}>
+                        <View
+                          style={[
+                            styles.catDot,
+                            { backgroundColor: item.categoryColor || colors.textTertiary },
+                          ]}
+                        />
+                        <Text style={styles.itemName} numberOfLines={1}>
+                          {item.categoryName}
+                        </Text>
+                        {item.status !== 'ok' && <AlertTriangle size={12} color={itemColor} />}
+                        <Text style={[styles.itemPct, { color: itemColor }]}>
+                          {item.percentageUsed.toFixed(0)}%
+                        </Text>
+                      </View>
+                      <View style={styles.itemAmounts}>
+                        <Text style={styles.itemSpent}>{formatCurrency(item.spent)}</Text>
+                        <Text style={styles.itemBudgeted}>/ {formatCurrency(item.budgeted)}</Text>
+                      </View>
+                      <View style={styles.itemTrack}>
+                        <View
+                          style={[
+                            styles.itemFill,
+                            { width: `${itemPct}%`, backgroundColor: itemColor },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </>
+        )}
+      </View>
+    );
+  },
+);
+
+BudgetCard.displayName = 'BudgetCard';
+
+// ── Comparison widget ────────────────────────────────────────────────────────
+
+interface ComparisonBarProps {
+  item: BudgetItemProgress;
+  maxAmount: number;
+  colors: ThemeColors;
+}
+
+const ComparisonBar: React.FC<ComparisonBarProps> = ({ item, maxAmount, colors }) => {
+  const budgetedWidth = maxAmount > 0 ? (item.budgeted / maxAmount) * 100 : 0;
+  const spentWidth = maxAmount > 0 ? Math.min((item.spent / maxAmount) * 100, 100) : 0;
+  const barColor =
+    item.status === 'ok' ? colors.income : item.status === 'warning' ? '#F59E0B' : colors.expense;
+
+  return (
+    <View style={compStyles.barRow}>
+      <View style={compStyles.barLabel}>
+        <View
+          style={[compStyles.dot, { backgroundColor: item.categoryColor || colors.textTertiary }]}
+        />
+        <Text style={[compStyles.barName, { color: colors.text }]} numberOfLines={1}>
+          {item.categoryName}
+        </Text>
+      </View>
+      <View style={compStyles.barsArea}>
+        {/* Budgeted bar */}
+        <View style={[compStyles.track, { backgroundColor: colors.border }]}>
+          <View
+            style={[compStyles.fill, { width: `${budgetedWidth}%`, backgroundColor: '#0052CC30' }]}
+          />
+          <View
+            style={[
+              compStyles.fill,
+              {
+                width: `${budgetedWidth}%`,
+                position: 'absolute',
+                borderWidth: 1,
+                borderColor: '#0052CC50',
+                backgroundColor: 'transparent',
+              },
+            ]}
+          />
+        </View>
+        {/* Spent bar */}
+        <View style={[compStyles.track, { backgroundColor: colors.border }]}>
+          <View style={[compStyles.fill, { width: `${spentWidth}%`, backgroundColor: barColor }]} />
+        </View>
+      </View>
+      <View style={compStyles.amountCol}>
+        <Text style={[compStyles.amountText, { color: colors.textTertiary }]}>
+          {formatCurrency(item.budgeted)}
+        </Text>
+        <Text style={[compStyles.amountText, { color: barColor, fontWeight: '700' }]}>
+          {formatCurrency(item.spent)}
+        </Text>
+      </View>
+    </View>
+  );
+};
+
+interface ComparisonWidgetContentProps {
+  budgetId: string;
+  colors: ThemeColors;
+  shadow: ReturnType<typeof getShadow>;
+}
+
+const ComparisonWidgetContent: React.FC<ComparisonWidgetContentProps> = ({
+  budgetId,
+  colors,
+  shadow,
+}) => {
+  const { data: progress, isLoading } = useBudgetProgress(budgetId);
+
+  const maxAmount = useMemo(
+    () => (progress?.items ?? []).reduce((m, i) => Math.max(m, i.budgeted, i.spent), 0),
+    [progress],
+  );
+
+  if (isLoading) {
+    return (
+      <View style={{ gap: spacing.sm }}>
+        <Skeleton height={28} borderRadius={radius.xs} />
+        <Skeleton height={28} borderRadius={radius.xs} />
+        <Skeleton height={28} borderRadius={radius.xs} />
+      </View>
+    );
+  }
+
+  if (!progress || progress.items.length === 0) return null;
+
+  return (
+    <View style={{ gap: spacing.sm }}>
+      {progress.items.map((item) => (
+        <ComparisonBar key={item.categoryId} item={item} maxAmount={maxAmount} colors={colors} />
+      ))}
+    </View>
+  );
+};
+
+interface ComparisonWidgetProps {
+  budgets: Budget[];
+  colors: ThemeColors;
+  shadow: ReturnType<typeof getShadow>;
+}
+
+const ComparisonWidget: React.FC<ComparisonWidgetProps> = ({ budgets, colors, shadow }) => {
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const selected = budgets[selectedIdx];
+
+  if (!selected) return null;
+
+  return (
+    <View style={[compStyles.card, { backgroundColor: colors.card, ...shadow.sm }]}>
+      {/* Header */}
+      <View style={compStyles.widgetHeader}>
+        <View style={compStyles.widgetTitleRow}>
+          <BarChart2 size={16} color={colors.primary} strokeWidth={2} />
+          <Text style={[compStyles.widgetTitle, { color: colors.text }]}>
+            Comparativa presupuesto vs real
+          </Text>
+        </View>
+        {/* Budget selector dots */}
+        {budgets.length > 1 && (
+          <View style={compStyles.dotsRow}>
+            {budgets.map((b, i) => (
+              <TouchableOpacity
+                key={b._id}
+                onPress={() => setSelectedIdx(i)}
+                activeOpacity={0.7}
+                style={[
+                  compStyles.dot2,
+                  { backgroundColor: i === selectedIdx ? colors.primary : colors.border },
+                ]}
+              />
+            ))}
+          </View>
+        )}
+      </View>
+
+      {budgets.length > 1 && (
+        <Text style={[compStyles.budgetName, { color: colors.textSecondary }]}>
+          {selected.name}
+        </Text>
+      )}
+
+      {/* Legend */}
+      <View style={compStyles.legend}>
+        <View style={compStyles.legendItem}>
+          <View
+            style={[
+              compStyles.legendDot,
+              { backgroundColor: '#0052CC40', borderWidth: 1, borderColor: '#0052CC80' },
+            ]}
+          />
+          <Text style={[compStyles.legendLabel, { color: colors.textTertiary }]}>
+            Presupuestado
+          </Text>
+        </View>
+        <View style={compStyles.legendItem}>
+          <View style={[compStyles.legendDot, { backgroundColor: colors.income }]} />
+          <Text style={[compStyles.legendLabel, { color: colors.textTertiary }]}>Gastado</Text>
         </View>
       </View>
 
-      {isLoading || !progress ? (
-        <View style={styles.skeletonArea}>
-          <Skeleton height={8} borderRadius={4} marginBottom={8} />
-          <Skeleton width="60%" height={12} marginBottom={12} />
-          <Skeleton height={8} borderRadius={4} marginBottom={6} />
-          <Skeleton height={8} borderRadius={4} marginBottom={0} />
-        </View>
-      ) : (
-        <>
-          {/* Overall totals */}
-          <View style={styles.totalsRow}>
-            <Text style={styles.spentAmount}>
-              {formatCurrency(progress.totalSpent)}{' '}
-              <Text style={styles.budgetedAmount}>/ {formatCurrency(progress.totalBudgeted)}</Text>
-            </Text>
-            <Text style={[styles.pctLabel, { color: overallColor }]}>
-              {progress.percentageUsed.toFixed(0)}%
-            </Text>
-          </View>
-
-          {/* Overall bar */}
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${overallPct}%`, backgroundColor: overallColor },
-              ]}
-            />
-          </View>
-
-          {/* Items breakdown */}
-          {progress.items.length > 0 && (
-            <View style={styles.itemsArea}>
-              {progress.items.map((item) => {
-                const itemPct = Math.min(item.percentageUsed, 100);
-                const itemColor =
-                  item.status === 'ok'
-                    ? colors.income
-                    : item.status === 'warning'
-                    ? '#F59E0B'
-                    : colors.expense;
-
-                return (
-                  <View key={item.categoryId} style={styles.itemRow}>
-                    <View style={styles.itemMeta}>
-                      <View
-                        style={[styles.catDot, { backgroundColor: item.categoryColor || colors.textTertiary }]}
-                      />
-                      <Text style={styles.itemName} numberOfLines={1}>
-                        {item.categoryName}
-                      </Text>
-                      {item.status !== 'ok' && (
-                        <AlertTriangle size={12} color={itemColor} />
-                      )}
-                      <Text style={[styles.itemPct, { color: itemColor }]}>
-                        {item.percentageUsed.toFixed(0)}%
-                      </Text>
-                    </View>
-                    <View style={styles.itemAmounts}>
-                      <Text style={styles.itemSpent}>{formatCurrency(item.spent)}</Text>
-                      <Text style={styles.itemBudgeted}>/ {formatCurrency(item.budgeted)}</Text>
-                    </View>
-                    <View style={styles.itemTrack}>
-                      <View
-                        style={[
-                          styles.itemFill,
-                          { width: `${itemPct}%`, backgroundColor: itemColor },
-                        ]}
-                      />
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-        </>
-      )}
+      <ComparisonWidgetContent budgetId={selected._id} colors={colors} shadow={shadow} />
     </View>
   );
-});
+};
 
-BudgetCard.displayName = 'BudgetCard';
+const compStyles = StyleSheet.create({
+  card: {
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    marginBottom: spacing.lg,
+  },
+  widgetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  widgetTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flex: 1,
+  },
+  widgetTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  dot2: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  budgetName: {
+    fontSize: 13,
+    marginBottom: spacing.sm,
+  },
+  legend: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  barRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 36,
+  },
+  barLabel: {
+    width: 80,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    flexShrink: 0,
+  },
+  barName: {
+    fontSize: 11,
+    fontWeight: '500',
+    flex: 1,
+  },
+  barsArea: {
+    flex: 1,
+    gap: 3,
+  },
+  track: {
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  fill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  amountCol: {
+    width: 60,
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  amountText: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
+});
 
 // ── Main screen ─────────────────────────────────────────────────────────────
 
@@ -217,7 +501,10 @@ export default function BudgetsScreen() {
         <Text style={styles.title}>Presupuestos</Text>
         <TouchableOpacity
           style={styles.addBtn}
-          onPress={() => { setEditingBudget(undefined); setFormVisible(true); }}
+          onPress={() => {
+            setEditingBudget(undefined);
+            setFormVisible(true);
+          }}
           activeOpacity={0.8}
         >
           <Plus size={20} color={colors.white} />
@@ -261,26 +548,27 @@ export default function BudgetsScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          budgets.map((b) => (
-            <BudgetCard
-              key={b._id}
-              budget={b}
-              colors={colors}
-              shadow={shadow}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          ))
+          <>
+            {budgets.map((b) => (
+              <BudgetCard
+                key={b._id}
+                budget={b}
+                colors={colors}
+                shadow={shadow}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            ))}
+            {budgets.length > 0 && (
+              <ComparisonWidget budgets={budgets} colors={colors} shadow={shadow} />
+            )}
+          </>
         )}
 
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      <BudgetFormModal
-        visible={formVisible}
-        budget={editingBudget}
-        onClose={handleCloseForm}
-      />
+      <BudgetFormModal visible={formVisible} budget={editingBudget} onClose={handleCloseForm} />
     </SafeAreaView>
   );
 }
