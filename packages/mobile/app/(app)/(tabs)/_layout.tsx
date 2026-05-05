@@ -10,6 +10,7 @@ import {
   Target,
   Landmark,
   Repeat2,
+  Search,
 } from 'lucide-react-native';
 import { colors, radius, shadow } from '@/theme';
 
@@ -58,6 +59,7 @@ export default function TabLayout() {
           name="recurring"
           options={{ title: 'Recurrentes', tabBarIcon: createIcon(Repeat2) }}
         />
+        <Tabs.Screen name="search" options={{ title: 'Buscar', tabBarIcon: createIcon(Search) }} />
         <Tabs.Screen
           name="settings"
           options={{ title: 'Ajustes', tabBarIcon: createIcon(Settings) }}
