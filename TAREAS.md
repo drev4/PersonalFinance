@@ -242,8 +242,8 @@ Los datos para calcularlo ya están disponibles: ratio gasto/ingreso, % de presu
 
 No hay buscador que cubra transacciones + cuentas + holdings a la vez.
 
-- [ ] `[WEB]` Añadir `⌘K` command palette en el header del `AppLayout` con búsqueda en tiempo real
-- [ ] `[MOB]` Añadir barra de búsqueda global accesible desde cualquier tab
+- [x] `[WEB]` Añadir `⌘K` command palette en el header del `AppLayout` con búsqueda en tiempo real
+- [x] `[MOB]` Añadir barra de búsqueda global accesible desde cualquier tab
 
 #### 27. Simuladores en mobile `[MOB]`
 
@@ -294,6 +294,6 @@ El módulo de holdings solo rastrea PnL por precio. No hay seguimiento de divide
 | 23  | Página de seguridad web               | WEB             | 🟢        | ⏳     |
 | 24  | Score de salud financiera             | API + WEB + MOB | 🟢        | ✅     |
 | 25  | Integración Plaid                     | API             | 🟢        | ⏳     |
-| 26  | Búsqueda global                       | WEB + MOB       | 🟢        | ⏳     |
+| 26  | Búsqueda global                       | WEB + MOB       | 🟢        | ✅     |
 | 27  | Simuladores mobile                    | MOB             | 🟢        | ⏳     |
 | 28  | Dividendos y rendimientos             | API + WEB + MOB | 🟢        | ⏳     |

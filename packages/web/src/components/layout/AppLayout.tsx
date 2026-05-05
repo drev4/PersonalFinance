@@ -1,31 +1,32 @@
-import { useState } from 'react';
+import {
+  ArrowLeftRight,
+  BarChart2,
+  Calculator,
+  CreditCard,
+  FileBarChart,
+  FolderTree,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  PiggyBank,
+  Plug,
+  Search,
+  Tag,
+  Target,
+  TrendingUp,
+  User,
+  X,
+} from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import type React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import {
-  TrendingUp,
-  Menu,
-  X,
-  LogOut,
-  LayoutDashboard,
-  CreditCard,
-  ArrowLeftRight,
-  PiggyBank,
-  Calculator,
-  Target,
-  BarChart2,
-  FileBarChart,
-  Plug,
-  User,
-  Tag,
-  FolderTree,
-} from 'lucide-react';
-import { useAuthStore } from '../../stores/authStore';
 import { useLogout, useMe } from '../../hooks/useAuth';
-import { usePrefetchAccounts, usePrefetchTransactions } from '../../hooks/usePrefetch';
+import { cn } from '../../lib/utils';
+import { useAuthStore } from '../../stores/authStore';
+import { NotificationBell } from '../notifications/NotificationBell';
+import { CommandPalette } from '../search/CommandPalette';
 import { Button } from '../ui/button';
 import { LanguageSelector } from '../ui/language-selector';
-import { NotificationBell } from '../notifications/NotificationBell';
-import { cn } from '../../lib/utils';
 
 interface NavItem {
   to: string;
@@ -243,7 +244,23 @@ function Sidebar({ open, onClose }: SidebarProps): React.ReactElement {
 
 export default function AppLayout(): React.ReactElement {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   useMe(); // Sincroniza baseCurrency, locale y otros cambios de perfil hechos desde mobile
+
+  const openPalette = useCallback(() => setPaletteOpen(true), []);
+  const closePalette = useCallback(() => setPaletteOpen(false), []);
+
+  // Global ⌘K / Ctrl+K shortcut
+  useEffect(() => {
+    function handler(e: KeyboardEvent): void {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setPaletteOpen((prev) => !prev);
+      }
+    }
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -260,25 +277,42 @@ export default function AppLayout(): React.ReactElement {
 
       {/* Main area */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top bar (mobile) */}
-        <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 shadow-sm lg:hidden">
+        {/* Top bar */}
+        <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 shadow-sm">
+          {/* Left: hamburger (mobile) + logo (mobile) */}
           <div className="flex items-center">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="mr-4 rounded p-1.5 text-gray-500 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+              className="mr-4 rounded p-1.5 text-gray-500 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 lg:hidden"
               aria-label="Abrir menu"
               aria-expanded={sidebarOpen}
             >
               <Menu className="h-5 w-5" aria-hidden="true" />
             </button>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 lg:hidden">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-600">
                 <TrendingUp className="h-4 w-4 text-white" aria-hidden="true" />
               </div>
               <span className="text-base font-semibold text-gray-900">Finanzas</span>
             </div>
           </div>
-          <NotificationBell />
+
+          {/* Center/Right: search trigger + notification bell */}
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              type="button"
+              onClick={openPalette}
+              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-400 transition-colors hover:border-primary-300 hover:bg-primary-50 hover:text-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+              aria-label="Buscar (⌘K)"
+            >
+              <Search className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+              <span className="hidden sm:inline">Buscar...</span>
+              <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-gray-400">
+                ⌘K
+              </kbd>
+            </button>
+            <NotificationBell />
+          </div>
         </header>
 
         {/* Page content */}
@@ -286,6 +320,8 @@ export default function AppLayout(): React.ReactElement {
           <Outlet />
         </main>
       </div>
+
+      <CommandPalette open={paletteOpen} onClose={closePalette} />
     </div>
   );
 }
