@@ -1,20 +1,15 @@
-import { useState, useCallback } from 'react';
-import type React from 'react';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
-import { ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
+import { addMonths, endOfMonth, format, startOfMonth, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
-import { Skeleton } from '../ui/skeleton';
+import { ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
+import type React from 'react';
+import { useState, useCallback, useMemo } from 'react';
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import { useBudgets } from '../../hooks/useBudgets';
 import { useDashboardSpendingByCategory } from '../../hooks/useDashboard';
 import { formatCurrency } from '../../lib/formatters';
 import type { CategorySpendingItem } from '../../types/api';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Skeleton } from '../ui/skeleton';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -83,6 +78,19 @@ export default function SpendingByCategoryChart(): React.ReactElement {
   }, [canGoForward]);
 
   const totalCents = data?.reduce((sum, item) => sum + item.total, 0) ?? 0;
+
+  // Monthly budget total from active monthly budgets (no extra API calls — derived from budget items)
+  const { data: budgets } = useBudgets();
+  const monthlyBudgetedCents = useMemo(
+    () =>
+      (budgets ?? [])
+        .filter((b) => b.period === 'monthly' && b.isActive)
+        .flatMap((b) => b.items)
+        .reduce((sum, item) => sum + item.amount, 0),
+    [budgets],
+  );
+  const budgetPct =
+    monthlyBudgetedCents > 0 ? Math.min((totalCents / monthlyBudgetedCents) * 100, 200) : 0;
 
   return (
     <Card className="flex h-full flex-col">
@@ -197,9 +205,7 @@ export default function SpendingByCategoryChart(): React.ReactElement {
                     <span className="truncate text-gray-700">{item.name}</span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs text-gray-400">
-                      {item.percentage.toFixed(1)}%
-                    </span>
+                    <span className="text-xs text-gray-400">{item.percentage.toFixed(1)}%</span>
                     <span className="font-medium text-gray-900">
                       {formatCurrency(item.total, 'EUR')}
                     </span>
@@ -207,6 +213,38 @@ export default function SpendingByCategoryChart(): React.ReactElement {
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {/* Budget overlay — shown when there is spending data and active monthly budgets */}
+        {!isLoading && monthlyBudgetedCents > 0 && (totalCents > 0 || monthlyBudgetedCents > 0) && (
+          <div className="mt-4 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
+            <div className="mb-1.5 flex items-center justify-between text-xs">
+              <span className="font-medium text-gray-600">Presupuesto mensual</span>
+              <span
+                className="font-semibold"
+                style={{
+                  color: budgetPct >= 100 ? '#FF4757' : budgetPct >= 80 ? '#F59E0B' : '#00C896',
+                }}
+              >
+                {budgetPct.toFixed(0)}% usado
+              </span>
+            </div>
+            {/* Progress bar */}
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${Math.min(budgetPct, 100)}%`,
+                  backgroundColor:
+                    budgetPct >= 100 ? '#FF4757' : budgetPct >= 80 ? '#F59E0B' : '#00C896',
+                }}
+              />
+            </div>
+            <div className="mt-1 flex items-center justify-between text-xs text-gray-400">
+              <span>{formatCurrency(totalCents, 'EUR')} gastado</span>
+              <span>de {formatCurrency(monthlyBudgetedCents, 'EUR')}</span>
+            </div>
           </div>
         )}
       </CardContent>

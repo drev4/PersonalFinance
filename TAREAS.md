@@ -209,9 +209,9 @@ El endpoint `GET /dashboard/upcoming-recurring` existe. El widget del dashboard 
 
 Los datos existen (budgets + spending by category) pero no hay gráfico de barras lado a lado.
 
-- [ ] `[WEB]` Añadir chart de barras agrupadas en `BudgetsPage` — columna "Presupuestado" vs "Gastado" por categoría
-- [ ] `[WEB]` También útil en `SpendingByCategoryChart` del dashboard con overlay del presupuesto total del mes
-- [ ] `[MOB]` Widget similar en la futura pantalla de presupuestos
+- [x] `[WEB]` Añadir chart de barras agrupadas en `BudgetsPage` — columna "Presupuestado" vs "Gastado" por categoría
+- [x] `[WEB]` También útil en `SpendingByCategoryChart` del dashboard con overlay del presupuesto total del mes
+- [x] `[MOB]` Widget similar en la futura pantalla de presupuestos
 
 #### 23. Página de seguridad en settings web `[WEB]`
 
@@ -290,7 +290,7 @@ El módulo de holdings solo rastrea PnL por precio. No hay seguimiento de divide
 | 19  | Depósito rápido a meta                | API + WEB + MOB | 🟢        | ✅     |
 | 20  | Gestión y filtro de tags              | WEB + MOB       | 🟢        | ✅     |
 | 21  | Calendario de recurrentes             | WEB + MOB       | 🟢        | ✅     |
-| 22  | Gráfico presupuesto vs real           | WEB + MOB       | 🟢        | ⏳     |
+| 22  | Gráfico presupuesto vs real           | WEB + MOB       | 🟢        | ✅     |
 | 23  | Página de seguridad web               | WEB             | 🟢        | ⏳     |
 | 24  | Score de salud financiera             | API + WEB + MOB | 🟢        | ✅     |
 | 25  | Integración Plaid                     | API             | 🟢        | ⏳     |
