@@ -11,6 +11,7 @@ import {
   Landmark,
   Repeat2,
   Search,
+  Calculator,
 } from 'lucide-react-native';
 import { colors, radius, shadow } from '@/theme';
 
@@ -60,6 +61,10 @@ export default function TabLayout() {
           options={{ title: 'Recurrentes', tabBarIcon: createIcon(Repeat2) }}
         />
         <Tabs.Screen name="search" options={{ title: 'Buscar', tabBarIcon: createIcon(Search) }} />
+        <Tabs.Screen
+          name="simulators"
+          options={{ title: 'Simuladores', tabBarIcon: createIcon(Calculator) }}
+        />
         <Tabs.Screen
           name="settings"
           options={{ title: 'Ajustes', tabBarIcon: createIcon(Settings) }}
