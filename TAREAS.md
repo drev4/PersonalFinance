@@ -249,10 +249,10 @@ No hay buscador que cubra transacciones + cuentas + holdings a la vez.
 
 El API de simuladores es público (sin auth) y tiene 5 calculadoras. No hay ninguna pantalla en mobile.
 
-- [ ] Añadir `src/api/simulators.ts`
-- [ ] Crear pantalla `app/(app)/(tabs)/simulators.tsx` con lista de calculadoras
-- [ ] Implementar al menos hipoteca (`/simulators/mortgage`) e inversión (`/simulators/investment`) con formularios nativos
-- [ ] Mostrar resultados con tabla de amortización simplificada
+- [x] Añadir `src/api/simulators.ts`
+- [x] Crear pantalla `app/(app)/(tabs)/simulators.tsx` con lista de calculadoras
+- [x] Implementar al menos hipoteca (`/simulators/mortgage`) e inversión (`/simulators/investment`) con formularios nativos
+- [x] Mostrar resultados con tabla de amortización simplificada
 
 #### 28. Dividendos y rendimientos de inversiones `[API]` `[WEB]` `[MOB]`
 
@@ -295,5 +295,5 @@ El módulo de holdings solo rastrea PnL por precio. No hay seguimiento de divide
 | 24  | Score de salud financiera             | API + WEB + MOB | 🟢        | ✅     |
 | 25  | Integración Plaid                     | API             | 🟢        | ⏳     |
 | 26  | Búsqueda global                       | WEB + MOB       | 🟢        | ✅     |
-| 27  | Simuladores mobile                    | MOB             | 🟢        | ⏳     |
+| 27  | Simuladores mobile                    | MOB             | 🟢        | ✅     |
 | 28  | Dividendos y rendimientos             | API + WEB + MOB | 🟢        | ⏳     |
