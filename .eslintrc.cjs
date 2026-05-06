@@ -5,7 +5,7 @@ module.exports = {
     browser: true,
     es2022: true,
   },
-  ignorePatterns: ['packages/mobile/**'],
+  ignorePatterns: ['packages/mobile/**', 'packages/api/**'],
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',

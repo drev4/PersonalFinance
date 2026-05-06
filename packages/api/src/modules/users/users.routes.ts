@@ -2,7 +2,13 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { requireAuth } from '../../middlewares/authenticate.js';
-import { findById, updateUser, updatePasswordHash } from './user.repository.js';
+import {
+  findById,
+  updateUser,
+  updatePasswordHash,
+  addPushToken,
+  removePushToken,
+} from './user.repository.js';
 import { AuditLogModel } from '../audit/auditLog.model.js';
 import type { SafeUser } from '../auth/auth.service.js';
 import type { IUser } from './user.model.js';
@@ -15,7 +21,11 @@ const UpdateProfileBodySchema = z.object({
   name: z.string().min(1).max(100).trim().optional(),
   firstName: z.string().min(1).max(50).trim().optional(),
   lastName: z.string().min(1).max(50).trim().optional(),
-  baseCurrency: z.string().length(3, 'Currency code must be exactly 3 characters').toUpperCase().optional(),
+  baseCurrency: z
+    .string()
+    .length(3, 'Currency code must be exactly 3 characters')
+    .toUpperCase()
+    .optional(),
   preferences: z
     .object({
       locale: z.string().optional(),
@@ -23,6 +33,11 @@ const UpdateProfileBodySchema = z.object({
       dashboardWidgets: z.array(z.string()).optional(),
     })
     .optional(),
+});
+
+const PushTokenBodySchema = z.object({
+  token: z.string().min(1, 'Token is required'),
+  platform: z.enum(['ios', 'android']).optional(),
 });
 
 const ChangePasswordBodySchema = z.object({
@@ -58,10 +73,7 @@ function toSafeUser(user: IUser): SafeUser {
 
 // ---- Handlers --------------------------------------------------------------
 
-async function getMeHandler(
-  request: FastifyRequest,
-  reply: FastifyReply,
-): Promise<FastifyReply> {
+async function getMeHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
   const user = await findById(request.user.userId);
 
   if (user === null) {
@@ -166,6 +178,44 @@ async function changePasswordHandler(
   });
 }
 
+async function registerPushTokenHandler(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const parsed = PushTokenBodySchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid request body',
+        details: parsed.error.flatten(),
+      },
+    });
+  }
+
+  await addPushToken(request.user.userId, parsed.data.token);
+  return reply.status(204).send();
+}
+
+async function removePushTokenHandler(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const parsed = PushTokenBodySchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid request body',
+        details: parsed.error.flatten(),
+      },
+    });
+  }
+
+  await removePushToken(request.user.userId, parsed.data.token);
+  return reply.status(204).send();
+}
+
 // ---- Route registration ----------------------------------------------------
 
 export async function registerUsersRoutes(fastify: FastifyInstance): Promise<void> {
@@ -176,5 +226,7 @@ export async function registerUsersRoutes(fastify: FastifyInstance): Promise<voi
     usersScope.get('/users/me', getMeHandler);
     usersScope.patch('/users/me', updateMeHandler);
     usersScope.patch('/users/me/password', changePasswordHandler);
+    usersScope.post('/users/push-token', registerPushTokenHandler);
+    usersScope.delete('/users/push-token', removePushTokenHandler);
   });
 }
