@@ -34,10 +34,7 @@ export async function createUser(data: CreateUserDTO): Promise<IUser> {
   return user.save();
 }
 
-export async function updateUser(
-  id: string,
-  data: Partial<UpdateUserDTO>,
-): Promise<IUser | null> {
+export async function updateUser(id: string, data: Partial<UpdateUserDTO>): Promise<IUser | null> {
   const updatePayload: Record<string, unknown> = {};
 
   if (data.name !== undefined) {
@@ -69,8 +66,18 @@ export async function updatePasswordHash(id: string, passwordHash: string): Prom
 }
 
 export async function markEmailVerified(id: string): Promise<void> {
-  await UserModel.findByIdAndUpdate(
-    id,
-    { $set: { emailVerified: true } },
-  ).exec();
+  await UserModel.findByIdAndUpdate(id, { $set: { emailVerified: true } }).exec();
+}
+
+export async function addPushToken(id: string, token: string): Promise<void> {
+  await UserModel.findByIdAndUpdate(id, { $addToSet: { pushTokens: token } }).exec();
+}
+
+export async function removePushToken(id: string, token: string): Promise<void> {
+  await UserModel.findByIdAndUpdate(id, { $pull: { pushTokens: token } }).exec();
+}
+
+export async function getUserPushTokens(id: string): Promise<string[]> {
+  const user = await UserModel.findById(id, 'pushTokens').lean().exec();
+  return (user as { pushTokens?: string[] } | null)?.pushTokens ?? [];
 }

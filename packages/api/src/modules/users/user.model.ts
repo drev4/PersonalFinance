@@ -18,6 +18,7 @@ export interface IUser extends Document {
   twoFactorEnabled: boolean;
   twoFactorSecret?: string;
   preferences: IUserPreferences;
+  pushTokens: string[];
   createdAt: Date;
   updatedAt: Date;
   lastLoginAt?: Date;
@@ -83,6 +84,10 @@ const UserSchema = new Schema<IUser>(
         theme: 'light',
         dashboardWidgets: [],
       }),
+    },
+    pushTokens: {
+      type: [String],
+      default: [],
     },
     lastLoginAt: {
       type: Date,

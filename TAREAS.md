@@ -11,9 +11,9 @@
 
 `useNotificationSetup.ts` en mobile llama a `POST /notifications/register-device` para registrar el token de Expo Push. Ese endpoint **no existe** en `notification.routes.ts`. Las notificaciones push al móvil nunca llegan.
 
-- [ ] Añadir `POST /notifications/register-device` con body `{ token: string, platform: 'ios' | 'android' }`
-- [ ] Guardar el token en el modelo de usuario (campo `pushTokens: string[]`)
-- [ ] Usar el token en el job `notifications.job.ts` al enviar alertas
+- [x] Añadir `POST /users/push-token` con body `{ token: string, platform?: 'ios' | 'android' }` (endpoint real que usa el hook móvil)
+- [x] Guardar el token en el modelo de usuario (campo `pushTokens: string[]`)
+- [x] Usar el token en el job `notifications.job.ts` al enviar alertas
 
 ### 2. Ficheros placeholder activos en el API `[API]`
 
@@ -269,7 +269,7 @@ El módulo de holdings solo rastrea PnL por precio. No hay seguimiento de divide
 
 | #   | Tarea                                 | Paquetes        | Prioridad | Estado |
 | --- | ------------------------------------- | --------------- | --------- | ------ |
-| 1   | Push notification endpoint            | API             | 🔴        | ⏳     |
+| 1   | Push notification endpoint            | API             | 🔴        | ✅     |
 | 2   | Eliminar ficheros placeholder         | API             | 🔴        | ✅     |
 | 3   | Pantalla Presupuestos mobile          | MOB             | 🟡        | ✅     |
 | 4   | Pantalla Metas mobile                 | MOB             | 🟡        | ✅     |
