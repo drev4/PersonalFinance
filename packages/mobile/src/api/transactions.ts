@@ -3,6 +3,7 @@ import client from './client';
 import { useAuthStore } from '@/stores/authStore';
 
 export interface Transaction {
+  _id: string;
   id: string;
   accountId: string;
   type: 'income' | 'expense' | 'transfer';

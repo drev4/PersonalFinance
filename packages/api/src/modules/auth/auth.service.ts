@@ -1,7 +1,11 @@
 import bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'node:crypto';
 import { v4 as uuidv4 } from 'uuid';
-import { authenticator } from 'otplib';
+import {
+  generateSecret as totpGenerateSecret,
+  verifySync as totpVerify,
+  generateURI as totpGenerateURI,
+} from 'otplib';
 import type { IUser } from '../users/user.model.js';
 import {
   findByEmail,
@@ -207,7 +211,7 @@ export async function login(dto: LoginDTO): Promise<AuthResult | TwoFactorRequir
     if (secret === null) {
       throw new AuthError('TWO_FACTOR_NOT_SETUP', '2FA is enabled but no secret found', 500);
     }
-    const valid = authenticator.verify({ token: dto.totpCode, secret });
+    const valid = totpVerify({ token: dto.totpCode, secret });
     if (!valid) {
       throw new AuthError('INVALID_TOTP', 'Invalid or expired verification code', 401);
     }
@@ -255,7 +259,7 @@ export async function completeTwoFactorLogin(
     throw new AuthError('TWO_FACTOR_NOT_SETUP', '2FA is enabled but no secret found', 500);
   }
 
-  const valid = authenticator.verify({ token: totpCode, secret });
+  const valid = totpVerify({ token: totpCode, secret });
   if (!valid) {
     throw new AuthError('INVALID_TOTP', 'Invalid or expired verification code', 401);
   }
@@ -281,10 +285,10 @@ export async function setup2FA(userId: string): Promise<TwoFactorSetupResult> {
     throw new AuthError('USER_NOT_FOUND', 'User not found', 404);
   }
 
-  const secret = authenticator.generateSecret();
+  const secret = totpGenerateSecret();
   await setTwoFactorSecret(userId, secret);
 
-  const otpauthUri = authenticator.keyuri(user.email, 'FinanzasApp', secret);
+  const otpauthUri = totpGenerateURI({ label: user.email, issuer: 'FinanzasApp', secret });
 
   return { secret, otpauthUri };
 }
@@ -295,7 +299,7 @@ export async function verify2FA(userId: string, totpCode: string): Promise<void>
     throw new AuthError('TWO_FACTOR_NOT_SETUP', 'Call setup first', 400);
   }
 
-  const valid = authenticator.verify({ token: totpCode, secret });
+  const valid = totpVerify({ token: totpCode, secret });
   if (!valid) {
     throw new AuthError('INVALID_TOTP', 'Invalid or expired verification code', 400);
   }
