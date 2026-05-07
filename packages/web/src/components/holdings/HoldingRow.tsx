@@ -1,11 +1,12 @@
+import { MoreVertical, Pencil, Trash2, TrendingUp, TrendingDown, Bell } from 'lucide-react';
 import * as React from 'react';
 import { useState } from 'react';
-import { MoreVertical, Pencil, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
-import { TableRow, TableCell } from '../ui/table';
-import { Badge } from '../ui/badge';
 import { formatCurrency, formatPercentage, formatDate } from '../../lib/formatters';
-import type { HoldingWithValue, AssetType } from '../../types/api';
 import { cn } from '../../lib/utils';
+import type { HoldingWithValue, AssetType } from '../../types/api';
+import { Badge } from '../ui/badge';
+import { TableRow, TableCell } from '../ui/table';
+import PriceAlertDialog from './PriceAlertDialog';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -79,7 +80,10 @@ function KebabMenu({ onEdit, onDelete }: KebabMenuProps): React.ReactElement {
           <button
             type="button"
             role="menuitem"
-            onClick={() => { onEdit(); setOpen(false); }}
+            onClick={() => {
+              onEdit();
+              setOpen(false);
+            }}
             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
           >
             <Pencil className="h-4 w-4 text-gray-400" aria-hidden="true" />
@@ -88,7 +92,10 @@ function KebabMenu({ onEdit, onDelete }: KebabMenuProps): React.ReactElement {
           <button
             type="button"
             role="menuitem"
-            onClick={() => { onDelete(); setOpen(false); }}
+            onClick={() => {
+              onDelete();
+              setOpen(false);
+            }}
             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
           >
             <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -113,6 +120,7 @@ export default function HoldingRow({
   onEdit,
   onDelete,
 }: HoldingRowProps): React.ReactElement {
+  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
   const isPnlPositive = holding.pnl >= 0;
   const pnlColor = isPnlPositive ? 'text-green-600' : 'text-red-600';
   const PnlIcon = isPnlPositive ? TrendingUp : TrendingDown;
@@ -125,9 +133,7 @@ export default function HoldingRow({
 
   // currentValue and totalCost already come in cents from the backend computed fields
   const displayValue =
-    holding.currentValue > 0
-      ? formatCurrency(holding.currentValue, holding.currency)
-      : '—';
+    holding.currentValue > 0 ? formatCurrency(holding.currentValue, holding.currency) : '—';
 
   const displayCurrentPrice =
     holding.currentPrice !== undefined && holding.currentPrice !== null
@@ -148,9 +154,7 @@ export default function HoldingRow({
           </span>
           <div className="min-w-0">
             <p className="font-semibold text-gray-900">{holding.symbol}</p>
-            {holding.exchange && (
-              <p className="text-xs text-gray-400">{holding.exchange}</p>
-            )}
+            {holding.exchange && <p className="text-xs text-gray-400">{holding.exchange}</p>}
           </div>
         </div>
       </TableCell>
@@ -163,9 +167,7 @@ export default function HoldingRow({
       </TableCell>
 
       {/* Quantity */}
-      <TableCell className="tabular-nums text-gray-700">
-        {formattedQuantity}
-      </TableCell>
+      <TableCell className="tabular-nums text-gray-700">{formattedQuantity}</TableCell>
 
       {/* Current price */}
       <TableCell
@@ -179,9 +181,7 @@ export default function HoldingRow({
       </TableCell>
 
       {/* Total value */}
-      <TableCell className="tabular-nums font-medium text-gray-900">
-        {displayValue}
-      </TableCell>
+      <TableCell className="tabular-nums font-medium text-gray-900">{displayValue}</TableCell>
 
       {/* P&L */}
       <TableCell>
@@ -207,11 +207,29 @@ export default function HoldingRow({
 
       {/* Actions */}
       <TableCell>
-        <KebabMenu
-          onEdit={() => onEdit(holding)}
-          onDelete={() => onDelete(holding)}
-        />
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setAlertDialogOpen(true)}
+            title="Configurar alertas de precio"
+            className={cn(
+              'rounded p-1 transition-colors',
+              'text-gray-400 hover:bg-amber-50 hover:text-amber-600',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
+            )}
+            aria-label={`Alertas de precio para ${holding.symbol}`}
+          >
+            <Bell className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <KebabMenu onEdit={() => onEdit(holding)} onDelete={() => onDelete(holding)} />
+        </div>
       </TableCell>
+
+      <PriceAlertDialog
+        holding={holding}
+        open={alertDialogOpen}
+        onOpenChange={setAlertDialogOpen}
+      />
     </TableRow>
   );
 }

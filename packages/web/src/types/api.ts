@@ -601,3 +601,26 @@ export interface IntegrationStatus {
   lastSyncStatus: SyncStatus;
   lastSyncError?: string;
 }
+
+// ─── Price Alerts ─────────────────────────────────────────────────────────────
+
+export interface PriceAlert {
+  _id: string;
+  userId: string;
+  holdingId: string;
+  symbol: string;
+  assetType: string;
+  condition: 'above' | 'below';
+  targetPrice: number; // cents
+  currency: string;
+  isActive: boolean;
+  triggeredAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePriceAlertDTO {
+  holdingId: string;
+  condition: 'above' | 'below';
+  targetPrice: number; // cents
+}
