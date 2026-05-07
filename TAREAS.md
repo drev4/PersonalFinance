@@ -39,39 +39,39 @@ Existe exportación CSV pero no importación.
 - [ ] `[WEB]` Botón "Importar CSV" en `TransactionsPage` con `ImportCsvDialog`
 - [ ] `[MOB]` Settings > Datos: importar desde archivo con `expo-document-picker`
 
-### 4. Dividendos y rendimientos de inversiones `[API]` `[WEB]` `[MOB]`
+### 4. Dividendos y rendimientos de inversiones `[API]` `[WEB]` `[MOB]` ✅
 
 Holdings solo rastrea PnL por precio. No hay seguimiento de dividendos ni staking.
 
-- [ ] `[API]` `POST /holdings/:id/dividend` con `{ amount, date, currency }` — registra ingreso
-- [ ] `[API]` `GET /holdings/:id/income` — historial de dividendos de esa posición
-- [ ] `[WEB]` Sección "Ingresos" en `HoldingsPage` con total de dividendos del año
-- [ ] `[MOB]` Rendimiento total (PnL + dividendos) en pantalla de cartera
+- [x] `[API]` `POST /holdings/:id/dividend` con `{ amount, date, currency }` — registra ingreso
+- [x] `[API]` `GET /holdings/:id/income` — historial de dividendos de esa posición
+- [x] `[WEB]` Sección "Ingresos" en `HoldingsPage` con total de dividendos del año
+- [x] `[MOB]` Rendimiento total (PnL + dividendos) en pantalla de cartera
 
-### 5. Pantalla de detalle de cuenta mobile `[MOB]`
+### 5. Pantalla de detalle de cuenta mobile `[MOB]` ✅
 
 La web tiene `AccountDetailPage` con historial y ajuste de saldo. En mobile solo existe la lista.
 
-- [ ] Crear `app/(app)/account/[id].tsx` con saldo actual, historial de movimientos filtrados y acciones
-- [ ] Navegar desde la tarjeta de cuenta en `accounts.tsx`
-- [ ] Reutilizar `AdjustBalanceDialog` (adaptar a RN)
+- [x] Crear `app/(app)/account-detail.tsx` con saldo actual, historial de movimientos filtrados y acciones
+- [x] Navegar desde la tarjeta de cuenta en `accounts.tsx`
+- [x] Reutilizar ajuste de saldo (bottom sheet) y edición (AccountFormModal)
 
-### 6. Pantalla de Informes mobile `[MOB]`
+### 6. Pantalla de Informes mobile `[MOB]` ✅
 
 La web tiene `ReportsPage` con exportación CSV y estadísticas mensuales. Mobile no tiene nada.
 
-- [ ] Añadir `src/api/reports.ts` con `getMonthlyReport`, `exportCsv`
-- [ ] Crear tab o pantalla accesible desde Settings: resumen mensual y botón de exportar
-- [ ] Usar `expo-sharing` para compartir el CSV generado
+- [x] Añadir hook `useSpendingByCategory` en `src/api/dashboard.ts` con filtro por rango de fechas
+- [x] Crear pantalla `reports.tsx` accesible desde el hub "Más": resumen mensual, gráfico cashflow y desglose por categoría
+- [ ] Exportación CSV con `expo-sharing`
 
 ### 7. Alertas de precio en cartera `[API]` `[WEB]` `[MOB]`
 
 El tipo de notificación `price_alert` existe pero no hay forma de configurar alertas.
 
-- [ ] `[API]` `POST /holdings/:id/price-alert` con `{ targetPrice, direction: 'above' | 'below' }`
-- [ ] `[API]` Evaluar alertas en el job `priceUpdate.job.ts` al actualizar precios
+- [x] `[API]` `POST /holdings/:id/price-alert` con `{ targetPrice, direction: 'above' | 'below' }`
+- [x] `[API]` Evaluar alertas en job cron cada 15 min al actualizar precios
 - [ ] `[WEB]` Botón "Configurar alerta" en `HoldingRow.tsx`
-- [ ] `[MOB]` Botón de alerta en la fila de holding de la cartera
+- [x] `[MOB]` Botón Bell por holding con modal de alertas activas/pausadas y formulario
 
 ---
 
@@ -152,10 +152,10 @@ El tema en mobile tiene colores definidos pero el toggle solo alterna en web. En
 | 1   | 2FA completo                           | API + WEB       | 🔴        | ✅     |
 | 2   | Página seguridad web (cambio password) | WEB             | 🟡        | ✅     |
 | 3   | Importar transacciones CSV             | API + WEB + MOB | 🟡        | ⏳     |
-| 4   | Dividendos y rendimientos              | API + WEB + MOB | 🟡        | ⏳     |
-| 5   | Detalle de cuenta mobile               | MOB             | 🟡        | ⏳     |
-| 6   | Pantalla Informes mobile               | MOB             | 🟡        | ⏳     |
-| 7   | Alertas de precio en cartera           | API + WEB + MOB | 🟡        | ⏳     |
+| 4   | Dividendos y rendimientos              | API + WEB + MOB | 🟡        | ✅     |
+| 5   | Detalle de cuenta mobile               | MOB             | 🟡        | ✅     |
+| 6   | Pantalla Informes mobile               | MOB             | 🟡        | ✅     |
+| 7   | Alertas de precio en cartera           | API + WEB + MOB | 🟡        | 🔄     |
 | 8   | Integración Plaid                      | API             | 🟢        | ⏳     |
 | 9   | Autenticación biométrica mobile        | MOB             | 🟢        | ✅     |
 | 10  | Tests paquete web                      | WEB             | 🟢        | ⏳     |
