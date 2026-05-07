@@ -14,6 +14,8 @@ import {
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useState, useMemo } from 'react';
 import {
+  Bell,
+  BellOff,
   ChevronLeft,
   TrendingUp,
   TrendingDown,
@@ -35,6 +37,13 @@ import {
   type CreateHoldingDTO,
   type IncomeType,
 } from '@/api/holdings';
+import {
+  usePriceAlerts,
+  useCreatePriceAlert,
+  useDeletePriceAlert,
+  useTogglePriceAlert,
+  type PriceAlert,
+} from '@/api/priceAlerts';
 import { useAccounts } from '@/api/transactions';
 import { formatCurrency, formatPercentage } from '@/lib/formatters';
 import { Skeleton } from '@/components/Skeleton';
@@ -65,6 +74,13 @@ export default function PortfolioScreen() {
     currency: 'EUR',
   });
 
+  const [alertsHolding, setAlertsHolding] = useState<HoldingWithValue | null>(null);
+  const [alertView, setAlertView] = useState<'list' | 'form'>('list');
+  const [alertForm, setAlertForm] = useState({
+    condition: 'above' as 'above' | 'below',
+    price: '',
+  });
+
   const [incomeModalHolding, setIncomeModalHolding] = useState<HoldingWithValue | null>(null);
   const [incomeView, setIncomeView] = useState<'history' | 'form'>('history');
   const [incomeForm, setIncomeForm] = useState({
@@ -90,6 +106,13 @@ export default function PortfolioScreen() {
     incomeModalHolding?._id ?? null,
   );
   const { mutate: addDividend, isPending: addPending } = useAddDividend();
+
+  const { data: priceAlerts = [], isLoading: alertsLoading } = usePriceAlerts(
+    alertsHolding?._id ?? '',
+  );
+  const { mutate: createPriceAlert, isPending: createAlertPending } = useCreatePriceAlert();
+  const { mutate: deletePriceAlert } = useDeletePriceAlert();
+  const { mutate: togglePriceAlert } = useTogglePriceAlert();
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -217,6 +240,39 @@ export default function PortfolioScreen() {
 
   const handleCloseIncomeModal = () => {
     setIncomeModalHolding(null);
+  };
+
+  const handleOpenAlertsModal = (holding: HoldingWithValue) => {
+    setAlertsHolding(holding);
+    setAlertView('list');
+    setAlertForm({ condition: 'above', price: '' });
+  };
+
+  const handleCloseAlertsModal = () => {
+    setAlertsHolding(null);
+  };
+
+  const handleAlertSubmit = () => {
+    if (!alertsHolding || !alertForm.price) return;
+    const parsed = parseFloat(alertForm.price);
+    if (isNaN(parsed) || parsed <= 0) {
+      Alert.alert('Error', 'Introduce un precio válido');
+      return;
+    }
+    createPriceAlert(
+      {
+        holdingId: alertsHolding._id,
+        condition: alertForm.condition,
+        targetPrice: Math.round(parsed * 100),
+      },
+      {
+        onSuccess: () => {
+          setAlertView('list');
+          setAlertForm({ condition: 'above', price: '' });
+        },
+        onError: () => Alert.alert('Error', 'No se pudo crear la alerta'),
+      },
+    );
   };
 
   const handleIncomeSubmit = () => {
@@ -434,6 +490,13 @@ export default function PortfolioScreen() {
                     {formatPercentage(item.portfolioPercentage)} de cartera
                   </Text>
                   <View style={styles.holdingActions}>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, { backgroundColor: colors.primaryLight }]}
+                      onPress={() => handleOpenAlertsModal(item)}
+                      disabled={isPending}
+                    >
+                      <Bell size={14} color={colors.primary} />
+                    </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.actionBtn, { backgroundColor: '#D9770618' }]}
                       onPress={() => handleOpenIncomeModal(item)}
@@ -691,6 +754,171 @@ export default function PortfolioScreen() {
         </SafeAreaProvider>
       </Modal>
 
+      {/* Price Alerts Modal */}
+      <Modal
+        visible={alertsHolding !== null}
+        animationType="slide"
+        onRequestClose={handleCloseAlertsModal}
+      >
+        <SafeAreaProvider>
+          <SafeAreaView style={styles.modalContainer} edges={['top', 'left', 'right', 'bottom']}>
+            <View style={styles.modalNav}>
+              <TouchableOpacity
+                onPress={alertView === 'form' ? () => setAlertView('list') : handleCloseAlertsModal}
+                style={styles.backButton}
+              >
+                <ChevronLeft size={20} color={colors.text} />
+              </TouchableOpacity>
+              <Text style={styles.modalNavTitle}>
+                {alertsHolding?.symbol} —{' '}
+                {alertView === 'form' ? 'Nueva alerta' : 'Alertas de precio'}
+              </Text>
+              <View style={{ width: 36 }} />
+            </View>
+
+            {alertView === 'list' ? (
+              <>
+                <View style={styles.incomeHeaderRow}>
+                  <Text style={styles.alertsSubtitle}>
+                    {priceAlerts.filter((a) => a.isActive).length} activa
+                    {priceAlerts.filter((a) => a.isActive).length !== 1 ? 's' : ''}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.addIncomeBtn}
+                    onPress={() => setAlertView('form')}
+                  >
+                    <Plus size={14} color={colors.white} />
+                    <Text style={styles.addIncomeBtnText}>Nueva</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {alertsLoading ? (
+                  <View style={{ padding: spacing.xl }}>
+                    <Skeleton height={64} borderRadius={radius.xl} marginBottom={spacing.md} />
+                    <Skeleton height={64} borderRadius={radius.xl} />
+                  </View>
+                ) : priceAlerts.length === 0 ? (
+                  <View style={styles.incomeEmpty}>
+                    <Bell size={36} color={colors.textTertiary} />
+                    <Text style={styles.emptyTitle}>Sin alertas configuradas</Text>
+                    <Text style={styles.emptyText}>
+                      Crea una alerta para recibir una notificación cuando el precio suba o baje de
+                      tu objetivo
+                    </Text>
+                    <TouchableOpacity style={styles.emptyCTA} onPress={() => setAlertView('form')}>
+                      <Text style={styles.emptyCTAText}>Crear primera alerta</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={priceAlerts}
+                    keyExtractor={(item) => item._id}
+                    contentContainerStyle={{
+                      paddingHorizontal: spacing.xl,
+                      paddingTop: spacing.sm,
+                    }}
+                    renderItem={({ item }) => (
+                      <AlertRow
+                        alert={item}
+                        colors={colors}
+                        shadow={shadow}
+                        onToggle={() =>
+                          togglePriceAlert({ id: item._id, holdingId: item.holdingId })
+                        }
+                        onDelete={() =>
+                          Alert.alert('Eliminar alerta', '¿Seguro que deseas eliminarla?', [
+                            { text: 'Cancelar', style: 'cancel' },
+                            {
+                              text: 'Eliminar',
+                              style: 'destructive',
+                              onPress: () =>
+                                deletePriceAlert({ id: item._id, holdingId: item.holdingId }),
+                            },
+                          ])
+                        }
+                      />
+                    )}
+                  />
+                )}
+              </>
+            ) : (
+              <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
+                {/* Condition */}
+                <View style={styles.formSection}>
+                  <Text style={styles.formLabel}>Condición</Text>
+                  <View style={styles.typeRow}>
+                    {(['above', 'below'] as const).map((c) => (
+                      <TouchableOpacity
+                        key={c}
+                        style={[
+                          styles.typeChip,
+                          alertForm.condition === c && {
+                            backgroundColor: c === 'above' ? colors.income : colors.expense,
+                            borderColor: c === 'above' ? colors.income : colors.expense,
+                          },
+                        ]}
+                        onPress={() => setAlertForm({ ...alertForm, condition: c })}
+                        disabled={createAlertPending}
+                      >
+                        <Text
+                          style={[
+                            styles.typeChipText,
+                            alertForm.condition === c && styles.typeChipTextActive,
+                          ]}
+                        >
+                          {c === 'above' ? '↑ Supera' : '↓ Baja de'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Target price */}
+                <View style={styles.formSection}>
+                  <Text style={styles.formLabel}>Precio objetivo *</Text>
+                  <View style={styles.priceInputRow}>
+                    <Text style={styles.currencyPrefix}>
+                      {alertsHolding?.currency === 'EUR' ? '€' : alertsHolding?.currency ?? '€'}
+                    </Text>
+                    <TextInput
+                      style={styles.priceInput}
+                      placeholder="0.00"
+                      placeholderTextColor={colors.textTertiary}
+                      value={alertForm.price}
+                      onChangeText={(t) => setAlertForm({ ...alertForm, price: t })}
+                      keyboardType="decimal-pad"
+                      editable={!createAlertPending}
+                    />
+                  </View>
+                  {alertsHolding?.currentPrice !== undefined && (
+                    <Text style={styles.alertCurrentPrice}>
+                      Precio actual: {(alertsHolding.currentPrice / 100).toFixed(2)}{' '}
+                      {alertsHolding.currency}
+                    </Text>
+                  )}
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.submitBtn,
+                    (!alertForm.price || createAlertPending) && styles.submitBtnDisabled,
+                  ]}
+                  onPress={handleAlertSubmit}
+                  disabled={!alertForm.price || createAlertPending}
+                  activeOpacity={0.85}
+                >
+                  {createAlertPending ? (
+                    <ActivityIndicator color={colors.white} />
+                  ) : (
+                    <Text style={styles.submitBtnText}>Guardar alerta</Text>
+                  )}
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+          </SafeAreaView>
+        </SafeAreaProvider>
+      </Modal>
+
       {/* Form Modal */}
       <Modal visible={formModalVisible} animationType="slide" onRequestClose={handleCloseModal}>
         <SafeAreaProvider>
@@ -856,6 +1084,111 @@ export default function PortfolioScreen() {
     </SafeAreaView>
   );
 }
+
+function AlertRow({
+  alert,
+  colors,
+  shadow,
+  onToggle,
+  onDelete,
+}: {
+  alert: PriceAlert;
+  colors: ThemeColors;
+  shadow: ReturnType<typeof getShadow>;
+  onToggle: () => void;
+  onDelete: () => void;
+}) {
+  const isAbove = alert.condition === 'above';
+  const conditionColor = isAbove ? colors.income : colors.expense;
+  const priceFormatted = (alert.targetPrice / 100).toFixed(2);
+
+  return (
+    <View
+      style={[
+        alertRowStyles.row,
+        { backgroundColor: colors.card, ...shadow.sm },
+        !alert.isActive && { opacity: 0.55 },
+      ]}
+    >
+      <View style={[alertRowStyles.conditionBadge, { backgroundColor: conditionColor + '18' }]}>
+        <Text style={[alertRowStyles.conditionText, { color: conditionColor }]}>
+          {isAbove ? '↑' : '↓'}
+        </Text>
+      </View>
+      <View style={alertRowStyles.info}>
+        <Text style={[alertRowStyles.label, { color: colors.text }]}>
+          {isAbove ? 'Supera' : 'Baja de'}{' '}
+          <Text style={{ color: conditionColor, fontWeight: '800' }}>
+            {priceFormatted} {alert.currency}
+          </Text>
+        </Text>
+        {alert.triggeredAt ? (
+          <Text style={[alertRowStyles.sub, { color: colors.textTertiary }]}>
+            Disparada {new Date(alert.triggeredAt).toLocaleDateString('es-ES')}
+          </Text>
+        ) : alert.isActive ? (
+          <Text style={[alertRowStyles.sub, { color: colors.textTertiary }]}>Activa</Text>
+        ) : (
+          <Text style={[alertRowStyles.sub, { color: colors.textTertiary }]}>Pausada</Text>
+        )}
+      </View>
+      <TouchableOpacity onPress={onToggle} style={alertRowStyles.iconBtn}>
+        {alert.isActive ? (
+          <Bell size={16} color={colors.primary} />
+        ) : (
+          <BellOff size={16} color={colors.textTertiary} />
+        )}
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={onDelete}
+        style={[alertRowStyles.iconBtn, { backgroundColor: colors.expenseLight }]}
+      >
+        <Trash2 size={14} color={colors.expense} />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const alertRowStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+    gap: 10,
+  },
+  conditionBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  conditionText: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  info: {
+    flex: 1,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  sub: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  iconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+});
 
 function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>) {
   return StyleSheet.create({
@@ -1303,6 +1636,16 @@ function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>)
       paddingVertical: 48,
       paddingHorizontal: spacing.xxxl,
       gap: spacing.md,
+    },
+    alertsSubtitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    alertCurrentPrice: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
     },
   });
 }
