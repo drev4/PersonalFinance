@@ -1,6 +1,6 @@
 # Tareas pendientes y funcionalidades nuevas
 
-> Actualizado: 2026-05-06  
+> Actualizado: 2026-05-07  
 > Leyenda: `[API]` `[WEB]` `[MOB]` — paquete afectado  
 > Estado: ⏳ pendiente · 🔄 en curso · ✅ hecho
 
@@ -86,14 +86,14 @@ El tipo de notificación `price_alert` existe pero no hay forma de configurar al
 - [ ] `POST /integrations/plaid/exchange` — intercambia token público por access token
 - [ ] Job de sync que importe transacciones y saldos automáticamente
 
-### 9. Autenticación biométrica mobile `[MOB]`
+### 9. Autenticación biométrica mobile `[MOB]` ✅
 
 Fintech habitual: bloquear la app con Face ID / huella.
 
-- [ ] Instalar `expo-local-authentication`
-- [ ] Toggle en Settings: "Usar biometría para abrir la app"
-- [ ] Al entrar desde background, pedir autenticación biométrica antes de mostrar contenido
-- [ ] Guardar preferencia en `configStore.ts`
+- [x] Instalar `expo-local-authentication`
+- [x] Toggle en Settings: "Usar biometría para abrir la app"
+- [x] Al entrar desde background, pedir autenticación biométrica antes de mostrar contenido
+- [x] Guardar preferencia en `configStore.ts`
 
 ### 10. Tests del paquete web `[WEB]`
 
@@ -103,12 +103,12 @@ Fintech habitual: bloquear la app con Face ID / huella.
 - [ ] Tests de integración para los flujos críticos: login, crear transacción, ver dashboard
 - [ ] Configurar `msw` para mock de la API en tests
 
-### 11. Infinite scroll / paginación en listas mobile `[MOB]`
+### 11. Infinite scroll / paginación en listas mobile `[MOB]` ✅
 
 `transactions.tsx` carga todo de golpe. Con muchos datos la lista se ralentiza.
 
-- [ ] Implementar `useInfiniteQuery` en `src/api/transactions.api.ts`
-- [ ] Pasar a `FlatList` con `onEndReached` para cargar siguiente página
+- [x] Implementar `useInfiniteQuery` en `src/api/transactions.api.ts`
+- [x] Pasar a `FlatList` con `onEndReached` para cargar siguiente página
 - [ ] Aplicar el mismo patrón en `notifications.tsx`
 
 ### 12. Pipeline CI/CD `[API]` `[WEB]` `[MOB]`
@@ -135,13 +135,13 @@ Las push notifications llegan pero al tocarlas abren la app en la pantalla inici
 - [ ] En `useNotificationSetup.ts`, manejar `addNotificationResponseReceivedListener` y navegar a la ruta
 - [ ] Ejemplos: notificación de presupuesto → navegar a `/(tabs)/budgets`, alerta de precio → `/(tabs)/portfolio`
 
-### 15. Modo oscuro mobile (dark theme) `[MOB]`
+### 15. Modo oscuro mobile (dark theme) `[MOB]` ✅
 
 El tema en mobile tiene colores definidos pero el toggle solo alterna en web. En mobile `useTheme` siempre devuelve el tema claro.
 
-- [ ] En `useTheme.ts` y/o `_layout.tsx`, leer `user.preferences.theme` del authStore
-- [ ] Propagar el tema al `configStore` para persistirlo localmente
-- [ ] Verificar que todos los componentes usan `c.bg`, `c.card`, etc. en lugar de colores hardcoded
+- [x] En `useTheme.ts` y/o `_layout.tsx`, leer `useColorScheme()` del sistema y propagar vía `configStore`
+- [x] Propagar el tema al `configStore` para persistirlo localmente (toggle manual + "Seguir sistema")
+- [x] Verificar que todos los componentes usan `c.bg`, `c.card`, etc. en lugar de colores hardcoded
 
 ---
 
@@ -157,10 +157,10 @@ El tema en mobile tiene colores definidos pero el toggle solo alterna en web. En
 | 6   | Pantalla Informes mobile               | MOB             | 🟡        | ⏳     |
 | 7   | Alertas de precio en cartera           | API + WEB + MOB | 🟡        | ⏳     |
 | 8   | Integración Plaid                      | API             | 🟢        | ⏳     |
-| 9   | Autenticación biométrica mobile        | MOB             | 🟢        | ⏳     |
+| 9   | Autenticación biométrica mobile        | MOB             | 🟢        | ✅     |
 | 10  | Tests paquete web                      | WEB             | 🟢        | ⏳     |
-| 11  | Infinite scroll listas mobile          | MOB             | 🟢        | ⏳     |
+| 11  | Infinite scroll listas mobile          | MOB             | 🟢        | ✅     |
 | 12  | Pipeline CI/CD                         | API + WEB + MOB | 🟢        | ⏳     |
 | 13  | Tipo de cambio en transferencias       | API + WEB + MOB | 🟢        | ✅     |
 | 14  | Deep links desde notificaciones        | MOB             | 🟢        | ⏳     |
-| 15  | Dark mode mobile                       | MOB             | 🟢        | ⏳     |
+| 15  | Dark mode mobile                       | MOB             | 🟢        | ✅     |
