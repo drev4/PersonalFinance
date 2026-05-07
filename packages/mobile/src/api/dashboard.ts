@@ -37,6 +37,8 @@ export interface SpendingCategory {
 
 export interface DashboardSummary {
   netWorth: number;
+  netWorthAssets: number;
+  netWorthLiabilities: number;
   netWorthChange24h: number;
   netWorthChange30d: number;
   sparklineData: number[];
@@ -176,7 +178,7 @@ export const useDashboardSummary = () => {
         }>('/transactions?limit=5'),
       ]);
 
-      const netWorthData = netWorthRes.data?.data || {};
+      const netWorthData = (netWorthRes.data?.data ?? {}) as Partial<NetWorthData>;
       const spendingData = spendingRes.data?.data || {};
       const accountsData = accountsRes.data?.data || [];
       const transactionsData = transactionsRes.data?.data?.data || [];
@@ -187,6 +189,8 @@ export const useDashboardSummary = () => {
 
       return {
         netWorth: netWorthData.total || 0,
+        netWorthAssets: netWorthData.assets || 0,
+        netWorthLiabilities: netWorthData.liabilities || 0,
         netWorthChange24h: 0,
         netWorthChange30d: 0,
         sparklineData: [],
