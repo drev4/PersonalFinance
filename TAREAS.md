@@ -64,13 +64,13 @@ La web tiene `ReportsPage` con exportación CSV y estadísticas mensuales. Mobil
 - [x] Crear pantalla `reports.tsx` accesible desde el hub "Más": resumen mensual, gráfico cashflow y desglose por categoría
 - [ ] Exportación CSV con `expo-sharing`
 
-### 7. Alertas de precio en cartera `[API]` `[WEB]` `[MOB]`
+### 7. Alertas de precio en cartera `[API]` `[WEB]` `[MOB]` ✅
 
 El tipo de notificación `price_alert` existe pero no hay forma de configurar alertas.
 
 - [x] `[API]` `POST /holdings/:id/price-alert` con `{ targetPrice, direction: 'above' | 'below' }`
 - [x] `[API]` Evaluar alertas en job cron cada 15 min al actualizar precios
-- [ ] `[WEB]` Botón "Configurar alerta" en `HoldingRow.tsx`
+- [x] `[WEB]` Botón Bell en `HoldingRow.tsx` abre `PriceAlertDialog` con lista y formulario de creación
 - [x] `[MOB]` Botón Bell por holding con modal de alertas activas/pausadas y formulario
 
 ---
@@ -155,7 +155,7 @@ El tema en mobile tiene colores definidos pero el toggle solo alterna en web. En
 | 4   | Dividendos y rendimientos              | API + WEB + MOB | 🟡        | ✅     |
 | 5   | Detalle de cuenta mobile               | MOB             | 🟡        | ✅     |
 | 6   | Pantalla Informes mobile               | MOB             | 🟡        | ✅     |
-| 7   | Alertas de precio en cartera           | API + WEB + MOB | 🟡        | 🔄     |
+| 7   | Alertas de precio en cartera           | API + WEB + MOB | 🟡        | ✅     |
 | 8   | Integración Plaid                      | API             | 🟢        | ⏳     |
 | 9   | Autenticación biométrica mobile        | MOB             | 🟢        | ✅     |
 | 10  | Tests paquete web                      | WEB             | 🟢        | ⏳     |
