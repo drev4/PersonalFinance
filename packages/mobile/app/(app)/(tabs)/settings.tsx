@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import { useLogout } from '@/api/auth';
 import { useMe, useUpdateProfile, useChangePassword } from '@/api/user';
@@ -31,15 +31,47 @@ import { useConfigStore } from '@/stores/configStore';
 import { useTheme } from '@/theme/useTheme';
 import { updateClientBaseURL } from '@/api/client';
 import {
-  LogOut, Server, Moon, User, Lock, Bell, Zap, Download,
-  ChevronRight, Check, X, RefreshCw, AlertCircle,
+  LogOut,
+  Server,
+  Moon,
+  User,
+  Lock,
+  Bell,
+  Zap,
+  Download,
+  ChevronRight,
+  Check,
+  X,
+  RefreshCw,
+  Fingerprint,
 } from 'lucide-react-native';
 import { radius, spacing, type ThemeColors, getShadow } from '@/theme';
+import {
+  getBiometricType,
+  authenticateWithBiometrics,
+  type BiometricType,
+} from '@/hooks/useBiometrics';
 
 const CURRENCIES = [
-  'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY',
-  'SEK', 'NZD', 'MXN', 'SGD', 'HKD', 'NOK', 'KRW', 'TRY',
-  'INR', 'BRL', 'ZAR',
+  'USD',
+  'EUR',
+  'GBP',
+  'JPY',
+  'AUD',
+  'CAD',
+  'CHF',
+  'CNY',
+  'SEK',
+  'NZD',
+  'MXN',
+  'SGD',
+  'HKD',
+  'NOK',
+  'KRW',
+  'TRY',
+  'INR',
+  'BRL',
+  'ZAR',
 ];
 
 const LANGUAGES = [
@@ -51,7 +83,17 @@ const LANGUAGES = [
 
 function SectionHeader({ label, colors }: { label: string; colors: ThemeColors }) {
   return (
-    <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.sm, marginLeft: 4 }}>
+    <Text
+      style={{
+        fontSize: 12,
+        fontWeight: '700',
+        color: colors.textTertiary,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginBottom: spacing.sm,
+        marginLeft: 4,
+      }}
+    >
       {label}
     </Text>
   );
@@ -129,7 +171,9 @@ function PickerModal<T extends string>({
         <View style={styles.sheet}>
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>{title}</Text>
-            <TouchableOpacity onPress={onClose}><X size={20} color={colors.textSecondary} /></TouchableOpacity>
+            <TouchableOpacity onPress={onClose}>
+              <X size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
           </View>
           <FlatList
             data={options}
@@ -137,10 +181,18 @@ function PickerModal<T extends string>({
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.pickerRow}
-                onPress={() => { onSelect(item.value); onClose(); }}
+                onPress={() => {
+                  onSelect(item.value);
+                  onClose();
+                }}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.pickerLabel, item.value === selected && { color: colors.primary, fontWeight: '700' }]}>
+                <Text
+                  style={[
+                    styles.pickerLabel,
+                    item.value === selected && { color: colors.primary, fontWeight: '700' },
+                  ]}
+                >
                   {item.label}
                 </Text>
                 {item.value === selected && <Check size={16} color={colors.primary} />}
@@ -186,7 +238,9 @@ function TextEditModal({
           <View style={styles.sheet}>
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{title}</Text>
-              <TouchableOpacity onPress={onClose}><X size={20} color={colors.textSecondary} /></TouchableOpacity>
+              <TouchableOpacity onPress={onClose}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
             </View>
             <TextInput
               style={styles.input}
@@ -196,8 +250,17 @@ function TextEditModal({
               placeholderTextColor={colors.textTertiary}
               autoFocus
             />
-            <TouchableOpacity style={[styles.btn, isPending && styles.btnDisabled]} onPress={onSave} disabled={isPending} activeOpacity={0.85}>
-              {isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Guardar</Text>}
+            <TouchableOpacity
+              style={[styles.btn, isPending && styles.btnDisabled]}
+              onPress={onSave}
+              disabled={isPending}
+              activeOpacity={0.85}
+            >
+              {isPending ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.btnText}>Guardar</Text>
+              )}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -231,7 +294,8 @@ function PasswordModal({
   const handleSave = () => {
     if (!current || !next || !confirm) return Alert.alert('Error', 'Completa todos los campos.');
     if (next !== confirm) return Alert.alert('Error', 'Las contraseñas nuevas no coinciden.');
-    if (next.length < 8) return Alert.alert('Error', 'La nueva contraseña debe tener al menos 8 caracteres.');
+    if (next.length < 8)
+      return Alert.alert('Error', 'La nueva contraseña debe tener al menos 8 caracteres.');
 
     changePassword(
       { currentPassword: current, newPassword: next },
@@ -258,7 +322,9 @@ function PasswordModal({
   };
 
   const handleClose = () => {
-    setCurrent(''); setNext(''); setConfirm('');
+    setCurrent('');
+    setNext('');
+    setConfirm('');
     onClose();
   };
 
@@ -270,16 +336,48 @@ function PasswordModal({
           <View style={styles.sheet}>
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Cambiar contraseña</Text>
-              <TouchableOpacity onPress={handleClose}><X size={20} color={colors.textSecondary} /></TouchableOpacity>
+              <TouchableOpacity onPress={handleClose}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
             </View>
             <Text style={styles.inputLabel}>Contraseña actual</Text>
-            <TextInput style={styles.input} value={current} onChangeText={setCurrent} secureTextEntry placeholder="••••••••" placeholderTextColor={colors.textTertiary} />
+            <TextInput
+              style={styles.input}
+              value={current}
+              onChangeText={setCurrent}
+              secureTextEntry
+              placeholder="••••••••"
+              placeholderTextColor={colors.textTertiary}
+            />
             <Text style={styles.inputLabel}>Nueva contraseña</Text>
-            <TextInput style={styles.input} value={next} onChangeText={setNext} secureTextEntry placeholder="Mín. 8 caracteres, 1 mayúscula, 1 número" placeholderTextColor={colors.textTertiary} />
+            <TextInput
+              style={styles.input}
+              value={next}
+              onChangeText={setNext}
+              secureTextEntry
+              placeholder="Mín. 8 caracteres, 1 mayúscula, 1 número"
+              placeholderTextColor={colors.textTertiary}
+            />
             <Text style={styles.inputLabel}>Confirmar contraseña</Text>
-            <TextInput style={[styles.input, { marginBottom: spacing.xl }]} value={confirm} onChangeText={setConfirm} secureTextEntry placeholder="••••••••" placeholderTextColor={colors.textTertiary} />
-            <TouchableOpacity style={[styles.btn, isPending && styles.btnDisabled]} onPress={handleSave} disabled={isPending} activeOpacity={0.85}>
-              {isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Cambiar contraseña</Text>}
+            <TextInput
+              style={[styles.input, { marginBottom: spacing.xl }]}
+              value={confirm}
+              onChangeText={setConfirm}
+              secureTextEntry
+              placeholder="••••••••"
+              placeholderTextColor={colors.textTertiary}
+            />
+            <TouchableOpacity
+              style={[styles.btn, isPending && styles.btnDisabled]}
+              onPress={handleSave}
+              disabled={isPending}
+              activeOpacity={0.85}
+            >
+              {isPending ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.btnText}>Cambiar contraseña</Text>
+              )}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -308,13 +406,15 @@ function BinanceModal({
   const { mutate: connect } = useConnectBinance();
 
   const handleConnect = () => {
-    if (!apiKey.trim() || !apiSecret.trim()) return Alert.alert('Error', 'Introduce API Key y Secret.');
+    if (!apiKey.trim() || !apiSecret.trim())
+      return Alert.alert('Error', 'Introduce API Key y Secret.');
     connect(
       { apiKey: apiKey.trim(), apiSecret: apiSecret.trim() },
       {
         onSuccess: () => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          setApiKey(''); setApiSecret('');
+          setApiKey('');
+          setApiSecret('');
           onClose();
         },
         onError: (err: any) => {
@@ -326,7 +426,8 @@ function BinanceModal({
   };
 
   const handleClose = () => {
-    setApiKey(''); setApiSecret('');
+    setApiKey('');
+    setApiSecret('');
     onClose();
   };
 
@@ -338,17 +439,43 @@ function BinanceModal({
           <View style={styles.sheet}>
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Conectar Binance</Text>
-              <TouchableOpacity onPress={handleClose}><X size={20} color={colors.textSecondary} /></TouchableOpacity>
+              <TouchableOpacity onPress={handleClose}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
             </View>
             <Text style={[styles.inputLabel, { marginBottom: spacing.sm }]}>
               Solo necesitas permisos de lectura. Nunca se envían órdenes.
             </Text>
             <Text style={styles.inputLabel}>API Key</Text>
-            <TextInput style={styles.input} value={apiKey} onChangeText={setApiKey} autoCapitalize="none" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" placeholderTextColor={colors.textTertiary} />
+            <TextInput
+              style={styles.input}
+              value={apiKey}
+              onChangeText={setApiKey}
+              autoCapitalize="none"
+              placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              placeholderTextColor={colors.textTertiary}
+            />
             <Text style={styles.inputLabel}>API Secret</Text>
-            <TextInput style={[styles.input, { marginBottom: spacing.xl }]} value={apiSecret} onChangeText={setApiSecret} secureTextEntry autoCapitalize="none" placeholder="••••••••••••••••••••••••••••••••••••••••" placeholderTextColor={colors.textTertiary} />
-            <TouchableOpacity style={[styles.btn, isPending && styles.btnDisabled]} onPress={handleConnect} disabled={isPending} activeOpacity={0.85}>
-              {isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Conectar</Text>}
+            <TextInput
+              style={[styles.input, { marginBottom: spacing.xl }]}
+              value={apiSecret}
+              onChangeText={setApiSecret}
+              secureTextEntry
+              autoCapitalize="none"
+              placeholder="••••••••••••••••••••••••••••••••••••••••"
+              placeholderTextColor={colors.textTertiary}
+            />
+            <TouchableOpacity
+              style={[styles.btn, isPending && styles.btnDisabled]}
+              onPress={handleConnect}
+              disabled={isPending}
+              activeOpacity={0.85}
+            >
+              {isPending ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.btnText}>Conectar</Text>
+              )}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -365,8 +492,26 @@ export default function SettingsScreen() {
   const styles = useMemo(() => createStyles(colors, shadow), [colors]);
 
   const { mutate: logout } = useLogout();
-  const { apiUrl, setApiUrl, isDark, setIsDark, budgetAlertsEnabled, setBudgetAlertsEnabled } = useConfigStore();
-  const user = useAuthStore((s) => s.user);
+  const {
+    apiUrl,
+    setApiUrl,
+    isDark: manualIsDark,
+    setIsDark,
+    resetTheme,
+    themeFollowsSystem,
+    budgetAlertsEnabled,
+    setBudgetAlertsEnabled,
+    biometricEnabled,
+    setBiometricEnabled,
+  } = useConfigStore();
+  const { user, lockApp } = useAuthStore();
+  const isDark = useTheme().isDark;
+
+  const [biometricType, setBiometricType] = useState<BiometricType>('none');
+
+  useEffect(() => {
+    getBiometricType().then(setBiometricType);
+  }, []);
 
   const { data: profile } = useMe();
   const { mutate: updateProfile, isPending: isUpdating } = useUpdateProfile();
@@ -391,21 +536,53 @@ export default function SettingsScreen() {
   const [optimisticLocale, setOptimisticLocale] = useState<string | null>(null);
 
   const displayName = profile?.name ?? user?.name ?? '';
-  const displayCurrency = optimisticCurrency ?? profile?.baseCurrency ?? user?.baseCurrency ?? 'EUR';
+  const displayCurrency =
+    optimisticCurrency ?? profile?.baseCurrency ?? user?.baseCurrency ?? 'EUR';
   const displayLocale = optimisticLocale ?? profile?.preferences?.locale ?? 'es';
   const currentLanguage = LANGUAGES.find((l) => l.code === displayLocale)?.label ?? 'Español';
 
   const binance = integrations?.find((i) => i.provider === 'binance');
 
+  const handleBiometricToggle = async (value: boolean) => {
+    if (value) {
+      const label = biometricType === 'face' ? 'Face ID' : 'Touch ID';
+      const success = await authenticateWithBiometrics(
+        `Confirma con ${label} para activar el acceso biométrico`,
+      );
+      if (!success) return;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    await setBiometricEnabled(value);
+  };
+
   const handleLogout = () => {
-    Alert.alert('Cerrar sesión', '¿Estás seguro?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Cerrar sesión',
-        style: 'destructive',
-        onPress: () => logout(undefined, { onSuccess: () => router.replace('/(auth)/login') }),
-      },
-    ]);
+    if (biometricEnabled) {
+      // Con biometría activa, bloquear la app sin destruir la sesión
+      // para poder volver a entrar con Face ID / Touch ID
+      Alert.alert(
+        'Bloquear app',
+        'La sesión se mantendrá activa. Usa Face ID / Touch ID para volver a entrar.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Bloquear',
+            onPress: () => {
+              lockApp();
+              router.replace('/(auth)/login');
+            },
+          },
+        ],
+      );
+    } else {
+      Alert.alert('Cerrar sesión', '¿Estás seguro?', [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Cerrar sesión',
+          style: 'destructive',
+          onPress: () => logout(undefined, { onSuccess: () => router.replace('/(auth)/login') }),
+        },
+      ]);
+    }
   };
 
   const openNameModal = () => {
@@ -418,7 +595,10 @@ export default function SettingsScreen() {
     updateProfile(
       { name: nameInput.trim() },
       {
-        onSuccess: () => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); setNameModal(false); },
+        onSuccess: () => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          setNameModal(false);
+        },
         onError: () => Alert.alert('Error', 'No se pudo actualizar el nombre.'),
       },
     );
@@ -541,8 +721,38 @@ export default function SettingsScreen() {
             onPress={() => setPasswordModal(true)}
             colors={colors}
             styles={styles}
-            isLast
           />
+          {biometricType !== 'none' && (
+            <SettingsRow
+              icon={<Fingerprint size={18} color={colors.primary} />}
+              iconBg={colors.primaryLight}
+              iconColor={colors.primary}
+              label={biometricType === 'face' ? 'Face ID' : 'Touch ID'}
+              colors={colors}
+              styles={styles}
+              isLast
+              rightNode={
+                <Switch
+                  value={biometricEnabled}
+                  onValueChange={handleBiometricToggle}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor={colors.white}
+                />
+              }
+            />
+          )}
+          {biometricType === 'none' && (
+            <SettingsRow
+              icon={<Fingerprint size={18} color={colors.textTertiary} />}
+              iconBg={colors.inputBg}
+              iconColor={colors.textTertiary}
+              label="Biometría"
+              value="No disponible en este dispositivo"
+              colors={colors}
+              styles={styles}
+              isLast
+            />
+          )}
         </View>
 
         {/* ── Notificaciones ── */}
@@ -578,17 +788,46 @@ export default function SettingsScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowLabel}>Binance</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <View style={[styles.statusDot, { backgroundColor: binance.status === 'active' ? colors.income : binance.status === 'error' ? colors.expense : colors.textTertiary }]} />
+                  <View
+                    style={[
+                      styles.statusDot,
+                      {
+                        backgroundColor:
+                          binance.status === 'active'
+                            ? colors.income
+                            : binance.status === 'error'
+                            ? colors.expense
+                            : colors.textTertiary,
+                      },
+                    ]}
+                  />
                   <Text style={styles.rowValue}>
-                    {binance.status === 'active' ? 'Conectado' : binance.status === 'error' ? 'Error' : 'Sincronizando'}
+                    {binance.status === 'active'
+                      ? 'Conectado'
+                      : binance.status === 'error'
+                      ? 'Error'
+                      : 'Sincronizando'}
                   </Text>
                 </View>
-                {binance.error ? <Text style={[styles.rowValue, { color: colors.expense }]}>{binance.error}</Text> : null}
+                {binance.error ? (
+                  <Text style={[styles.rowValue, { color: colors.expense }]}>{binance.error}</Text>
+                ) : null}
               </View>
-              <TouchableOpacity style={styles.iconBtn} onPress={() => syncIntegration('binance')} disabled={isSyncing}>
-                {isSyncing ? <ActivityIndicator size="small" color={colors.primary} /> : <RefreshCw size={16} color={colors.primary} />}
+              <TouchableOpacity
+                style={styles.iconBtn}
+                onPress={() => syncIntegration('binance')}
+                disabled={isSyncing}
+              >
+                {isSyncing ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <RefreshCw size={16} color={colors.primary} />
+                )}
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.expenseLight }]} onPress={handleDisconnectBinance}>
+              <TouchableOpacity
+                style={[styles.iconBtn, { backgroundColor: colors.expenseLight }]}
+                onPress={handleDisconnectBinance}
+              >
                 <X size={16} color={colors.expense} />
               </TouchableOpacity>
             </View>
@@ -616,7 +855,12 @@ export default function SettingsScreen() {
             iconColor={colors.income}
             label="Exportar transacciones CSV"
             value="Disponible en la app web"
-            onPress={() => Alert.alert('Exportar CSV', 'Accede desde la aplicación web para descargar tus transacciones en formato CSV.')}
+            onPress={() =>
+              Alert.alert(
+                'Exportar CSV',
+                'Accede desde la aplicación web para descargar tus transacciones en formato CSV.',
+              )
+            }
             colors={colors}
             styles={styles}
             isLast
@@ -631,9 +875,10 @@ export default function SettingsScreen() {
             iconBg={colors.primaryLight}
             iconColor={colors.primary}
             label="Modo oscuro"
+            value={themeFollowsSystem ? 'Automático (sistema)' : undefined}
             colors={colors}
             styles={styles}
-            isLast
+            isLast={themeFollowsSystem}
             rightNode={
               <Switch
                 value={isDark}
@@ -643,6 +888,22 @@ export default function SettingsScreen() {
               />
             }
           />
+          {!themeFollowsSystem && (
+            <TouchableOpacity
+              style={[styles.row, { borderBottomWidth: 0 }]}
+              onPress={resetTheme}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.rowIcon, { backgroundColor: colors.inputBg }]}>
+                <Moon size={18} color={colors.textTertiary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.rowLabel, { color: colors.textSecondary }]}>
+                  Seguir sistema
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* ── Cuenta ── */}
@@ -652,7 +913,7 @@ export default function SettingsScreen() {
             icon={<LogOut size={18} color={colors.expense} />}
             iconBg={colors.expenseLight}
             iconColor={colors.expense}
-            label="Cerrar sesión"
+            label={biometricEnabled ? 'Bloquear app' : 'Cerrar sesión'}
             onPress={handleLogout}
             colors={colors}
             styles={styles}
@@ -747,51 +1008,180 @@ function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>)
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.bg },
     content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: 100 },
-    title: { fontSize: 28, fontWeight: '700', letterSpacing: -0.3, color: colors.text, marginBottom: spacing.xxl },
+    title: {
+      fontSize: 28,
+      fontWeight: '700',
+      letterSpacing: -0.3,
+      color: colors.text,
+      marginBottom: spacing.xxl,
+    },
 
     // User card
-    userCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.xxl, gap: spacing.md },
-    avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primaryLight, justifyContent: 'center', alignItems: 'center' },
+    userCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderRadius: radius.xl,
+      padding: spacing.lg,
+      marginBottom: spacing.xxl,
+      gap: spacing.md,
+    },
+    avatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: colors.primaryLight,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
     avatarText: { fontSize: 18, fontWeight: '700', color: colors.primary },
     userName: { fontSize: 16, fontWeight: '700', color: colors.text },
     userEmail: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
 
     // Sections
-    section: { backgroundColor: colors.card, borderRadius: radius.xl, marginBottom: spacing.xl, overflow: 'hidden' },
-    row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
-    rowIcon: { width: 36, height: 36, borderRadius: radius.sm, justifyContent: 'center', alignItems: 'center' },
+    section: {
+      backgroundColor: colors.card,
+      borderRadius: radius.xl,
+      marginBottom: spacing.xl,
+      overflow: 'hidden',
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      gap: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    rowIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: radius.sm,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
     rowLabel: { fontSize: 15, fontWeight: '600', color: colors.text },
     rowValue: { fontSize: 13, color: colors.textSecondary, marginTop: 1 },
 
     // Status
     statusDot: { width: 8, height: 8, borderRadius: 4 },
-    iconBtn: { width: 32, height: 32, borderRadius: radius.xs, backgroundColor: colors.primaryLight, justifyContent: 'center', alignItems: 'center' },
+    iconBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: radius.xs,
+      backgroundColor: colors.primaryLight,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
     // Modal sheet
-    overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
-    sheet: { backgroundColor: colors.card, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.xl, paddingBottom: 40 },
-    sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xl },
+    overlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.4)',
+    },
+    sheet: {
+      backgroundColor: colors.card,
+      borderTopLeftRadius: radius.xl,
+      borderTopRightRadius: radius.xl,
+      padding: spacing.xl,
+      paddingBottom: 40,
+    },
+    sheetHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.xl,
+    },
     sheetTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
 
     // Form
-    inputLabel: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: spacing.xs },
-    input: { backgroundColor: colors.inputBg, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 12, fontSize: 15, color: colors.text, marginBottom: spacing.lg },
-    btn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 14, alignItems: 'center' },
+    inputLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.3,
+      marginBottom: spacing.xs,
+    },
+    input: {
+      backgroundColor: colors.inputBg,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 12,
+      fontSize: 15,
+      color: colors.text,
+      marginBottom: spacing.lg,
+    },
+    btn: {
+      backgroundColor: colors.primary,
+      borderRadius: radius.md,
+      paddingVertical: 14,
+      alignItems: 'center',
+    },
     btnDisabled: { opacity: 0.6 },
     btnText: { color: colors.white, fontSize: 15, fontWeight: '700' },
 
     // Picker
-    pickerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border },
+    pickerRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
     pickerLabel: { fontSize: 15, color: colors.text },
 
     // Debug
-    debugHint: { fontSize: 12, color: colors.textTertiary, textAlign: 'center', paddingVertical: spacing.md },
-    debugCard: { backgroundColor: colors.card, borderRadius: radius.xl, padding: spacing.xl, marginTop: spacing.md },
-    debugHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg },
+    debugHint: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      textAlign: 'center',
+      paddingVertical: spacing.md,
+    },
+    debugCard: {
+      backgroundColor: colors.card,
+      borderRadius: radius.xl,
+      padding: spacing.xl,
+      marginTop: spacing.md,
+    },
+    debugHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginBottom: spacing.lg,
+    },
     debugTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
-    debugLabel: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: spacing.sm },
-    debugInput: { backgroundColor: colors.inputBg, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 12, fontSize: 13, color: colors.text, marginBottom: spacing.md, fontFamily: 'Courier New' },
-    debugBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 12, alignItems: 'center', marginBottom: spacing.sm },
+    debugLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.3,
+      marginBottom: spacing.sm,
+    },
+    debugInput: {
+      backgroundColor: colors.inputBg,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 12,
+      fontSize: 13,
+      color: colors.text,
+      marginBottom: spacing.md,
+      fontFamily: 'Courier New',
+    },
+    debugBtn: {
+      backgroundColor: colors.primary,
+      borderRadius: radius.md,
+      paddingVertical: 12,
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
     debugBtnText: { color: colors.white, fontSize: 14, fontWeight: '700' },
     debugInfo: { fontSize: 11, color: colors.textTertiary, fontStyle: 'italic' },
   });

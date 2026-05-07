@@ -1,7 +1,8 @@
 import { Tabs, useRouter } from 'expo-router';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { ArrowRightLeft, Home, LayoutGrid, Plus, Wallet } from 'lucide-react-native';
-import { colors, radius, shadow } from '@/theme';
+import { radius } from '@/theme';
+import { useTheme } from '@/theme/useTheme';
 
 const createIcon = (Icon: React.ElementType) => {
   const TabIcon = ({ color, size }: { color: string; size: number }) => (
@@ -13,13 +14,22 @@ const createIcon = (Icon: React.ElementType) => {
 
 export default function TabLayout() {
   const router = useRouter();
+  const { colors, shadow } = useTheme();
 
   return (
     <View style={styles.container}>
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarStyle: styles.tabBar,
+          tabBarStyle: {
+            borderTopWidth: 0,
+            backgroundColor: colors.card,
+            height: 64,
+            paddingBottom: 8,
+            paddingTop: 8,
+            ...shadow.md,
+            shadowOffset: { width: 0, height: -4 },
+          },
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.textTertiary,
           tabBarLabelStyle: styles.tabLabel,
@@ -51,7 +61,13 @@ export default function TabLayout() {
       </Tabs>
 
       <TouchableOpacity
-        style={styles.fab}
+        style={[
+          styles.fab,
+          {
+            backgroundColor: colors.primary,
+            shadowColor: colors.primary,
+          },
+        ]}
         onPress={() => router.push('/(modals)/quick-add')}
         activeOpacity={0.85}
       >
@@ -65,15 +81,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  tabBar: {
-    borderTopWidth: 0,
-    backgroundColor: colors.card,
-    height: 64,
-    paddingBottom: 8,
-    paddingTop: 8,
-    ...shadow.md,
-    shadowOffset: { width: 0, height: -4 },
-  },
   tabLabel: {
     fontSize: 10,
     fontWeight: '600',
@@ -85,10 +92,8 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: radius.full,
-    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
