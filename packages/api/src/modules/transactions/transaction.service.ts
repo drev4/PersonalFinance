@@ -48,6 +48,7 @@ export interface CreateTransferDTO {
   date: Date;
   description: string;
   currency?: string;
+  exchangeRate?: number;
   tags?: string[];
 }
 
@@ -78,11 +79,17 @@ async function applyBalanceDelta(
   }
 
   await (session !== undefined
-    ? mongoose.model('Account').findOneAndUpdate(
-        { _id: new mongoose.Types.ObjectId(accountId), userId: new mongoose.Types.ObjectId(userId) },
-        { $set: { currentBalance: newBalance } },
-        { session },
-      ).exec()
+    ? mongoose
+        .model('Account')
+        .findOneAndUpdate(
+          {
+            _id: new mongoose.Types.ObjectId(accountId),
+            userId: new mongoose.Types.ObjectId(userId),
+          },
+          { $set: { currentBalance: newBalance } },
+          { session },
+        )
+        .exec()
     : updateBalance(accountId, userId, newBalance));
 }
 
@@ -108,11 +115,17 @@ async function revertBalanceDelta(
   }
 
   await (session !== undefined
-    ? mongoose.model('Account').findOneAndUpdate(
-        { _id: new mongoose.Types.ObjectId(accountId), userId: new mongoose.Types.ObjectId(userId) },
-        { $set: { currentBalance: newBalance } },
-        { session },
-      ).exec()
+    ? mongoose
+        .model('Account')
+        .findOneAndUpdate(
+          {
+            _id: new mongoose.Types.ObjectId(accountId),
+            userId: new mongoose.Types.ObjectId(userId),
+          },
+          { $set: { currentBalance: newBalance } },
+          { session },
+        )
+        .exec()
     : updateBalance(accountId, userId, newBalance));
 }
 
@@ -138,17 +151,10 @@ export async function getTransactions(
   };
 }
 
-export async function getTransaction(
-  userId: string,
-  transactionId: string,
-): Promise<ITransaction> {
+export async function getTransaction(userId: string, transactionId: string): Promise<ITransaction> {
   const tx = await findById(transactionId, userId);
   if (tx === null) {
-    throw new TransactionError(
-      'TRANSACTION_NOT_FOUND',
-      'Transaction not found',
-      404,
-    );
+    throw new TransactionError('TRANSACTION_NOT_FOUND', 'Transaction not found', 404);
   }
   return tx;
 }
@@ -192,30 +198,31 @@ export async function createTransfer(
   ]);
 
   if (fromAccount === null || !fromAccount.isActive) {
-    throw new TransactionError(
-      'ACCOUNT_NOT_FOUND',
-      'Source account not found',
-      404,
-    );
+    throw new TransactionError('ACCOUNT_NOT_FOUND', 'Source account not found', 404);
   }
 
   if (toAccount === null || !toAccount.isActive) {
-    throw new TransactionError(
-      'ACCOUNT_NOT_FOUND',
-      'Destination account not found',
-      404,
-    );
+    throw new TransactionError('ACCOUNT_NOT_FOUND', 'Destination account not found', 404);
   }
 
   if (dto.fromAccountId === dto.toAccountId) {
+    throw new TransactionError('SAME_ACCOUNT_TRANSFER', 'Cannot transfer to the same account', 400);
+  }
+
+  const fromCurrency = dto.currency ?? fromAccount.currency;
+  const toCurrency = toAccount.currency;
+  const isCrossCurrency = fromCurrency !== toCurrency;
+
+  if (isCrossCurrency && (dto.exchangeRate === undefined || dto.exchangeRate <= 0)) {
     throw new TransactionError(
-      'SAME_ACCOUNT_TRANSFER',
-      'Cannot transfer to the same account',
+      'EXCHANGE_RATE_REQUIRED',
+      'Exchange rate is required for transfers between accounts with different currencies',
       400,
     );
   }
 
-  const currency = dto.currency ?? fromAccount.currency;
+  const toAmount = isCrossCurrency ? Math.round(dto.amount * dto.exchangeRate!) : dto.amount;
+
   const session = await mongoose.startSession();
   let fromTx: ITransaction;
   let toTx: ITransaction;
@@ -228,10 +235,11 @@ export async function createTransfer(
           accountId: dto.fromAccountId,
           type: 'transfer',
           amount: dto.amount,
-          currency,
+          currency: fromCurrency,
           date: dto.date,
           description: dto.description,
           transferToAccountId: dto.toAccountId,
+          exchangeRate: dto.exchangeRate,
           tags: dto.tags ?? [],
           source: 'manual',
         },
@@ -243,11 +251,12 @@ export async function createTransfer(
           userId,
           accountId: dto.toAccountId,
           type: 'income',
-          amount: dto.amount,
-          currency,
+          amount: toAmount,
+          currency: toCurrency,
           date: dto.date,
           description: dto.description,
           transferToAccountId: dto.fromAccountId,
+          exchangeRate: dto.exchangeRate !== undefined ? 1 / dto.exchangeRate : undefined,
           tags: dto.tags ?? [],
           source: 'manual',
         },
@@ -256,8 +265,8 @@ export async function createTransfer(
 
       // Debit from source
       await applyBalanceDelta(dto.fromAccountId, userId, 'transfer', dto.amount, session);
-      // Credit to destination — treat incoming transfer as income delta
-      await applyBalanceDelta(dto.toAccountId, userId, 'income', dto.amount, session);
+      // Credit to destination with the converted amount
+      await applyBalanceDelta(dto.toAccountId, userId, 'income', toAmount, session);
     });
   } finally {
     await session.endSession();
@@ -273,15 +282,10 @@ export async function updateTransaction(
 ): Promise<ITransaction> {
   const existing = await findById(transactionId, userId);
   if (existing === null) {
-    throw new TransactionError(
-      'TRANSACTION_NOT_FOUND',
-      'Transaction not found',
-      404,
-    );
+    throw new TransactionError('TRANSACTION_NOT_FOUND', 'Transaction not found', 404);
   }
 
-  const amountChanged =
-    dto.amount !== undefined && dto.amount !== existing.amount;
+  const amountChanged = dto.amount !== undefined && dto.amount !== existing.amount;
 
   const session = await mongoose.startSession();
   let updated: ITransaction;
@@ -308,11 +312,7 @@ export async function updateTransaction(
 
       const result = await update(transactionId, userId, dto);
       if (result === null) {
-        throw new TransactionError(
-          'TRANSACTION_NOT_FOUND',
-          'Transaction not found',
-          404,
-        );
+        throw new TransactionError('TRANSACTION_NOT_FOUND', 'Transaction not found', 404);
       }
       updated = result;
     });
@@ -323,17 +323,10 @@ export async function updateTransaction(
   return updated!;
 }
 
-export async function deleteTransaction(
-  userId: string,
-  transactionId: string,
-): Promise<void> {
+export async function deleteTransaction(userId: string, transactionId: string): Promise<void> {
   const existing = await findById(transactionId, userId);
   if (existing === null) {
-    throw new TransactionError(
-      'TRANSACTION_NOT_FOUND',
-      'Transaction not found',
-      404,
-    );
+    throw new TransactionError('TRANSACTION_NOT_FOUND', 'Transaction not found', 404);
   }
 
   const session = await mongoose.startSession();
@@ -364,8 +357,9 @@ export async function bulkCreate(
 
   // Collect externalIds that have a value
   const externalIds = transactions
-    .filter((t): t is CreateTransactionDTO & { externalId: string } =>
-      t.externalId !== undefined && t.externalId.trim() !== '',
+    .filter(
+      (t): t is CreateTransactionDTO & { externalId: string } =>
+        t.externalId !== undefined && t.externalId.trim() !== '',
     )
     .map((t) => t.externalId);
 
@@ -436,10 +430,7 @@ export async function getSpendingByCategory(
   return repoGetSpendingByCategory(userId, from, to);
 }
 
-export async function getCashflow(
-  userId: string,
-  months: number,
-): Promise<CashflowData[]> {
+export async function getCashflow(userId: string, months: number): Promise<CashflowData[]> {
   return repoGetCashflow(userId, months);
 }
 

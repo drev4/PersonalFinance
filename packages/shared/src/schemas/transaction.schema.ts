@@ -38,6 +38,7 @@ export const TransactionSchema = z.object({
   notes: z.string().optional(),
   recurring: RecurringSchema.optional(),
   relatedTransactionId: z.string().optional(),
+  exchangeRate: z.number().positive().optional(),
   attachments: z
     .array(
       z.object({
