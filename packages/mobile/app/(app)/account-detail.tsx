@@ -271,7 +271,7 @@ export default function AccountDetailScreen() {
                 const prefix = tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : '';
 
                 return (
-                  <View key={tx.id} style={[styles.txRow, !isLast && styles.txRowBorder]}>
+                  <View key={tx._id || tx.id} style={[styles.txRow, !isLast && styles.txRowBorder]}>
                     <View style={[styles.txDot, { backgroundColor: dotBg }]}>
                       {tx.type === 'income' ? (
                         <ArrowDownLeft size={13} color={colors.income} />

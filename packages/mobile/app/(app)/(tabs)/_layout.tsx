@@ -1,21 +1,6 @@
 import { Tabs, useRouter } from 'expo-router';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import {
-  ArrowRightLeft,
-  Bell,
-  Calculator,
-  ChartPie,
-  FileText,
-  Home,
-  Landmark,
-  Plus,
-  Repeat2,
-  Search,
-  Settings,
-  Target,
-  Wallet,
-} from 'lucide-react-native';
-import { useUnreadCount } from '@/api/notifications';
+import { ArrowRightLeft, Home, LayoutGrid, Plus, Wallet } from 'lucide-react-native';
 import { colors, radius, shadow } from '@/theme';
 
 const createIcon = (Icon: React.ElementType) => {
@@ -28,8 +13,6 @@ const createIcon = (Icon: React.ElementType) => {
 
 export default function TabLayout() {
   const router = useRouter();
-  const { data: unreadData } = useUnreadCount();
-  const unreadBadge = unreadData && unreadData.count > 0 ? unreadData.count : undefined;
 
   return (
     <View style={styles.container}>
@@ -43,7 +26,8 @@ export default function TabLayout() {
           tabBarShowLabel: false,
         }}
       >
-        <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: createIcon(Home) }} />
+        {/* ── Visible tabs ─────────────────────────────────────────────────── */}
+        <Tabs.Screen name="index" options={{ title: 'Inicio', tabBarIcon: createIcon(Home) }} />
         <Tabs.Screen
           name="transactions"
           options={{ title: 'Movimientos', tabBarIcon: createIcon(ArrowRightLeft) }}
@@ -52,40 +36,18 @@ export default function TabLayout() {
           name="portfolio"
           options={{ title: 'Cartera', tabBarIcon: createIcon(Wallet) }}
         />
-        <Tabs.Screen
-          name="reports"
-          options={{ title: 'Informes', tabBarIcon: createIcon(FileText) }}
-        />
-        <Tabs.Screen
-          name="budgets"
-          options={{ title: 'Presupuestos', tabBarIcon: createIcon(ChartPie) }}
-        />
-        <Tabs.Screen name="goals" options={{ title: 'Metas', tabBarIcon: createIcon(Target) }} />
-        <Tabs.Screen
-          name="accounts"
-          options={{ title: 'Cuentas', tabBarIcon: createIcon(Landmark) }}
-        />
-        <Tabs.Screen
-          name="recurring"
-          options={{ title: 'Recurrentes', tabBarIcon: createIcon(Repeat2) }}
-        />
-        <Tabs.Screen name="search" options={{ title: 'Buscar', tabBarIcon: createIcon(Search) }} />
-        <Tabs.Screen
-          name="simulators"
-          options={{ title: 'Simuladores', tabBarIcon: createIcon(Calculator) }}
-        />
-        <Tabs.Screen
-          name="notifications"
-          options={{
-            tabBarBadge: unreadBadge,
-            tabBarIcon: createIcon(Bell),
-            title: 'Notificaciones',
-          }}
-        />
-        <Tabs.Screen
-          name="settings"
-          options={{ title: 'Ajustes', tabBarIcon: createIcon(Settings) }}
-        />
+        <Tabs.Screen name="more" options={{ title: 'Más', tabBarIcon: createIcon(LayoutGrid) }} />
+
+        {/* ── Hidden tabs — accessible via router but no tab button ─────────── */}
+        <Tabs.Screen name="accounts" options={{ href: null }} />
+        <Tabs.Screen name="reports" options={{ href: null }} />
+        <Tabs.Screen name="budgets" options={{ href: null }} />
+        <Tabs.Screen name="goals" options={{ href: null }} />
+        <Tabs.Screen name="recurring" options={{ href: null }} />
+        <Tabs.Screen name="search" options={{ href: null }} />
+        <Tabs.Screen name="simulators" options={{ href: null }} />
+        <Tabs.Screen name="notifications" options={{ href: null }} />
+        <Tabs.Screen name="settings" options={{ href: null }} />
       </Tabs>
 
       <TouchableOpacity
