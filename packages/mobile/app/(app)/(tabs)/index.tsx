@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDashboardSummary, useCashflow, useHealthScore } from '@/api/dashboard';
 import { Skeleton, SkeletonGroup } from '@/components/Skeleton';
@@ -9,7 +9,27 @@ import { radius, spacing, type ThemeColors, getShadow } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
 import { TrendingUp, TrendingDown } from 'lucide-react-native';
 
-const MONTHS_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+type NetWorthView = 'neto' | 'activos' | 'pasivos';
+const NW_VIEWS: { key: NetWorthView; label: string }[] = [
+  { key: 'neto', label: 'Neto' },
+  { key: 'activos', label: 'Activos' },
+  { key: 'pasivos', label: 'Pasivos' },
+];
+
+const MONTHS_ES = [
+  'ene',
+  'feb',
+  'mar',
+  'abr',
+  'may',
+  'jun',
+  'jul',
+  'ago',
+  'sep',
+  'oct',
+  'nov',
+  'dic',
+];
 
 export default function HomeScreen() {
   const user = useAuthStore((state) => state.user);
@@ -17,6 +37,7 @@ export default function HomeScreen() {
   const { data: cashflow, isLoading: cashflowLoading, refetch: refetchCashflow } = useCashflow(6);
   const { data: healthScore, refetch: refetchHealth } = useHealthScore();
   const [refreshing, setRefreshing] = useState(false);
+  const [nwView, setNwView] = useState<NetWorthView>('activos');
 
   const { colors, shadow, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadow), [isDark]);
@@ -91,52 +112,78 @@ export default function HomeScreen() {
 
         {/* Net Worth Card */}
         <View style={styles.netWorthCard}>
-          <Text style={styles.netWorthLabel}>Patrimonio Neto</Text>
-          <Text style={styles.netWorthAmount}>{formatCurrency(data?.netWorth || 0)}</Text>
-          <View style={styles.variationRow}>
-            <View
-              style={[
-                styles.variationPill,
-                { backgroundColor: change24h >= 0 ? colors.incomeLight : colors.expenseLight },
-              ]}
-            >
-              {change24h >= 0 ? (
-                <TrendingUp size={11} color={colors.income} />
-              ) : (
-                <TrendingDown size={11} color={colors.expense} />
-              )}
-              <Text
-                style={[
-                  styles.variationText,
-                  { color: change24h >= 0 ? colors.income : colors.expense },
-                ]}
+          {/* Toggle: Neto / Activos / Pasivos */}
+          <View style={styles.nwToggleRow}>
+            {NW_VIEWS.map(({ key, label }) => (
+              <TouchableOpacity
+                key={key}
+                onPress={() => setNwView(key)}
+                style={[styles.nwTogglePill, nwView === key && styles.nwTogglePillActive]}
+                activeOpacity={0.7}
               >
-                {change24h >= 0 ? '+' : ''}
-                {change24h.toFixed(2)}% hoy
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.variationPill,
-                { backgroundColor: change30d >= 0 ? colors.incomeLight : colors.expenseLight },
-              ]}
-            >
-              {change30d >= 0 ? (
-                <TrendingUp size={11} color={colors.income} />
-              ) : (
-                <TrendingDown size={11} color={colors.expense} />
-              )}
-              <Text
-                style={[
-                  styles.variationText,
-                  { color: change30d >= 0 ? colors.income : colors.expense },
-                ]}
-              >
-                {change30d >= 0 ? '+' : ''}
-                {change30d.toFixed(2)}% mes
-              </Text>
-            </View>
+                <Text style={[styles.nwToggleText, nwView === key && styles.nwToggleTextActive]}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
+
+          <Text style={styles.netWorthAmount}>
+            {formatCurrency(
+              nwView === 'neto'
+                ? data?.netWorth || 0
+                : nwView === 'activos'
+                ? data?.netWorthAssets || 0
+                : data?.netWorthLiabilities || 0,
+            )}
+          </Text>
+
+          {nwView === 'neto' && (
+            <View style={styles.variationRow}>
+              <View
+                style={[
+                  styles.variationPill,
+                  { backgroundColor: change24h >= 0 ? colors.incomeLight : colors.expenseLight },
+                ]}
+              >
+                {change24h >= 0 ? (
+                  <TrendingUp size={11} color={colors.income} />
+                ) : (
+                  <TrendingDown size={11} color={colors.expense} />
+                )}
+                <Text
+                  style={[
+                    styles.variationText,
+                    { color: change24h >= 0 ? colors.income : colors.expense },
+                  ]}
+                >
+                  {change24h >= 0 ? '+' : ''}
+                  {change24h.toFixed(2)}% hoy
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.variationPill,
+                  { backgroundColor: change30d >= 0 ? colors.incomeLight : colors.expenseLight },
+                ]}
+              >
+                {change30d >= 0 ? (
+                  <TrendingUp size={11} color={colors.income} />
+                ) : (
+                  <TrendingDown size={11} color={colors.expense} />
+                )}
+                <Text
+                  style={[
+                    styles.variationText,
+                    { color: change30d >= 0 ? colors.income : colors.expense },
+                  ]}
+                >
+                  {change30d >= 0 ? '+' : ''}
+                  {change30d.toFixed(2)}% mes
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Cashflow chart */}
@@ -151,43 +198,47 @@ export default function HomeScreen() {
               <View style={styles.chartEmpty}>
                 <Text style={styles.chartEmptyText}>Sin datos</Text>
               </View>
-            ) : (() => {
-              const maxExp = Math.max(...cashflow.map((m) => m.expenses), 1);
-              return (
-                <>
-                  <View style={styles.chartBars}>
-                    {cashflow.map((m, i) => {
-                      const barH = Math.max(4, Math.round((m.expenses / maxExp) * 76));
-                      const isLast = i === cashflow.length - 1;
-                      const barColor = m.net < 0 ? colors.expense : colors.primary;
-                      return (
-                        <View
-                          key={m.month}
-                          style={[
-                            styles.chartBar,
-                            {
-                              height: barH,
-                              backgroundColor: barColor,
-                              opacity: isLast ? 1 : 0.35 + (i / Math.max(cashflow.length - 1, 1)) * 0.5,
-                            },
-                          ]}
-                        />
-                      );
-                    })}
-                  </View>
-                  <View style={styles.chartLabels}>
-                    {cashflow.map((m) => {
-                      const monthIdx = parseInt(m.month.split('-')[1], 10) - 1;
-                      return (
-                        <Text key={m.month} style={styles.chartLabel}>
-                          {MONTHS_ES[monthIdx]}
-                        </Text>
-                      );
-                    })}
-                  </View>
-                </>
-              );
-            })()}
+            ) : (
+              (() => {
+                const maxExp = Math.max(...cashflow.map((m) => m.expenses), 1);
+                return (
+                  <>
+                    <View style={styles.chartBars}>
+                      {cashflow.map((m, i) => {
+                        const barH = Math.max(4, Math.round((m.expenses / maxExp) * 76));
+                        const isLast = i === cashflow.length - 1;
+                        const barColor = m.net < 0 ? colors.expense : colors.primary;
+                        return (
+                          <View
+                            key={m.month}
+                            style={[
+                              styles.chartBar,
+                              {
+                                height: barH,
+                                backgroundColor: barColor,
+                                opacity: isLast
+                                  ? 1
+                                  : 0.35 + (i / Math.max(cashflow.length - 1, 1)) * 0.5,
+                              },
+                            ]}
+                          />
+                        );
+                      })}
+                    </View>
+                    <View style={styles.chartLabels}>
+                      {cashflow.map((m) => {
+                        const monthIdx = parseInt(m.month.split('-')[1], 10) - 1;
+                        return (
+                          <Text key={m.month} style={styles.chartLabel}>
+                            {MONTHS_ES[monthIdx]}
+                          </Text>
+                        );
+                      })}
+                    </View>
+                  </>
+                );
+              })()
+            )}
           </View>
         </View>
 
@@ -263,15 +314,27 @@ export default function HomeScreen() {
               {healthScore.areas.map((area) => {
                 const pct = Math.round((area.score / area.max) * 100);
                 const barColor =
-                  pct >= 80 ? '#22c55e' : pct >= 60 ? '#84cc16' : pct >= 40 ? '#f59e0b' : pct >= 20 ? '#f97316' : '#ef4444';
+                  pct >= 80
+                    ? '#22c55e'
+                    : pct >= 60
+                    ? '#84cc16'
+                    : pct >= 40
+                    ? '#f59e0b'
+                    : pct >= 20
+                    ? '#f97316'
+                    : '#ef4444';
                 return (
                   <View key={area.key} style={styles.areaRow}>
                     <View style={styles.areaLabelRow}>
                       <Text style={styles.areaLabel}>{area.label}</Text>
-                      <Text style={styles.areaScore}>{area.score}/{area.max}</Text>
+                      <Text style={styles.areaScore}>
+                        {area.score}/{area.max}
+                      </Text>
                     </View>
                     <View style={styles.areaTrack}>
-                      <View style={[styles.areaFill, { width: `${pct}%`, backgroundColor: barColor }]} />
+                      <View
+                        style={[styles.areaFill, { width: `${pct}%`, backgroundColor: barColor }]}
+                      />
                     </View>
                     <Text style={styles.areaDetail}>{area.detail}</Text>
                   </View>
@@ -363,11 +426,30 @@ function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>)
       borderRadius: radius.xl,
       ...shadow.md,
     },
-    netWorthLabel: {
-      fontSize: 14,
-      color: 'rgba(255,255,255,0.7)',
-      fontWeight: '500',
-      marginBottom: spacing.sm,
+    nwToggleRow: {
+      flexDirection: 'row',
+      gap: 2,
+      marginBottom: spacing.md,
+      alignSelf: 'flex-start',
+      backgroundColor: 'rgba(0,0,0,0.18)',
+      borderRadius: radius.full,
+      padding: 2,
+    },
+    nwTogglePill: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: radius.full,
+    },
+    nwTogglePillActive: {
+      backgroundColor: 'rgba(255,255,255,0.22)',
+    },
+    nwToggleText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: 'rgba(255,255,255,0.5)',
+    },
+    nwToggleTextActive: {
+      color: '#FFFFFF',
     },
     netWorthAmount: {
       fontSize: 38,
