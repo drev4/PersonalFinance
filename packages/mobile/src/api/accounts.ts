@@ -69,6 +69,20 @@ export const useAccounts = () => {
   });
 };
 
+export const useAccount = (id: string | null) => {
+  const accessToken = useAuthStore((state) => state.accessToken);
+
+  return useQuery<Account>({
+    queryKey: ['accounts', id],
+    enabled: !!accessToken && !!id,
+    queryFn: async () => {
+      const response = await client.get<{ data: Account }>(`/accounts/${id}`);
+      return response.data.data;
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+};
+
 export const useCreateAccount = () => {
   const queryClient = useQueryClient();
 
@@ -103,7 +117,15 @@ export const useAdjustBalance = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, newBalance, note }: { id: string; newBalance: number; note?: string }) => {
+    mutationFn: async ({
+      id,
+      newBalance,
+      note,
+    }: {
+      id: string;
+      newBalance: number;
+      note?: string;
+    }) => {
       const response = await client.patch<{ data: Account }>(`/accounts/${id}/balance`, {
         newBalance,
         note,
