@@ -4,6 +4,7 @@ import env from '../../config/env.js';
 import {
   registerHandler,
   loginHandler,
+  twoFactorLoginHandler,
   refreshHandler,
   logoutHandler,
   forgotPasswordHandler,
@@ -35,6 +36,7 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
 
     authScope.post('/auth/register', registerHandler);
     authScope.post('/auth/login', loginHandler);
+    authScope.post('/auth/2fa-login', twoFactorLoginHandler);
     authScope.post('/auth/refresh', refreshHandler);
     authScope.post('/auth/logout', logoutHandler);
     authScope.post('/auth/forgot-password', forgotPasswordHandler);

@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'node:crypto';
 import { v4 as uuidv4 } from 'uuid';
+import { authenticator } from 'otplib';
 import type { IUser } from '../users/user.model.js';
 import {
   findByEmail,
@@ -9,6 +10,10 @@ import {
   updatePasswordHash,
   markEmailVerified,
   updateLastLogin,
+  getTwoFactorSecret,
+  setTwoFactorSecret,
+  enableTwoFactor,
+  disableTwoFactor,
 } from '../users/user.repository.js';
 import { getRedisClient } from '../../config/redis.js';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../utils/jwt.js';
@@ -19,6 +24,7 @@ const BCRYPT_COST = 12;
 const REFRESH_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 const RESET_TOKEN_TTL_SECONDS = 60 * 60; // 1 hour
 const VERIFY_TOKEN_TTL_SECONDS = 24 * 60 * 60; // 24 hours
+const TOTP_TEMP_TTL_SECONDS = 5 * 60; // 5 minutes
 
 // ---- Types ----------------------------------------------------------------
 
@@ -31,6 +37,17 @@ export interface RegisterDTO {
 export interface LoginDTO {
   email: string;
   password: string;
+  totpCode?: string;
+}
+
+export interface TwoFactorRequiredResult {
+  requiresTwoFactor: true;
+  tempToken: string;
+}
+
+export interface TwoFactorSetupResult {
+  secret: string;
+  otpauthUri: string;
 }
 
 export interface SafeUser {
@@ -110,6 +127,10 @@ function verifyEmailKey(userId: string): string {
   return `verify_email:${userId}`;
 }
 
+function totpTempKey(userId: string, tokenId: string): string {
+  return `2fa_temp:${userId}:${tokenId}`;
+}
+
 // ---- Service ---------------------------------------------------------------
 
 export async function register(dto: RegisterDTO): Promise<AuthResult> {
@@ -133,11 +154,7 @@ export async function register(dto: RegisterDTO): Promise<AuthResult> {
   const refreshToken = signRefreshToken({ userId, tokenId });
 
   const redis = getRedisClient();
-  await redis.setex(
-    refreshKey(userId, tokenId),
-    REFRESH_TTL_SECONDS,
-    '1',
-  );
+  await redis.setex(refreshKey(userId, tokenId), REFRESH_TTL_SECONDS, '1');
 
   // Seed default categories for the new user (non-blocking)
   seedDefaultCategories(userId).catch((err: unknown) => {
@@ -158,7 +175,7 @@ export async function register(dto: RegisterDTO): Promise<AuthResult> {
   return { user: toSafeUser(user), accessToken, refreshToken };
 }
 
-export async function login(dto: LoginDTO): Promise<AuthResult> {
+export async function login(dto: LoginDTO): Promise<AuthResult | TwoFactorRequiredResult> {
   const user = await findByEmail(dto.email);
   if (user === null) {
     // Constant-time response to prevent user enumeration
@@ -172,24 +189,132 @@ export async function login(dto: LoginDTO): Promise<AuthResult> {
   }
 
   const userId = user._id.toHexString();
-  const tokenId = uuidv4();
 
+  // 2FA gate: issue a short-lived temp token instead of real tokens
+  if (user.twoFactorEnabled) {
+    if (dto.totpCode === undefined || dto.totpCode === '') {
+      const tokenId = uuidv4();
+      const redis = getRedisClient();
+      await redis.setex(totpTempKey(userId, tokenId), TOTP_TEMP_TTL_SECONDS, '1');
+      return {
+        requiresTwoFactor: true,
+        tempToken: `${userId}.${tokenId}`,
+      };
+    }
+
+    // Verify the TOTP code supplied in the same request
+    const secret = await getTwoFactorSecret(userId);
+    if (secret === null) {
+      throw new AuthError('TWO_FACTOR_NOT_SETUP', '2FA is enabled but no secret found', 500);
+    }
+    const valid = authenticator.verify({ token: dto.totpCode, secret });
+    if (!valid) {
+      throw new AuthError('INVALID_TOTP', 'Invalid or expired verification code', 401);
+    }
+  }
+
+  const tokenId = uuidv4();
   const accessToken = signAccessToken({ userId, email: user.email, role: user.role });
   const refreshToken = signRefreshToken({ userId, tokenId });
 
   const redis = getRedisClient();
-  await redis.setex(
-    refreshKey(userId, tokenId),
-    REFRESH_TTL_SECONDS,
-    '1',
-  );
+  await redis.setex(refreshKey(userId, tokenId), REFRESH_TTL_SECONDS, '1');
 
-  // Update last login in the background
   updateLastLogin(userId).catch((err: unknown) => {
     console.error('[Auth] Failed to update lastLoginAt:', err);
   });
 
   return { user: toSafeUser(user), accessToken, refreshToken };
+}
+
+export async function completeTwoFactorLogin(
+  tempToken: string,
+  totpCode: string,
+): Promise<AuthResult> {
+  const dotIndex = tempToken.indexOf('.');
+  if (dotIndex === -1) {
+    throw new AuthError('INVALID_TEMP_TOKEN', 'Invalid or expired token', 400);
+  }
+
+  const userId = tempToken.substring(0, dotIndex);
+  const tokenId = tempToken.substring(dotIndex + 1);
+
+  const redis = getRedisClient();
+  const exists = await redis.exists(totpTempKey(userId, tokenId));
+  if (exists === 0) {
+    throw new AuthError('INVALID_TEMP_TOKEN', 'Invalid or expired token', 400);
+  }
+
+  const user = await findById(userId);
+  if (user === null) {
+    throw new AuthError('USER_NOT_FOUND', 'User not found', 404);
+  }
+
+  const secret = await getTwoFactorSecret(userId);
+  if (secret === null) {
+    throw new AuthError('TWO_FACTOR_NOT_SETUP', '2FA is enabled but no secret found', 500);
+  }
+
+  const valid = authenticator.verify({ token: totpCode, secret });
+  if (!valid) {
+    throw new AuthError('INVALID_TOTP', 'Invalid or expired verification code', 401);
+  }
+
+  // Consume the temp token
+  await redis.del(totpTempKey(userId, tokenId));
+
+  const newTokenId = uuidv4();
+  const accessToken = signAccessToken({ userId, email: user.email, role: user.role });
+  const refreshToken = signRefreshToken({ userId, tokenId: newTokenId });
+  await redis.setex(refreshKey(userId, newTokenId), REFRESH_TTL_SECONDS, '1');
+
+  updateLastLogin(userId).catch((err: unknown) => {
+    console.error('[Auth] Failed to update lastLoginAt:', err);
+  });
+
+  return { user: toSafeUser(user), accessToken, refreshToken };
+}
+
+export async function setup2FA(userId: string): Promise<TwoFactorSetupResult> {
+  const user = await findById(userId);
+  if (user === null) {
+    throw new AuthError('USER_NOT_FOUND', 'User not found', 404);
+  }
+
+  const secret = authenticator.generateSecret();
+  await setTwoFactorSecret(userId, secret);
+
+  const otpauthUri = authenticator.keyuri(user.email, 'FinanzasApp', secret);
+
+  return { secret, otpauthUri };
+}
+
+export async function verify2FA(userId: string, totpCode: string): Promise<void> {
+  const secret = await getTwoFactorSecret(userId);
+  if (secret === null) {
+    throw new AuthError('TWO_FACTOR_NOT_SETUP', 'Call setup first', 400);
+  }
+
+  const valid = authenticator.verify({ token: totpCode, secret });
+  if (!valid) {
+    throw new AuthError('INVALID_TOTP', 'Invalid or expired verification code', 400);
+  }
+
+  await enableTwoFactor(userId);
+}
+
+export async function disable2FA(userId: string, password: string): Promise<void> {
+  const user = await findById(userId);
+  if (user === null) {
+    throw new AuthError('USER_NOT_FOUND', 'User not found', 404);
+  }
+
+  const passwordValid = await user.comparePassword(password);
+  if (!passwordValid) {
+    throw new AuthError('INVALID_PASSWORD', 'Current password is incorrect', 401);
+  }
+
+  await disableTwoFactor(userId);
 }
 
 export async function refreshTokens(
@@ -215,7 +340,11 @@ export async function refreshTokens(
   // Verify the token is still in the whitelist
   const exists = await redis.exists(refreshKey(userId, tokenId));
   if (exists === 0) {
-    throw new AuthError('REFRESH_TOKEN_EXPIRED', 'Refresh token has expired or been invalidated', 401);
+    throw new AuthError(
+      'REFRESH_TOKEN_EXPIRED',
+      'Refresh token has expired or been invalidated',
+      401,
+    );
   }
 
   const user = await findById(userId);
@@ -345,11 +474,7 @@ export async function verifyEmail(token: string): Promise<void> {
   const storedHash = await redis.get(verifyEmailKey(userId));
 
   if (storedHash === null || storedHash !== tokenHash) {
-    throw new AuthError(
-      'INVALID_VERIFICATION_TOKEN',
-      'Invalid or expired verification token',
-      400,
-    );
+    throw new AuthError('INVALID_VERIFICATION_TOKEN', 'Invalid or expired verification token', 400);
   }
 
   await markEmailVerified(userId);

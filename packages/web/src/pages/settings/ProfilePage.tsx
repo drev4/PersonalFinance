@@ -1,23 +1,32 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Moon, Palette, Shield, Sun, User } from 'lucide-react';
 import { useState } from 'react';
 import type React from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { Link } from 'react-router-dom';
 import { z } from 'zod';
-import { User } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
+import { updateMe } from '../../api/auth.api';
 import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../../components/ui/card';
 import {
   Form,
+  FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
-  FormControl,
   FormMessage,
-  FormDescription,
 } from '../../components/ui/form';
+import { Input } from '../../components/ui/input';
+import { Switch } from '../../components/ui/switch';
 import { useAuthStore } from '../../stores/authStore';
-import { updateMe } from '../../api/auth.api';
+import { useThemeStore } from '../../stores/themeStore';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -31,7 +40,7 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-// ─── Currency options ─────────────────────────────────────────────────────────
+// ─── Currency shortcuts ───────────────────────────────────────────────────────
 
 const COMMON_CURRENCIES = ['EUR', 'USD', 'MXN', 'ARS', 'COP', 'CLP', 'PEN', 'BRL', 'GBP'];
 
@@ -41,8 +50,11 @@ export default function ProfilePage(): React.ReactElement {
   const user = useAuthStore((state) => state.user);
   const setAuth = useAuthStore((state) => state.setAuth);
   const accessToken = useAuthStore((state) => state.accessToken);
+  const theme = useThemeStore((s) => s.theme);
+  const setTheme = useThemeStore((s) => s.setTheme);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [themeSaving, setThemeSaving] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -51,6 +63,20 @@ export default function ProfilePage(): React.ReactElement {
       baseCurrency: user?.baseCurrency ?? 'EUR',
     },
   });
+
+  async function handleThemeChange(isDark: boolean): Promise<void> {
+    const newTheme: 'light' | 'dark' = isDark ? 'dark' : 'light';
+    setTheme(newTheme);
+    setThemeSaving(true);
+    try {
+      const updated = await updateMe({ preferences: { theme: newTheme } });
+      if (accessToken) setAuth(updated, accessToken);
+    } catch {
+      setTheme(isDark ? 'light' : 'dark');
+    } finally {
+      setThemeSaving(false);
+    }
+  }
 
   async function handleSubmit(values: ProfileFormValues): Promise<void> {
     setError(null);
@@ -84,10 +110,66 @@ export default function ProfilePage(): React.ReactElement {
               {displayName.charAt(0).toUpperCase()}
             </span>
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="font-semibold text-gray-900">{displayName}</p>
             <p className="text-sm text-gray-500">{user?.email}</p>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Appearance */}
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Palette className="h-5 w-5 text-gray-500" aria-hidden="true" />
+            <CardTitle className="text-base">Apariencia</CardTitle>
+          </div>
+          <CardDescription>Elige entre modo claro y modo oscuro.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {theme === 'dark' ? (
+                <Moon className="h-5 w-5 text-primary-500" aria-hidden="true" />
+              ) : (
+                <Sun className="h-5 w-5 text-yellow-500" aria-hidden="true" />
+              )}
+              <div>
+                <p className="text-sm font-medium text-gray-900">
+                  {theme === 'dark' ? 'Modo oscuro' : 'Modo claro'}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {theme === 'dark' ? 'Tema oscuro activado' : 'Tema claro activado'}
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="dark-mode-toggle"
+              checked={theme === 'dark'}
+              onCheckedChange={handleThemeChange}
+              disabled={themeSaving}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Security shortcut */}
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-gray-500" aria-hidden="true" />
+            <CardTitle className="text-base">Seguridad</CardTitle>
+          </div>
+          <CardDescription>
+            Cambia tu contraseña y gestiona la verificación en dos pasos.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link to="/settings/security">
+            <Button variant="outline" size="sm">
+              Ir a Seguridad
+            </Button>
+          </Link>
         </CardContent>
       </Card>
 
@@ -98,9 +180,7 @@ export default function ProfilePage(): React.ReactElement {
             <User className="h-5 w-5 text-gray-500" aria-hidden="true" />
             <CardTitle className="text-base">Informacion personal</CardTitle>
           </div>
-          <CardDescription>
-            Actualiza tu nombre y moneda base.
-          </CardDescription>
+          <CardDescription>Actualiza tu nombre y moneda base.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -122,9 +202,7 @@ export default function ProfilePage(): React.ReactElement {
 
               {/* Email — read-only */}
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-700">
-                  Correo electronico
-                </label>
+                <label className="text-sm font-medium text-gray-700">Correo electronico</label>
                 <Input
                   value={user?.email ?? ''}
                   readOnly
@@ -132,9 +210,7 @@ export default function ProfilePage(): React.ReactElement {
                   className="bg-gray-50 text-gray-500"
                   aria-label="Correo electronico (no editable)"
                 />
-                <p className="text-xs text-gray-400">
-                  El correo no se puede cambiar desde aqui.
-                </p>
+                <p className="text-xs text-gray-400">El correo no se puede cambiar desde aqui.</p>
               </div>
 
               {/* Base currency */}
@@ -150,9 +226,7 @@ export default function ProfilePage(): React.ReactElement {
                         placeholder="EUR"
                         maxLength={3}
                         className="uppercase w-32"
-                        onChange={(e) =>
-                          field.onChange(e.target.value.toUpperCase())
-                        }
+                        onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                       />
                     </FormControl>
                     <FormDescription>
@@ -175,7 +249,6 @@ export default function ProfilePage(): React.ReactElement {
                 )}
               />
 
-              {/* Submit */}
               <div className="flex items-center gap-3 pt-2">
                 <Button type="submit" disabled={form.formState.isSubmitting}>
                   {form.formState.isSubmitting ? 'Guardando...' : 'Guardar cambios'}

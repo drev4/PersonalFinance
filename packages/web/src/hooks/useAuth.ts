@@ -1,10 +1,9 @@
 import { useMutation, useQuery, type UseMutationResult } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../stores/authStore';
-import i18n from '../lib/i18n';
 import {
   register,
   login,
+  completeTwoFactorLogin,
   logout,
   forgotPassword,
   resetPassword,
@@ -12,7 +11,10 @@ import {
   type AuthResponse,
   type RegisterData,
   type LoginData,
+  type LoginResult,
 } from '../api/auth.api';
+import i18n from '../lib/i18n';
+import { useAuthStore } from '../stores/authStore';
 
 export function useRegister(): UseMutationResult<AuthResponse, Error, RegisterData> {
   return useMutation<AuthResponse, Error, RegisterData>({
@@ -20,12 +22,41 @@ export function useRegister(): UseMutationResult<AuthResponse, Error, RegisterDa
   });
 }
 
-export function useLogin(): UseMutationResult<AuthResponse, Error, LoginData> {
+export function useLogin(
+  onRequiresTwoFactor: (tempToken: string) => void,
+): UseMutationResult<LoginResult, Error, LoginData> {
   const { setAuth } = useAuthStore();
   const navigate = useNavigate();
 
-  return useMutation<AuthResponse, Error, LoginData>({
+  return useMutation<LoginResult, Error, LoginData>({
     mutationFn: login,
+    onSuccess: (data) => {
+      if (data.requiresTwoFactor && data.tempToken) {
+        onRequiresTwoFactor(data.tempToken);
+        return;
+      }
+      if (data.user && data.accessToken) {
+        setAuth(data.user, data.accessToken);
+        const locale = data.user.preferences?.locale;
+        if (locale && locale !== i18n.language) {
+          void i18n.changeLanguage(locale);
+        }
+        void navigate('/dashboard');
+      }
+    },
+  });
+}
+
+export function useCompleteTwoFactorLogin(): UseMutationResult<
+  AuthResponse,
+  Error,
+  { tempToken: string; totpCode: string }
+> {
+  const { setAuth } = useAuthStore();
+  const navigate = useNavigate();
+
+  return useMutation({
+    mutationFn: ({ tempToken, totpCode }) => completeTwoFactorLogin(tempToken, totpCode),
     onSuccess: (data) => {
       setAuth(data.user, data.accessToken);
       const locale = data.user.preferences?.locale;
