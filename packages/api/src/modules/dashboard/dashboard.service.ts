@@ -6,14 +6,12 @@ import { getRates, convertWithRates, type ExchangeRates } from '../../services/c
 import { CategoryModel } from '../categories/category.model.js';
 import { BudgetModel } from '../budgets/budget.model.js';
 import { GoalModel } from '../goals/goal.model.js';
+import { DebtModel } from '../debts/debt.model.js';
 import {
   getCashflow as repoCashflow,
   getSpendingByCategory as repoSpendingByCategory,
 } from '../transactions/transaction.repository.js';
-import {
-  NetWorthSnapshotModel,
-  type INetWorthBreakdown,
-} from './netWorthSnapshot.model.js';
+import { NetWorthSnapshotModel, type INetWorthBreakdown } from './netWorthSnapshot.model.js';
 import { getRedisClient } from '../../config/redis.js';
 
 const logger = pino({ name: 'dashboard.service' });
@@ -74,9 +72,7 @@ function midnightUTC(d: Date = new Date()): Date {
 }
 
 /** Maps AccountType to breakdown bucket. Returns null for untracked types. */
-function bucketForType(
-  type: string,
-): keyof INetWorthBreakdown | null {
+function bucketForType(type: string): keyof INetWorthBreakdown | null {
   switch (type) {
     case 'checking':
     case 'savings':
@@ -163,7 +159,7 @@ export async function getNetWorth(userId: string): Promise<NetWorthSummary> {
     logger.warn({ err, currency }, 'Failed to fetch exchange rates; values may be unconverted');
   }
 
-  const [accounts, holdings] = await Promise.all([
+  const [accounts, holdings, debts] = await Promise.all([
     AccountModel.find({
       userId: new mongoose.Types.ObjectId(userId),
       isActive: true,
@@ -180,6 +176,14 @@ export async function getNetWorth(userId: string): Promise<NetWorthSummary> {
         return [];
       }
     })(),
+    DebtModel.find({
+      userId: new mongoose.Types.ObjectId(userId),
+      isActive: true,
+      isPaidOff: false,
+    })
+      .select('currentBalance currency')
+      .lean()
+      .exec(),
   ]);
 
   const breakdown: INetWorthBreakdown = {
@@ -198,7 +202,12 @@ export async function getNetWorth(userId: string): Promise<NetWorthSummary> {
     if (bucket === null) continue;
 
     const accountCurrency = (account as any).currency ?? currency;
-    const balanceInBase = convertWithRates(account.currentBalance, accountCurrency, currency, rates);
+    const balanceInBase = convertWithRates(
+      account.currentBalance,
+      accountCurrency,
+      currency,
+      rates,
+    );
 
     if (bucket === 'debts') {
       liabilities += balanceInBase;
@@ -218,6 +227,19 @@ export async function getNetWorth(userId: string): Promise<NetWorthSummary> {
     breakdown[bucket] += valueInBase;
   }
 
+  // Include tracked debts from the Debt module (these may not have an Account counterpart)
+  for (const debt of debts) {
+    const debtCurrency = (debt as any).currency ?? currency;
+    const balanceInBase = convertWithRates(
+      (debt as any).currentBalance,
+      debtCurrency,
+      currency,
+      rates,
+    );
+    liabilities += balanceInBase;
+    breakdown.debts += balanceInBase;
+  }
+
   const summary: NetWorthSummary = {
     total: assets - liabilities,
     assets,
@@ -229,11 +251,7 @@ export async function getNetWorth(userId: string): Promise<NetWorthSummary> {
   // Fire-and-forget cache write; never blocks the response path.
   try {
     const redis = getRedisClient();
-    await redis.setex(
-      cacheKey,
-      NET_WORTH_CACHE_TTL_SECONDS,
-      JSON.stringify(summary),
-    );
+    await redis.setex(cacheKey, NET_WORTH_CACHE_TTL_SECONDS, JSON.stringify(summary));
   } catch (err) {
     logger.warn({ err, userId }, 'Net-worth cache write failed');
   }
@@ -271,10 +289,7 @@ export async function getNetWorthHistory(
     dateFilter['date'] = { $gte: start };
   }
 
-  const snapshots = await NetWorthSnapshotModel.find(dateFilter)
-    .sort({ date: 1 })
-    .lean()
-    .exec();
+  const snapshots = await NetWorthSnapshotModel.find(dateFilter).sort({ date: 1 }).lean().exec();
 
   return snapshots.map((s) => ({
     date: (s.date as Date).toISOString(),
@@ -286,10 +301,7 @@ export async function getNetWorthHistory(
 /**
  * Returns monthly cashflow (income, expenses, net) for the last `months` months.
  */
-export async function getCashflow(
-  userId: string,
-  months: number,
-): Promise<CashflowMonth[]> {
+export async function getCashflow(userId: string, months: number): Promise<CashflowMonth[]> {
   const raw = await repoCashflow(userId, months);
   return raw.map((r) => ({
     month: r.month,
@@ -314,17 +326,13 @@ export async function getSpendingByCategory(
   const totalSpend = rawItems.reduce((sum, item) => sum + item.total, 0);
 
   // Fetch category metadata in a single query
-  const categoryIds = rawItems.map(
-    (item) => new mongoose.Types.ObjectId(item.categoryId),
-  );
+  const categoryIds = rawItems.map((item) => new mongoose.Types.ObjectId(item.categoryId));
   const categories = await CategoryModel.find({ _id: { $in: categoryIds } })
     .select('name color icon')
     .lean()
     .exec();
 
-  const catMap = new Map(
-    categories.map((c) => [c._id.toHexString(), c]),
-  );
+  const catMap = new Map(categories.map((c) => [c._id.toHexString(), c]));
 
   const result: CategorySpending[] = rawItems
     .map((item) => {
@@ -335,9 +343,7 @@ export async function getSpendingByCategory(
         color: cat?.color ?? '#888888',
         icon: cat?.icon ?? 'circle',
         total: item.total,
-        percentage: totalSpend > 0
-          ? Math.round((item.total / totalSpend) * 10000) / 100
-          : 0,
+        percentage: totalSpend > 0 ? Math.round((item.total / totalSpend) * 10000) / 100 : 0,
       };
     })
     .sort((a, b) => b.total - a.total);
@@ -349,24 +355,16 @@ export async function getSpendingByCategory(
  * Returns the top N holdings for a user ordered by current value (descending).
  * Delegates to the Holdings module to compute enriched values.
  */
-export async function getTopHoldings(
-  userId: string,
-  limit: number,
-): Promise<unknown[]> {
+export async function getTopHoldings(userId: string, limit: number): Promise<unknown[]> {
   const { getUserHoldings } = await import('../holdings/holding.service.js');
   const holdings = await getUserHoldings(userId);
-  return holdings
-    .sort((a, b) => b.currentValue - a.currentValue)
-    .slice(0, limit);
+  return holdings.sort((a, b) => b.currentValue - a.currentValue).slice(0, limit);
 }
 
 /**
  * Returns upcoming recurring transactions within the next `days` days.
  */
-export async function getUpcomingRecurring(
-  userId: string,
-  days: number,
-): Promise<ITransaction[]> {
+export async function getUpcomingRecurring(userId: string, days: number): Promise<ITransaction[]> {
   const today = midnightUTC();
   const until = new Date(today);
   until.setUTCDate(until.getUTCDate() + days);
@@ -447,11 +445,15 @@ export async function getHealthScore(userId: string): Promise<HealthScore> {
     const rate = (totalIncome - totalExpenses) / totalIncome;
     cashflowScore = rate >= 0.3 ? 25 : rate >= 0.2 ? 20 : rate >= 0.1 ? 13 : rate >= 0 ? 6 : 0;
     const pct = Math.round(Math.abs(rate) * 100);
-    cashflowDetail = rate >= 0
-      ? `Tasa de ahorro: ${pct}%`
-      : `Gastos superan ingresos un ${pct}%`;
+    cashflowDetail = rate >= 0 ? `Tasa de ahorro: ${pct}%` : `Gastos superan ingresos un ${pct}%`;
   }
-  areas.push({ key: 'cashflow', label: 'Flujo de caja', score: cashflowScore, max: 25, detail: cashflowDetail });
+  areas.push({
+    key: 'cashflow',
+    label: 'Flujo de caja',
+    score: cashflowScore,
+    max: 25,
+    detail: cashflowDetail,
+  });
   total += cashflowScore;
 
   // ── 2. Budget adherence: current-month expense vs total active budgets ─────
@@ -474,11 +476,19 @@ export async function getHealthScore(userId: string): Promise<HealthScore> {
     budgetScore = usage < 0.7 ? 25 : usage < 0.85 ? 18 : usage <= 1 ? 10 : 0;
     budgetDetail = `${Math.round(usage * 100)}% del presupuesto mensual usado`;
   }
-  areas.push({ key: 'budgets', label: 'Presupuestos', score: budgetScore, max: 25, detail: budgetDetail });
+  areas.push({
+    key: 'budgets',
+    label: 'Presupuestos',
+    score: budgetScore,
+    max: 25,
+    detail: budgetDetail,
+  });
   total += budgetScore;
 
   // ── 3. Goal progress: average progress across active incomplete goals ──────
-  const goals = await GoalModel.find({ userId: uid, isActive: true, isCompleted: false }).lean().exec();
+  const goals = await GoalModel.find({ userId: uid, isActive: true, isCompleted: false })
+    .lean()
+    .exec();
 
   let goalScore: number;
   let goalDetail: string;
@@ -487,13 +497,22 @@ export async function getHealthScore(userId: string): Promise<HealthScore> {
     goalScore = 12;
     goalDetail = 'Sin metas activas';
   } else {
-    const avgProgress = goals.reduce((s, g) => {
-      return s + (g.targetAmount > 0 ? g.currentAmount / g.targetAmount : 0);
-    }, 0) / goals.length;
+    const avgProgress =
+      goals.reduce((s, g) => {
+        return s + (g.targetAmount > 0 ? g.currentAmount / g.targetAmount : 0);
+      }, 0) / goals.length;
     goalScore = avgProgress >= 0.75 ? 25 : avgProgress >= 0.5 ? 18 : avgProgress >= 0.25 ? 12 : 5;
-    goalDetail = `${goals.length} meta${goals.length > 1 ? 's' : ''} · Progreso medio: ${Math.round(avgProgress * 100)}%`;
+    goalDetail = `${goals.length} meta${goals.length > 1 ? 's' : ''} · Progreso medio: ${Math.round(
+      avgProgress * 100,
+    )}%`;
   }
-  areas.push({ key: 'goals', label: 'Metas de ahorro', score: goalScore, max: 25, detail: goalDetail });
+  areas.push({
+    key: 'goals',
+    label: 'Metas de ahorro',
+    score: goalScore,
+    max: 25,
+    detail: goalDetail,
+  });
   total += goalScore;
 
   // ── 4. Debt ratio: liabilities / (assets + liabilities) ───────────────────
@@ -511,21 +530,37 @@ export async function getHealthScore(userId: string): Promise<HealthScore> {
     debtScore = ratio < 0.2 ? 25 : ratio < 0.4 ? 18 : ratio < 0.6 ? 10 : ratio < 0.8 ? 5 : 0;
     debtDetail = `Ratio de deuda: ${Math.round(ratio * 100)}%`;
   }
-  areas.push({ key: 'debt', label: 'Nivel de deuda', score: debtScore, max: 25, detail: debtDetail });
+  areas.push({
+    key: 'debt',
+    label: 'Nivel de deuda',
+    score: debtScore,
+    max: 25,
+    detail: debtDetail,
+  });
   total += debtScore;
 
   // ── Final score ────────────────────────────────────────────────────────────
   const label =
-    total >= 80 ? 'Excelente' :
-    total >= 60 ? 'Buena' :
-    total >= 40 ? 'Regular' :
-    total >= 20 ? 'Mejorable' : 'Crítica';
+    total >= 80
+      ? 'Excelente'
+      : total >= 60
+      ? 'Buena'
+      : total >= 40
+      ? 'Regular'
+      : total >= 20
+      ? 'Mejorable'
+      : 'Crítica';
 
   const color =
-    total >= 80 ? '#22c55e' :
-    total >= 60 ? '#84cc16' :
-    total >= 40 ? '#f59e0b' :
-    total >= 20 ? '#f97316' : '#ef4444';
+    total >= 80
+      ? '#22c55e'
+      : total >= 60
+      ? '#84cc16'
+      : total >= 40
+      ? '#f59e0b'
+      : total >= 20
+      ? '#f97316'
+      : '#ef4444';
 
   return { score: total, label, color, areas };
 }
@@ -537,9 +572,23 @@ export async function takeSnapshotsForAllUsers(): Promise<{
   success: number;
   errors: number;
 }> {
-  const userIds = await AccountModel.distinct('userId', {
-    isActive: true,
-  }).exec() as mongoose.Types.ObjectId[];
+  const [accountUserIds, debtUserIds] = await Promise.all([
+    AccountModel.distinct('userId', { isActive: true }).exec() as Promise<
+      mongoose.Types.ObjectId[]
+    >,
+    DebtModel.distinct('userId', { isActive: true }).exec() as Promise<mongoose.Types.ObjectId[]>,
+  ]);
+
+  // Merge and deduplicate user IDs
+  const seen = new Set<string>();
+  const userIds: mongoose.Types.ObjectId[] = [];
+  for (const id of [...accountUserIds, ...debtUserIds]) {
+    const key = id.toHexString();
+    if (!seen.has(key)) {
+      seen.add(key);
+      userIds.push(id);
+    }
+  }
 
   let success = 0;
   let errors = 0;
