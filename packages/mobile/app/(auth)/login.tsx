@@ -9,25 +9,72 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Fingerprint } from 'lucide-react-native';
 import { useLogin } from '@/api/auth';
 import { checkBackendHealth } from '@/api/health';
 import { radius, spacing, type ThemeColors, getShadow } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
+import { useConfigStore } from '@/stores/configStore';
+import { useAuthStore } from '@/stores/authStore';
+import {
+  getBiometricType,
+  authenticateWithBiometrics,
+  type BiometricType,
+} from '@/hooks/useBiometrics';
 
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [backendStatus, setBackendStatus] = useState<{ ok: boolean; error?: string } | null>(null);
+  const [biometricType, setBiometricType] = useState<BiometricType>('none');
+  const [biometricLoading, setBiometricLoading] = useState(false);
+  const [biometricError, setBiometricError] = useState(false);
+  const [forceShowForm, setForceShowForm] = useState(false);
+  const autoTriggered = useRef(false);
   const { mutate: login, isPending, error } = useLogin();
 
   const { colors, shadow, isDark } = useTheme();
-  const styles = useMemo(() => createStyles(colors, shadow, isDark), [isDark]);
+  const styles = useMemo(() => createStyles(colors, shadow, isDark), [colors, shadow, isDark]);
+  // isDark used for keyboardAppearance and lock-screen subtitle
+
+  const { biometricEnabled } = useConfigStore();
+  const { accessToken, biometricPassed, setBiometricPassed } = useAuthStore();
+
+  // Lock mode: hay sesión activa pero biometría no verificada
+  const isLockMode =
+    !forceShowForm &&
+    biometricEnabled &&
+    biometricType !== 'none' &&
+    !!accessToken &&
+    !biometricPassed;
 
   useEffect(() => {
     checkBackendHealth().then(setBackendStatus);
+    getBiometricType().then(setBiometricType);
   }, []);
+
+  // Auto-disparar Face ID la primera vez que entra en modo bloqueo
+  useEffect(() => {
+    if (isLockMode && !autoTriggered.current) {
+      autoTriggered.current = true;
+      handleBiometricLogin();
+    }
+  });
+
+  const handleBiometricLogin = async () => {
+    setBiometricLoading(true);
+    setBiometricError(false);
+    const label = biometricType === 'face' ? 'Face ID' : 'Touch ID';
+    const success = await authenticateWithBiometrics(`Accede a Finanzas con ${label}`);
+    setBiometricLoading(false);
+    if (success) {
+      setBiometricPassed(true);
+    } else {
+      setBiometricError(true);
+    }
+  };
 
   const handleLogin = () => {
     if (!email || !password) {
@@ -37,6 +84,58 @@ export default function LoginScreen() {
     login({ email, password });
   };
 
+  // ── Pantalla de bloqueo ────────────────────────────────────────────────────
+  if (isLockMode) {
+    const biometricLabel = biometricType === 'face' ? 'Face ID' : 'Touch ID';
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.lockScreen}>
+          <View style={styles.lockTop}>
+            <View style={styles.logoMark} />
+            <Text style={styles.appName}>Finanzas</Text>
+            <Text style={styles.lockSubtitle}>Verifica tu identidad para continuar</Text>
+          </View>
+
+          <View style={styles.lockCenter}>
+            <TouchableOpacity
+              style={[styles.biometricCircle, biometricLoading && styles.biometricCircleLoading]}
+              onPress={handleBiometricLogin}
+              disabled={biometricLoading}
+              activeOpacity={0.75}
+            >
+              {biometricLoading ? (
+                <ActivityIndicator color={colors.primary} size="large" />
+              ) : (
+                <Fingerprint
+                  size={44}
+                  color={biometricError ? colors.expense : colors.primary}
+                  strokeWidth={1.5}
+                />
+              )}
+            </TouchableOpacity>
+
+            <Text style={[styles.biometricLabel, biometricError && styles.biometricLabelError]}>
+              {biometricLoading
+                ? 'Verificando...'
+                : biometricError
+                ? 'No reconocido. Toca para reintentar'
+                : `Toca para usar ${biometricLabel}`}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.usePasswordLink}
+            onPress={() => setForceShowForm(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.usePasswordText}>Usar contraseña</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Pantalla de login normal ───────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -65,6 +164,7 @@ export default function LoginScreen() {
               editable={!isPending}
               keyboardType="email-address"
               autoCapitalize="none"
+              keyboardAppearance={isDark ? 'dark' : 'light'}
             />
           </View>
 
@@ -79,6 +179,7 @@ export default function LoginScreen() {
               editable={!isPending}
               secureTextEntry
               autoCapitalize="none"
+              keyboardAppearance={isDark ? 'dark' : 'light'}
             />
           </View>
 
@@ -123,6 +224,59 @@ function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>,
       flex: 1,
       backgroundColor: colors.bg,
     },
+
+    // ── Lock screen ────────────────────────────────────────────────────────
+    lockScreen: {
+      flex: 1,
+      paddingHorizontal: spacing.xxl,
+      paddingBottom: spacing.xxl,
+      justifyContent: 'space-between',
+    },
+    lockTop: {
+      paddingTop: 72,
+      alignItems: 'flex-start',
+    },
+    lockSubtitle: {
+      fontSize: 15,
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
+    },
+    lockCenter: {
+      alignItems: 'center',
+      gap: spacing.xl,
+    },
+    biometricCircle: {
+      width: 96,
+      height: 96,
+      borderRadius: 48,
+      backgroundColor: colors.card,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...shadow.md,
+    },
+    biometricCircleLoading: {
+      opacity: 0.7,
+    },
+    biometricLabel: {
+      fontSize: 15,
+      fontWeight: '500',
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    biometricLabelError: {
+      color: colors.expense,
+    },
+    usePasswordLink: {
+      alignSelf: 'center',
+      paddingVertical: spacing.md,
+    },
+    usePasswordText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.primary,
+    },
+
+    // ── Login form ─────────────────────────────────────────────────────────
     scrollContent: {
       flexGrow: 1,
       paddingHorizontal: spacing.xxl,
