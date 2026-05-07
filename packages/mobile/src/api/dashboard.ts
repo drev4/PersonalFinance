@@ -130,6 +130,26 @@ export const useUpcomingRecurring = (days = 60) => {
   });
 };
 
+export const useSpendingByCategory = (from: Date, to: Date) => {
+  const accessToken = useAuthStore((state) => state.accessToken);
+
+  return useQuery<SpendingCategory[]>({
+    queryKey: ['dashboard', 'spending-by-category', from.toISOString(), to.toISOString()],
+    enabled: !!accessToken,
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        from: from.toISOString(),
+        to: to.toISOString(),
+      });
+      const response = await client.get<{ data: SpendingCategory[] }>(
+        `/dashboard/spending-by-category?${params.toString()}`,
+      );
+      return response.data.data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
 export const useDashboardSummary = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
 
