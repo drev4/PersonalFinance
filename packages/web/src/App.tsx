@@ -1,6 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import type React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -9,6 +9,8 @@ import { SkipLink } from './components/ui/skip-link';
 import { queryClient } from './lib/queryClient';
 import ProtectedRoute from './routes/ProtectedRoute';
 import PublicRoute from './routes/PublicRoute';
+import { useAuthStore } from './stores/authStore';
+import { useThemeStore } from './stores/themeStore';
 
 // Lazy-loaded pages for code splitting
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
@@ -25,6 +27,7 @@ const GoalsPage = lazy(() => import('./pages/goals/GoalsPage'));
 const HoldingsPage = lazy(() => import('./pages/holdings/HoldingsPage'));
 const IntegrationsPage = lazy(() => import('./pages/settings/IntegrationsPage'));
 const ProfilePage = lazy(() => import('./pages/settings/ProfilePage'));
+const SecurityPage = lazy(() => import('./pages/settings/SecurityPage'));
 const CategoryRulesPage = lazy(() => import('./pages/settings/CategoryRulesPage'));
 const CategoriesPage = lazy(() => import('./pages/settings/CategoriesPage'));
 const RecurringPage = lazy(() => import('./pages/transactions/RecurringPage'));
@@ -40,6 +43,29 @@ const RetirementPage = lazy(() => import('./pages/simulators/RetirementPage'));
 const SavedSimulationsPage = lazy(() => import('./pages/simulators/SavedSimulationsPage'));
 const NotificationsPage = lazy(() => import('./pages/notifications/NotificationsPage'));
 const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
+
+// Syncs user server preference → local themeStore on login,
+// and applies the `dark` class to <html> whenever the theme changes.
+function ThemeSync(): null {
+  const theme = useThemeStore((s) => s.theme);
+  const setTheme = useThemeStore((s) => s.setTheme);
+  const serverTheme = useAuthStore((s) => s.user?.preferences?.theme);
+
+  useEffect(() => {
+    if (serverTheme) setTheme(serverTheme);
+  }, [serverTheme, setTheme]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [theme]);
+
+  return null;
+}
 
 function PageLoader(): React.ReactElement {
   return (
@@ -57,6 +83,7 @@ export default function App(): React.ReactElement {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
+        <ThemeSync />
         <SkipLink />
         <Router>
           <Suspense fallback={<PageLoader />}>
@@ -89,6 +116,7 @@ export default function App(): React.ReactElement {
                     <Route path="/holdings" element={<HoldingsPage />} />
                     <Route path="/settings/integrations" element={<IntegrationsPage />} />
                     <Route path="/settings/profile" element={<ProfilePage />} />
+                    <Route path="/settings/security" element={<SecurityPage />} />
                     <Route path="/settings/category-rules" element={<CategoryRulesPage />} />
                     <Route path="/settings/categories" element={<CategoriesPage />} />
                     <Route path="/simulators" element={<SimulatorsPage />} />

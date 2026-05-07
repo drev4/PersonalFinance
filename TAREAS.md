@@ -1,299 +1,166 @@
 # Tareas pendientes y funcionalidades nuevas
 
-> Generado: 2026-04-29  
-> Leyenda: `[API]` `[WEB]` `[MOB]` — paquete afectado
+> Actualizado: 2026-05-06  
+> Leyenda: `[API]` `[WEB]` `[MOB]` — paquete afectado  
+> Estado: ⏳ pendiente · 🔄 en curso · ✅ hecho
 
 ---
 
-## 🔴 CRÍTICO — Roto o bloqueante
+## 🔴 CRÍTICO
 
-### 1. Push notifications mobile — endpoint faltante `[API]`
+### 1. 2FA — campo en modelo, sin endpoints `[API]` `[WEB]`
 
-`useNotificationSetup.ts` en mobile llama a `POST /notifications/register-device` para registrar el token de Expo Push. Ese endpoint **no existe** en `notification.routes.ts`. Las notificaciones push al móvil nunca llegan.
-
-- [x] Añadir `POST /users/push-token` con body `{ token: string, platform?: 'ios' | 'android' }` (endpoint real que usa el hook móvil)
-- [x] Guardar el token en el modelo de usuario (campo `pushTokens: string[]`)
-- [x] Usar el token en el job `notifications.job.ts` al enviar alertas
-
-### 2. Ficheros placeholder activos en el API `[API]`
-
-Tres ficheros con código obsoleto que no se usan y pueden confundir:
-
-- [x] Eliminar `packages/api/src/middleware/auth.ts` (tiene `TODO: Validate JWT token here`, el real está en `middlewares/authenticate.ts`)
-- [x] Eliminar `packages/api/src/services/example.service.ts`
-- [x] Eliminar `packages/api/src/routes/example.routes.ts`
-
----
-
-## 🟡 IMPORTANTE — Features incompletas
-
-### Mobile — pantallas faltantes (el API ya existe, la UI no)
-
-#### 3. Pantalla de Presupuestos `[MOB]`
-
-El API tiene CRUD completo en `/budgets` + progreso + alertas. No hay ninguna pantalla en mobile.
-
-- [x] Crear `app/(app)/(tabs)/budgets.tsx` con lista de presupuestos
-- [x] Añadir la tab al layout `app/(app)/(tabs)/_layout.tsx`
-- [x] Añadir `src/api/budgets.ts` con `getBudgets`, `createBudget`, `getBudgetProgress`, `getBudgetAlerts`
-- [x] Modal de creación/edición de presupuesto
-- [x] Barra de progreso por categoría con alerta visual si supera el 80%
-
-#### 4. Pantalla de Metas de ahorro `[MOB]`
-
-El API tiene CRUD en `/goals` + sugerencia de aportación mensual. No hay pantalla en mobile.
-
-- [x] Crear `app/(app)/(tabs)/goals.tsx` con lista de metas
-- [x] Añadir la tab al layout
-- [x] Añadir `src/api/goals.ts` con `getGoals`, `createGoal`, `updateGoal`, `deleteGoal`
-- [x] Tarjeta por meta con barra de progreso circular y sugerencia mensual
-- [x] Acción rápida "Aportar" (ver tarea #19)
-
-#### 5. Pantalla de Cuentas `[MOB]`
-
-Las cuentas solo aparecen como scroll horizontal en el home, sin gestión.
-
-- [x] Crear `app/(app)/(tabs)/accounts.tsx` con lista completa
-- [x] Añadir `src/api/accounts.ts` con `getAccounts`, `createAccount`, `updateAccount`, `adjustBalance`, `archiveAccount`
-- [x] Formulario de crear/editar cuenta (tipo, moneda, saldo inicial, color, institución)
-- [x] Acción de ajustar saldo
-- [x] Swipe to archive (acción destructiva con confirmación haptic)
-
-#### 6. Pantalla / Tab de Notificaciones `[MOB]`
-
-`src/api/notifications.ts` existe pero no hay UI.
-
-- [ ] Crear `app/(app)/(tabs)/notifications.tsx`
-- [ ] Añadir badge en la tab con el conteo de no leídas (`GET /notifications/unread-count`)
-- [ ] Lista paginada, swipe para marcar leída / eliminar
-- [ ] Botón "Marcar todas como leídas"
-
-#### 7. Settings mobile — muy incompleto `[MOB]`
-
-Solo tiene modo oscuro + logout + debug oculto.
-
-- [x] Sección "Perfil": editar nombre, moneda base, idioma (llamar a `PATCH /users/me`)
-- [x] Sección "Seguridad": cambiar contraseña (`PATCH /users/me/password`)
-- [x] Sección "Notificaciones": toggle de alertas de presupuesto
-- [x] Sección "Integraciones": ver estado de Binance, conectar/desconectar
-- [x] Sección "Datos": exportar CSV (enlace a web — no hay expo-sharing/expo-file-system instalado)
-
-### Mobile — funcionalidad rota en pantallas existentes
-
-#### 8. Filtro de fechas en transacciones no es interactivo `[MOB]`
-
-Los chips "Desde" y "Hasta" en `transactions.tsx` muestran la fecha pero no abren ningún picker.
-
-- [x] Conectar `DatePickerCalendar.tsx` (ya existe en `src/components/`) al chip de fecha
-- [x] Al tocar el chip, abrir el calendario y actualizar el estado `from` / `to`
-
-#### 9. Sin editar/eliminar en el detalle de transacción `[MOB]`
-
-El modal de detalle solo muestra información. `EditTransactionModal.tsx` existe pero no está conectado.
-
-- [x] Añadir botones "Editar" y "Eliminar" en el modal de detalle (`transactions.tsx`)
-- [x] Al editar, abrir `EditTransactionModal` con los datos precargados
-- [x] Al eliminar, confirmar con `Alert` + haptic feedback destructivo
-- [x] Swipe-to-delete en filas de transacciones (PanResponder + Animated, sin dependencias externas)
-
-#### 10. Sin botón "+" en la tab de Transacciones `[MOB]`
-
-No hay acceso directo para añadir transacción desde la pantalla de transacciones; solo existe el FAB del layout.
-
-- [x] Añadir botón "+" en el header de `transactions.tsx` que abre el quick-add modal
-- [x] O integrar el formulario directamente en la tab
-
-#### 11. Gráfico del home es hardcoded `[MOB]`
-
-Las barras de "Últimos 30 días" usan valores fijos `[40, 65, 45, 80, 55, 90, 70, 85, 60, 95, 75, 88]`.
-
-- [x] Reemplazar con datos reales de `GET /dashboard/cashflow?months=6`
-- [x] Mantener el skeleton mientras carga
-
-### Web — páginas/features faltantes
-
-#### 12. No hay UI para Reglas de Categorización `[WEB]`
-
-El API tiene CRUD completo en `/category-rules`. Sin UI, el auto-categorizado es inaccesible.
-
-- [x] Crear `src/api/categoryRules.api.ts`
-- [x] Crear `src/hooks/useCategoryRules.ts`
-- [x] Crear página `src/pages/settings/CategoryRulesPage.tsx`
-- [x] Añadir ruta `/settings/category-rules` en `App.tsx`
-- [x] Añadir enlace en el sidebar de settings en `AppLayout.tsx`
-- [x] Componente para crear regla: keywords (palabras clave contra descripción), categoría destino, prioridad
-
-#### 13. No hay UI para gestionar Categorías `[WEB]`
-
-Las categorías son solo seleccionables en formularios. No hay página dedicada.
-
-- [x] Crear `src/pages/settings/CategoriesPage.tsx`
-- [x] Añadir ruta `/settings/categories`
-- [x] Añadir al sidebar
-- [x] Lista con árbol (soporte `parentId`) — crear, editar nombre/color/icono, eliminar
-
-#### 14. No hay UI para Transacciones Recurrentes `[WEB]`
-
-El API expone `GET /transactions/recurring`, `PATCH` y `DELETE` pero no hay ninguna página.
-
-- [x] Añadir `src/hooks/useRecurring.ts`
-- [x] Crear `src/pages/transactions/RecurringPage.tsx` (enlazada desde TransactionsPage)
-- [x] Lista de plantillas activas con frecuencia, próxima fecha, importe
-- [x] Acciones de crear / editar frecuencia / cancelar
-
-#### 15. Dark mode web — preferencia guardada pero sin efecto `[WEB]`
-
-`preferences.theme` se persiste en BD y en Zustand pero nunca se aplica al DOM.
-
-- [ ] En `App.tsx` o en un efecto del `authStore`, leer `user.preferences.theme` y hacer `document.documentElement.classList.toggle('dark', isDark)`
-- [ ] Añadir toggle de tema en `ProfilePage.tsx` o en el header del `AppLayout`
-- [ ] Verificar que los componentes Tailwind usan prefijos `dark:` donde corresponde
-
-### API — features con modelo pero sin implementación
-
-#### 16. 2FA — campo en modelo, sin endpoints `[API]`
-
-`twoFactorEnabled` y `twoFactorSecret` existen en el modelo de usuario pero no hay rutas para activarlos.
+`twoFactorEnabled` y `twoFactorSecret` existen en el modelo pero no hay rutas.
 
 - [ ] `POST /users/me/2fa/setup` — genera QR con URI TOTP y secreto
-- [ ] `POST /users/me/2fa/verify` — verifica el primer código TOTP y activa 2FA
-- [ ] `POST /users/me/2fa/disable` — desactiva 2FA con verificación de contraseña
+- [ ] `POST /users/me/2fa/verify` — verifica primer código y activa 2FA
+- [ ] `POST /users/me/2fa/disable` — desactiva con contraseña actual
 - [ ] Validar código TOTP en `POST /auth/login` cuando `twoFactorEnabled: true`
-- [ ] Añadir sección "Seguridad" en `ProfilePage.tsx` del web
-
-#### 17. No existe `POST /transactions/recurring` `[API]`
-
-Solo existen `PATCH` y `DELETE` en `/transactions/recurring`. Para crear una plantilla hay que pasar el campo `recurring` al crear una transacción, lo que genera siempre una primera transacción inmediata.
-
-- [x] Añadir `POST /transactions/recurring` con los campos de la plantilla (sin crear transacción real)
-- [x] Útil para programar pagos futuros sin que exista una transacción "hoy"
+- [ ] Añadir sección "Seguridad" en `ProfilePage.tsx` del web con estado 2FA y setup wizard
 
 ---
 
-## 🟢 FUNCIONALIDADES NUEVAS
+## 🟡 IMPORTANTE
 
-#### 18. Importación de transacciones por CSV `[API]` `[WEB]` `[MOB]`
+### 2. Página de seguridad web — cambio de contraseña `[WEB]`
 
-Existe exportación CSV (`GET /reports/export`) pero no importación.
+`PATCH /users/me/password` existe en el API pero no hay formulario.
 
-- [ ] `[API]` Añadir `POST /transactions/import-csv` — body `{ csvContent, accountId }`, devuelve `{ created, errors }`
-- [ ] `[WEB]` Añadir botón "Importar CSV" en `TransactionsPage` con dialog de selección de archivo
-- [ ] `[MOB]` Añadir en Settings > Datos: importar desde archivo CSV (con `expo-document-picker`)
-- [ ] Soportar columnas: `date, description, amount, currency, type, category, tags`
+- [ ] Crear sección "Seguridad" en `ProfilePage` o página `/settings/security`
+- [ ] Formulario: contraseña actual + nueva + confirmación
+- [ ] Enlace "Configurar 2FA" cuando se implemente la tarea #1
 
-#### 19. Depósito rápido a meta de ahorro `[API]` `[WEB]` `[MOB]`
+### 3. Importación de transacciones por CSV `[API]` `[WEB]` `[MOB]`
 
-Actualizar `currentAmount` de una meta requiere editar el objeto completo. No hay acción de "aportar".
+Existe exportación CSV pero no importación.
 
-- [x] `[API]` Añadir `POST /goals/:id/deposit` con body `{ amount: number }` — incrementa `currentAmount`, marca `isCompleted` si llega al objetivo
-- [x] `[WEB]` Botón "Aportar" en `GoalCard.tsx` que abre un input rápido de importe
-- [x] `[MOB]` Acción rápida "Aportar" en la futura pantalla de metas
+- [ ] `[API]` `POST /transactions/import-csv` — body `{ csvContent, accountId }`, devuelve `{ created, errors }`
+- [ ] `[API]` Soportar columnas: `date, description, amount, currency, type, category, tags`
+- [ ] `[WEB]` Botón "Importar CSV" en `TransactionsPage` con `ImportCsvDialog`
+- [ ] `[MOB]` Settings > Datos: importar desde archivo con `expo-document-picker`
 
-#### 20. Gestión y filtro de etiquetas (tags) `[WEB]` `[MOB]`
+### 4. Dividendos y rendimientos de inversiones `[API]` `[WEB]` `[MOB]`
 
-Las transacciones guardan `tags[]` en BD pero no hay UI para gestionarlos ni filtrar por ellos.
+Holdings solo rastrea PnL por precio. No hay seguimiento de dividendos ni staking.
 
-- [x] `[WEB]` Añadir filtro por `tags` en `TransactionsPage` con combobox multi-selección
-- [x] `[WEB]` Mostrar tags como chips en `TransactionRow`
-- [x] `[MOB]` Añadir filtro de tags en la pantalla de transacciones
-- [x] `[WEB]` `[MOB]` Input de tags en el formulario de creación/edición de transacción (autocompletado con tags existentes)
+- [ ] `[API]` `POST /holdings/:id/dividend` con `{ amount, date, currency }` — registra ingreso
+- [ ] `[API]` `GET /holdings/:id/income` — historial de dividendos de esa posición
+- [ ] `[WEB]` Sección "Ingresos" en `HoldingsPage` con total de dividendos del año
+- [ ] `[MOB]` Rendimiento total (PnL + dividendos) en pantalla de cartera
 
-#### 21. Vista de calendario de recurrentes `[WEB]` `[MOB]`
+### 5. Pantalla de detalle de cuenta mobile `[MOB]`
 
-El endpoint `GET /dashboard/upcoming-recurring` existe. El widget del dashboard solo muestra una lista plana.
+La web tiene `AccountDetailPage` con historial y ajuste de saldo. En mobile solo existe la lista.
 
-- [x] `[WEB]` Página o modal de calendario mensual (`/transactions/calendar`) donde cada día muestre los pagos programados
-- [x] `[MOB]` Vista de semana/mes en la futura pantalla de recurrentes
+- [ ] Crear `app/(app)/account/[id].tsx` con saldo actual, historial de movimientos filtrados y acciones
+- [ ] Navegar desde la tarjeta de cuenta en `accounts.tsx`
+- [ ] Reutilizar `AdjustBalanceDialog` (adaptar a RN)
 
-#### 22. Comparativa presupuesto vs real `[WEB]` `[MOB]`
+### 6. Pantalla de Informes mobile `[MOB]`
 
-Los datos existen (budgets + spending by category) pero no hay gráfico de barras lado a lado.
+La web tiene `ReportsPage` con exportación CSV y estadísticas mensuales. Mobile no tiene nada.
 
-- [x] `[WEB]` Añadir chart de barras agrupadas en `BudgetsPage` — columna "Presupuestado" vs "Gastado" por categoría
-- [x] `[WEB]` También útil en `SpendingByCategoryChart` del dashboard con overlay del presupuesto total del mes
-- [x] `[MOB]` Widget similar en la futura pantalla de presupuestos
+- [ ] Añadir `src/api/reports.ts` con `getMonthlyReport`, `exportCsv`
+- [ ] Crear tab o pantalla accesible desde Settings: resumen mensual y botón de exportar
+- [ ] Usar `expo-sharing` para compartir el CSV generado
 
-#### 23. Página de seguridad en settings web `[WEB]`
+### 7. Alertas de precio en cartera `[API]` `[WEB]` `[MOB]`
 
-`PATCH /users/me/password` existe en el API pero no hay formulario en el web.
+El tipo de notificación `price_alert` existe pero no hay forma de configurar alertas.
 
-- [ ] Crear sección "Seguridad" en `ProfilePage` o nueva página `/settings/security`
-- [ ] Formulario: contraseña actual + nueva contraseña + confirmación
-- [ ] Mostrar estado de 2FA y enlace para configurarlo (cuando se implemente la tarea #16)
+- [ ] `[API]` `POST /holdings/:id/price-alert` con `{ targetPrice, direction: 'above' | 'below' }`
+- [ ] `[API]` Evaluar alertas en el job `priceUpdate.job.ts` al actualizar precios
+- [ ] `[WEB]` Botón "Configurar alerta" en `HoldingRow.tsx`
+- [ ] `[MOB]` Botón de alerta en la fila de holding de la cartera
 
-#### 24. Score / índice de salud financiera `[WEB]` `[MOB]`
+---
 
-Los datos para calcularlo ya están disponibles: ratio gasto/ingreso, % de presupuesto usado, progreso de metas, deuda/activos.
+## 🟢 NUEVAS FUNCIONALIDADES
 
-- [x] `[API]` Añadir `GET /dashboard/health-score` — devuelve puntuación 0–100 con desglose por área
-- [x] `[WEB]` Widget en el dashboard con el score y colores semáforo
-- [x] `[MOB]` Tarjeta en el home entre el patrimonio neto y el gráfico
-
-#### 25. Importación desde Plaid (Open Banking) `[API]`
+### 8. Integración Plaid (Open Banking) `[API]`
 
 `IntegrationTypeEnum` ya incluye `plaid` pero no hay implementación.
 
-- [ ] Añadir `packages/api/src/modules/integrations/plaid/plaid.client.ts`
-- [ ] `POST /integrations/plaid` — inicia el flujo de conexión (Link Token)
-- [ ] `POST /integrations/plaid/exchange` — intercambia el token público por access token
-- [ ] Sync job que importe transacciones y saldos automáticamente
+- [ ] Crear `packages/api/src/modules/integrations/plaid/plaid.client.ts`
+- [ ] `POST /integrations/plaid` — inicia flujo (Link Token)
+- [ ] `POST /integrations/plaid/exchange` — intercambia token público por access token
+- [ ] Job de sync que importe transacciones y saldos automáticamente
 
-#### 26. Búsqueda global `[WEB]` `[MOB]`
+### 9. Autenticación biométrica mobile `[MOB]`
 
-No hay buscador que cubra transacciones + cuentas + holdings a la vez.
+Fintech habitual: bloquear la app con Face ID / huella.
 
-- [x] `[WEB]` Añadir `⌘K` command palette en el header del `AppLayout` con búsqueda en tiempo real
-- [x] `[MOB]` Añadir barra de búsqueda global accesible desde cualquier tab
+- [ ] Instalar `expo-local-authentication`
+- [ ] Toggle en Settings: "Usar biometría para abrir la app"
+- [ ] Al entrar desde background, pedir autenticación biométrica antes de mostrar contenido
+- [ ] Guardar preferencia en `configStore.ts`
 
-#### 27. Simuladores en mobile `[MOB]`
+### 10. Tests del paquete web `[WEB]`
 
-El API de simuladores es público (sin auth) y tiene 5 calculadoras. No hay ninguna pantalla en mobile.
+`packages/web` solo tiene `App.test.tsx`. El API tiene tests por módulo, la web no.
 
-- [x] Añadir `src/api/simulators.ts`
-- [x] Crear pantalla `app/(app)/(tabs)/simulators.tsx` con lista de calculadoras
-- [x] Implementar al menos hipoteca (`/simulators/mortgage`) e inversión (`/simulators/investment`) con formularios nativos
-- [x] Mostrar resultados con tabla de amortización simplificada
+- [ ] Añadir tests de renderizado para los hooks principales (`useTransactions`, `useDashboard`, etc.)
+- [ ] Tests de integración para los flujos críticos: login, crear transacción, ver dashboard
+- [ ] Configurar `msw` para mock de la API en tests
 
-#### 28. Dividendos y rendimientos de inversiones `[API]` `[WEB]` `[MOB]`
+### 11. Infinite scroll / paginación en listas mobile `[MOB]`
 
-El módulo de holdings solo rastrea PnL por precio. No hay seguimiento de dividendos ni staking.
+`transactions.tsx` carga todo de golpe. Con muchos datos la lista se ralentiza.
 
-- [ ] `[API]` Añadir `POST /holdings/:id/dividend` con `{ amount, date, currency }` — registra un ingreso de dividendo
-- [ ] `[API]` `GET /holdings/:id/income` — historial de dividendos/staking de esa posición
-- [ ] `[WEB]` Sección "Ingresos" en `HoldingsPage` con total de dividendos del año
-- [ ] `[MOB]` Mostrar rendimiento total (PnL + dividendos) en la pantalla de cartera
+- [ ] Implementar `useInfiniteQuery` en `src/api/transactions.api.ts`
+- [ ] Pasar a `FlatList` con `onEndReached` para cargar siguiente página
+- [ ] Aplicar el mismo patrón en `notifications.tsx`
+
+### 12. Pipeline CI/CD `[API]` `[WEB]` `[MOB]`
+
+No hay `.github/workflows`. Cada push al repo no valida automáticamente.
+
+- [ ] Crear `.github/workflows/ci.yml`: lint + typecheck + tests en cada PR
+- [ ] Separar job de build para web y API
+- [ ] Badge de estado en el README
+
+### 13. Selector de moneda en transacciones multi-cuenta `[WEB]` `[MOB]`
+
+Si una cuenta es en USD y otra en EUR, la transferencia entre ellas no tiene campo de tipo de cambio.
+
+- [ ] `[API]` Añadir campo `exchangeRate` en `TransactionSchema` para transferencias inter-moneda
+- [ ] `[WEB]` Mostrar campo de tipo de cambio en `TransferFormDialog` cuando las monedas difieren
+- [ ] `[MOB]` Igual en `QuickAddModal` para transferencias
+
+### 14. Deep links y notificaciones con navegación `[MOB]`
+
+Las push notifications llegan pero al tocarlas abren la app en la pantalla inicial, sin navegar al contenido relevante.
+
+- [ ] Añadir campo `deepLink` al payload de notificación en `push.service.ts`
+- [ ] En `useNotificationSetup.ts`, manejar `addNotificationResponseReceivedListener` y navegar a la ruta
+- [ ] Ejemplos: notificación de presupuesto → navegar a `/(tabs)/budgets`, alerta de precio → `/(tabs)/portfolio`
+
+### 15. Modo oscuro mobile (dark theme) `[MOB]`
+
+El tema en mobile tiene colores definidos pero el toggle solo alterna en web. En mobile `useTheme` siempre devuelve el tema claro.
+
+- [ ] En `useTheme.ts` y/o `_layout.tsx`, leer `user.preferences.theme` del authStore
+- [ ] Propagar el tema al `configStore` para persistirlo localmente
+- [ ] Verificar que todos los componentes usan `c.bg`, `c.card`, etc. en lugar de colores hardcoded
 
 ---
 
 ## Resumen ejecutivo
 
-| #   | Tarea                                 | Paquetes        | Prioridad | Estado |
-| --- | ------------------------------------- | --------------- | --------- | ------ |
-| 1   | Push notification endpoint            | API             | 🔴        | ✅     |
-| 2   | Eliminar ficheros placeholder         | API             | 🔴        | ✅     |
-| 3   | Pantalla Presupuestos mobile          | MOB             | 🟡        | ✅     |
-| 4   | Pantalla Metas mobile                 | MOB             | 🟡        | ✅     |
-| 5   | Pantalla Cuentas mobile               | MOB             | 🟡        | ✅     |
-| 6   | Pantalla Notificaciones mobile        | MOB             | 🟡        | ⏳     |
-| 7   | Settings mobile completo              | MOB             | 🟡        | ✅     |
-| 8   | Filtro de fechas interactivo mobile   | MOB             | 🟡        | ✅     |
-| 9   | Editar/eliminar transacciones mobile  | MOB             | 🟡        | ✅     |
-| 10  | Botón "+" en tab Transacciones mobile | MOB             | 🟡        | ✅     |
-| 11  | Gráfico home con datos reales         | MOB             | 🟡        | ✅     |
-| 12  | UI Reglas de categorización           | WEB             | 🟡        | ✅     |
-| 13  | UI Gestión de categorías              | WEB             | 🟡        | ✅     |
-| 14  | UI Transacciones recurrentes          | WEB             | 🟡        | ✅     |
-| 15  | Dark mode web funcional               | WEB             | 🟡        | ⏳     |
-| 16  | 2FA implementación                    | API             | 🟡        | ⏳     |
-| 17  | POST /transactions/recurring          | API             | 🟡        | ✅     |
-| 18  | Importar transacciones CSV            | API + WEB + MOB | 🟢        | ⏳     |
-| 19  | Depósito rápido a meta                | API + WEB + MOB | 🟢        | ✅     |
-| 20  | Gestión y filtro de tags              | WEB + MOB       | 🟢        | ✅     |
-| 21  | Calendario de recurrentes             | WEB + MOB       | 🟢        | ✅     |
-| 22  | Gráfico presupuesto vs real           | WEB + MOB       | 🟢        | ✅     |
-| 23  | Página de seguridad web               | WEB             | 🟢        | ⏳     |
-| 24  | Score de salud financiera             | API + WEB + MOB | 🟢        | ✅     |
-| 25  | Integración Plaid                     | API             | 🟢        | ⏳     |
-| 26  | Búsqueda global                       | WEB + MOB       | 🟢        | ✅     |
-| 27  | Simuladores mobile                    | MOB             | 🟢        | ✅     |
-| 28  | Dividendos y rendimientos             | API + WEB + MOB | 🟢        | ⏳     |
+| #   | Tarea                                  | Paquetes        | Prioridad | Estado |
+| --- | -------------------------------------- | --------------- | --------- | ------ |
+| 1   | 2FA completo                           | API + WEB       | 🔴        | ✅     |
+| 2   | Página seguridad web (cambio password) | WEB             | 🟡        | ✅     |
+| 3   | Importar transacciones CSV             | API + WEB + MOB | 🟡        | ⏳     |
+| 4   | Dividendos y rendimientos              | API + WEB + MOB | 🟡        | ⏳     |
+| 5   | Detalle de cuenta mobile               | MOB             | 🟡        | ⏳     |
+| 6   | Pantalla Informes mobile               | MOB             | 🟡        | ⏳     |
+| 7   | Alertas de precio en cartera           | API + WEB + MOB | 🟡        | ⏳     |
+| 8   | Integración Plaid                      | API             | 🟢        | ⏳     |
+| 9   | Autenticación biométrica mobile        | MOB             | 🟢        | ⏳     |
+| 10  | Tests paquete web                      | WEB             | 🟢        | ⏳     |
+| 11  | Infinite scroll listas mobile          | MOB             | 🟢        | ⏳     |
+| 12  | Pipeline CI/CD                         | API + WEB + MOB | 🟢        | ⏳     |
+| 13  | Tipo de cambio en transferencias       | API + WEB + MOB | 🟢        | ✅     |
+| 14  | Deep links desde notificaciones        | MOB             | 🟢        | ⏳     |
+| 15  | Dark mode mobile                       | MOB             | 🟢        | ⏳     |

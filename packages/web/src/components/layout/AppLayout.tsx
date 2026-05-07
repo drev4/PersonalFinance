@@ -8,9 +8,12 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Moon,
   PiggyBank,
   Plug,
   Search,
+  Shield,
+  Sun,
   Tag,
   Target,
   TrendingUp,
@@ -20,9 +23,11 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import type React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import { updateMe } from '../../api/auth.api';
 import { useLogout, useMe } from '../../hooks/useAuth';
 import { cn } from '../../lib/utils';
 import { useAuthStore } from '../../stores/authStore';
+import { useThemeStore } from '../../stores/themeStore';
 import { NotificationBell } from '../notifications/NotificationBell';
 import { CommandPalette } from '../search/CommandPalette';
 import { Button } from '../ui/button';
@@ -88,6 +93,11 @@ const SETTINGS_NAV_ITEMS: NavItem[] = [
     to: '/settings/profile',
     icon: <User className="h-5 w-5 flex-shrink-0" aria-hidden="true" />,
     label: 'Perfil',
+  },
+  {
+    to: '/settings/security',
+    icon: <Shield className="h-5 w-5 flex-shrink-0" aria-hidden="true" />,
+    label: 'Seguridad',
   },
   {
     to: '/settings/categories',
@@ -245,10 +255,24 @@ function Sidebar({ open, onClose }: SidebarProps): React.ReactElement {
 export default function AppLayout(): React.ReactElement {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const theme = useThemeStore((s) => s.theme);
+  const setTheme = useThemeStore((s) => s.setTheme);
+  const setAuth = useAuthStore((s) => s.setAuth);
+  const accessToken = useAuthStore((s) => s.accessToken);
   useMe(); // Sincroniza baseCurrency, locale y otros cambios de perfil hechos desde mobile
 
   const openPalette = useCallback(() => setPaletteOpen(true), []);
   const closePalette = useCallback(() => setPaletteOpen(false), []);
+
+  function handleThemeToggle(): void {
+    const newTheme: 'light' | 'dark' = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    void updateMe({ preferences: { theme: newTheme } })
+      .then((updated) => {
+        if (accessToken) setAuth(updated, accessToken);
+      })
+      .catch(() => {});
+  }
 
   // Global ⌘K / Ctrl+K shortcut
   useEffect(() => {
@@ -297,7 +321,7 @@ export default function AppLayout(): React.ReactElement {
             </div>
           </div>
 
-          {/* Center/Right: search trigger + notification bell */}
+          {/* Center/Right: search + theme toggle + notification bell */}
           <div className="flex items-center gap-2 ml-auto">
             <button
               type="button"
@@ -310,6 +334,18 @@ export default function AppLayout(): React.ReactElement {
               <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-gray-400">
                 ⌘K
               </kbd>
+            </button>
+            <button
+              type="button"
+              onClick={handleThemeToggle}
+              className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+              aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+            >
+              {theme === 'dark' ? (
+                <Sun className="h-5 w-5" aria-hidden="true" />
+              ) : (
+                <Moon className="h-5 w-5" aria-hidden="true" />
+              )}
             </button>
             <NotificationBell />
           </div>
