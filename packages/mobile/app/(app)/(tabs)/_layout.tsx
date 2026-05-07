@@ -1,18 +1,20 @@
 import { Tabs, useRouter } from 'expo-router';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import {
-  Home,
   ArrowRightLeft,
-  Wallet,
-  Settings,
-  Plus,
+  Bell,
+  Calculator,
   ChartPie,
-  Target,
+  Home,
   Landmark,
+  Plus,
   Repeat2,
   Search,
-  Calculator,
+  Settings,
+  Target,
+  Wallet,
 } from 'lucide-react-native';
+import { useUnreadCount } from '@/api/notifications';
 import { colors, radius, shadow } from '@/theme';
 
 const createIcon = (Icon: React.ElementType) => {
@@ -25,6 +27,8 @@ const createIcon = (Icon: React.ElementType) => {
 
 export default function TabLayout() {
   const router = useRouter();
+  const { data: unreadData } = useUnreadCount();
+  const unreadBadge = unreadData && unreadData.count > 0 ? unreadData.count : undefined;
 
   return (
     <View style={styles.container}>
@@ -64,6 +68,14 @@ export default function TabLayout() {
         <Tabs.Screen
           name="simulators"
           options={{ title: 'Simuladores', tabBarIcon: createIcon(Calculator) }}
+        />
+        <Tabs.Screen
+          name="notifications"
+          options={{
+            tabBarBadge: unreadBadge,
+            tabBarIcon: createIcon(Bell),
+            title: 'Notificaciones',
+          }}
         />
         <Tabs.Screen
           name="settings"

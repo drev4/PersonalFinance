@@ -16,7 +16,7 @@ export interface Notification {
   title: string;
   message: string;
   data?: Record<string, any>;
-  read: boolean;
+  isRead: boolean;
   createdAt: string;
   updatedAt: string;
 }
