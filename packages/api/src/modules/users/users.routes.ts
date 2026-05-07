@@ -9,6 +9,7 @@ import {
   addPushToken,
   removePushToken,
 } from './user.repository.js';
+import { setup2FA, verify2FA, disable2FA, AuthError } from '../auth/auth.service.js';
 import { AuditLogModel } from '../audit/auditLog.model.js';
 import type { SafeUser } from '../auth/auth.service.js';
 import type { IUser } from './user.model.js';
@@ -47,6 +48,14 @@ const ChangePasswordBodySchema = z.object({
     .min(8, 'New password must be at least 8 characters')
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
     .regex(/[0-9]/, 'Password must contain at least one number'),
+});
+
+const Verify2FABodySchema = z.object({
+  totpCode: z.string().length(6, 'Code must be 6 digits'),
+});
+
+const Disable2FABodySchema = z.object({
+  password: z.string().min(1, 'Password is required'),
 });
 
 // ---- Helpers ---------------------------------------------------------------
@@ -216,6 +225,73 @@ async function removePushTokenHandler(
   return reply.status(204).send();
 }
 
+async function setup2FAHandler(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  try {
+    const result = await setup2FA(request.user.userId);
+    return reply.status(200).send({ data: result });
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return reply.status(err.statusCode).send({ error: { code: err.code, message: err.message } });
+    }
+    throw err;
+  }
+}
+
+async function verify2FAHandler(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const parsed = Verify2FABodySchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid request body',
+        details: parsed.error.flatten(),
+      },
+    });
+  }
+
+  try {
+    await verify2FA(request.user.userId, parsed.data.totpCode);
+    return reply.status(200).send({ data: { message: '2FA enabled successfully' } });
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return reply.status(err.statusCode).send({ error: { code: err.code, message: err.message } });
+    }
+    throw err;
+  }
+}
+
+async function disable2FAHandler(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const parsed = Disable2FABodySchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid request body',
+        details: parsed.error.flatten(),
+      },
+    });
+  }
+
+  try {
+    await disable2FA(request.user.userId, parsed.data.password);
+    return reply.status(200).send({ data: { message: '2FA disabled successfully' } });
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return reply.status(err.statusCode).send({ error: { code: err.code, message: err.message } });
+    }
+    throw err;
+  }
+}
+
 // ---- Route registration ----------------------------------------------------
 
 export async function registerUsersRoutes(fastify: FastifyInstance): Promise<void> {
@@ -228,5 +304,8 @@ export async function registerUsersRoutes(fastify: FastifyInstance): Promise<voi
     usersScope.patch('/users/me/password', changePasswordHandler);
     usersScope.post('/users/push-token', registerPushTokenHandler);
     usersScope.delete('/users/push-token', removePushTokenHandler);
+    usersScope.post('/users/me/2fa/setup', setup2FAHandler);
+    usersScope.post('/users/me/2fa/verify', verify2FAHandler);
+    usersScope.post('/users/me/2fa/disable', disable2FAHandler);
   });
 }

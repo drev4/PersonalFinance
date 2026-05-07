@@ -81,3 +81,23 @@ export async function getUserPushTokens(id: string): Promise<string[]> {
   const user = await UserModel.findById(id, 'pushTokens').lean().exec();
   return (user as { pushTokens?: string[] } | null)?.pushTokens ?? [];
 }
+
+export async function getTwoFactorSecret(id: string): Promise<string | null> {
+  const user = await UserModel.findById(id).select('+twoFactorSecret').exec();
+  return user?.twoFactorSecret ?? null;
+}
+
+export async function setTwoFactorSecret(id: string, secret: string): Promise<void> {
+  await UserModel.findByIdAndUpdate(id, { $set: { twoFactorSecret: secret } }).exec();
+}
+
+export async function enableTwoFactor(id: string): Promise<void> {
+  await UserModel.findByIdAndUpdate(id, { $set: { twoFactorEnabled: true } }).exec();
+}
+
+export async function disableTwoFactor(id: string): Promise<void> {
+  await UserModel.findByIdAndUpdate(id, {
+    $set: { twoFactorEnabled: false },
+    $unset: { twoFactorSecret: '' },
+  }).exec();
+}
