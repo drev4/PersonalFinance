@@ -47,10 +47,10 @@ export interface CreateTransactionDTO {
   description: string;
   categoryId?: string;
   toAccountId?: string;
+  exchangeRate?: number;
   tags?: string[];
   notes?: string;
 }
-
 
 export const useCategories = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
@@ -198,6 +198,7 @@ export const useCreateTransaction = () => {
             amount: data.amount,
             date: data.date,
             description: data.description,
+            exchangeRate: data.exchangeRate,
           },
         );
         return response.data.data;

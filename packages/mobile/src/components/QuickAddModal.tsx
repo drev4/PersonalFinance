@@ -36,6 +36,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [selectedToAccountId, setSelectedToAccountId] = useState<string>('');
+  const [exchangeRate, setExchangeRate] = useState('');
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showToAccountPicker, setShowToAccountPicker] = useState(false);
@@ -76,6 +77,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
     setType(newType);
     setSelectedCategoryId('');
     setSelectedToAccountId('');
+    setExchangeRate('');
     setShowToAccountPicker(false);
     setShowCategoryPicker(false);
   };
@@ -96,6 +98,17 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
   });
   const selectedToAccount = accounts.find((a) => a._id === selectedToAccountId);
 
+  const isCrossCurrency =
+    type === 'transfer' &&
+    selectedAccount !== undefined &&
+    selectedToAccount !== undefined &&
+    selectedAccount.currency !== selectedToAccount.currency;
+  const parsedExchangeRate = parseFloat(exchangeRate.replace(',', '.'));
+  const toAmount =
+    isCrossCurrency && parsedExchangeRate > 0 && parseFloat(amount.replace(',', '.')) > 0
+      ? (parseFloat(amount.replace(',', '.')) * parsedExchangeRate).toFixed(2)
+      : null;
+
   const handleSubmit = async () => {
     if (!amount || !selectedAccountId || !description) {
       Alert.alert('Error', 'Por favor completa cantidad, cuenta y descripción');
@@ -103,6 +116,10 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
     }
     if (type === 'transfer' && !selectedToAccountId) {
       Alert.alert('Error', 'Por favor selecciona una cuenta destino');
+      return;
+    }
+    if (isCrossCurrency && !(parsedExchangeRate > 0)) {
+      Alert.alert('Error', 'Indica el tipo de cambio para transferir entre monedas distintas');
       return;
     }
     if (type !== 'transfer' && !selectedCategoryId) {
@@ -123,6 +140,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
         description,
         categoryId: type === 'transfer' ? undefined : selectedCategoryId,
         toAccountId: type === 'transfer' ? selectedToAccountId : undefined,
+        exchangeRate: isCrossCurrency ? parsedExchangeRate : undefined,
         tags: finalTags.length > 0 ? finalTags : undefined,
         notes: notes || undefined,
       },
@@ -139,7 +157,13 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
 
   const isValid =
     type === 'transfer'
-      ? !!(amount && selectedAccountId && description && selectedToAccountId)
+      ? !!(
+          amount &&
+          selectedAccountId &&
+          description &&
+          selectedToAccountId &&
+          (!isCrossCurrency || parsedExchangeRate > 0)
+        )
       : !!(amount && selectedAccountId && description && selectedCategoryId);
 
   const activeColor = TYPE_CONFIG[type].color;
@@ -218,7 +242,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
             <Text style={styles.selectorText}>{selectedAccount?.name || 'Seleccionar cuenta'}</Text>
             {selectedAccount && (
               <Text style={styles.selectorSub}>
-                {formatCurrency(selectedAccount.currentBalance)}
+                {formatCurrency(selectedAccount.currentBalance)} · {selectedAccount.currency}
               </Text>
             )}
           </TouchableOpacity>
@@ -254,54 +278,82 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
 
         {/* Category or To-Account */}
         {type === 'transfer' ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Cuenta destino</Text>
-            <TouchableOpacity
-              style={styles.selectorBtn}
-              onPress={() => setShowToAccountPicker(!showToAccountPicker)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.selectorText}>
-                {selectedToAccount?.name || 'Seleccionar cuenta'}
-              </Text>
-              {selectedToAccount && (
-                <Text style={styles.selectorSub}>
-                  {formatCurrency(selectedToAccount.currentBalance)}
+          <>
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Cuenta destino</Text>
+              <TouchableOpacity
+                style={styles.selectorBtn}
+                onPress={() => setShowToAccountPicker(!showToAccountPicker)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.selectorText}>
+                  {selectedToAccount?.name || 'Seleccionar cuenta'}
                 </Text>
-              )}
-            </TouchableOpacity>
-            {showToAccountPicker && (
-              <View style={styles.pickerList}>
-                {accounts
-                  .filter((a) => a._id !== selectedAccountId)
-                  .map((item) => (
-                    <TouchableOpacity
-                      key={item._id}
-                      style={[
-                        styles.pickerItem,
-                        selectedToAccountId === item._id && styles.pickerItemActive,
-                      ]}
-                      onPress={() => {
-                        setSelectedToAccountId(item._id);
-                        setShowToAccountPicker(false);
-                      }}
-                    >
-                      <Text
+                {selectedToAccount && (
+                  <Text style={styles.selectorSub}>
+                    {formatCurrency(selectedToAccount.currentBalance)}
+                  </Text>
+                )}
+              </TouchableOpacity>
+              {showToAccountPicker && (
+                <View style={styles.pickerList}>
+                  {accounts
+                    .filter((a) => a._id !== selectedAccountId)
+                    .map((item) => (
+                      <TouchableOpacity
+                        key={item._id}
                         style={[
-                          styles.pickerItemText,
-                          selectedToAccountId === item._id && { color: colors.primary },
+                          styles.pickerItem,
+                          selectedToAccountId === item._id && styles.pickerItemActive,
                         ]}
+                        onPress={() => {
+                          setSelectedToAccountId(item._id);
+                          setShowToAccountPicker(false);
+                          setExchangeRate('');
+                        }}
                       >
-                        {item.name}
-                      </Text>
-                      <Text style={styles.pickerItemSub}>
-                        {formatCurrency(item.currentBalance)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={[
+                            styles.pickerItemText,
+                            selectedToAccountId === item._id && { color: colors.primary },
+                          ]}
+                        >
+                          {item.name}
+                        </Text>
+                        <Text style={styles.pickerItemSub}>
+                          {formatCurrency(item.currentBalance)} · {item.currency}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                </View>
+              )}
+            </View>
+
+            {/* Exchange rate — only when currencies differ */}
+            {isCrossCurrency && (
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>
+                  Tipo de cambio ({selectedAccount!.currency} → {selectedToAccount!.currency}) *
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="1.00"
+                  placeholderTextColor={colors.textTertiary}
+                  value={exchangeRate}
+                  onChangeText={setExchangeRate}
+                  keyboardType="decimal-pad"
+                />
+                {toAmount !== null && (
+                  <Text style={[styles.exchangeHint, { color: colors.textSecondary }]}>
+                    El destinatario recibirá{' '}
+                    <Text style={{ fontWeight: '700', color: colors.transfer }}>
+                      {toAmount} {selectedToAccount!.currency}
+                    </Text>
+                  </Text>
+                )}
               </View>
             )}
-          </View>
+          </>
         ) : (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Categoría</Text>
@@ -386,20 +438,46 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
           <View
             style={[
               styles.input,
-              { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs, minHeight: 50, paddingVertical: spacing.sm },
+              {
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                gap: spacing.xs,
+                minHeight: 50,
+                paddingVertical: spacing.sm,
+              },
             ]}
           >
             {tags.map((tag) => (
-              <View key={tag} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primaryLight, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.full }}>
+              <View
+                key={tag}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                  backgroundColor: colors.primaryLight,
+                  paddingHorizontal: spacing.sm,
+                  paddingVertical: 4,
+                  borderRadius: radius.full,
+                }}
+              >
                 <Tag size={10} color={colors.primary} />
-                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>{tag}</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>
+                  {tag}
+                </Text>
                 <TouchableOpacity onPress={() => removeTag(tag)} hitSlop={6}>
                   <X size={12} color={colors.primary} />
                 </TouchableOpacity>
               </View>
             ))}
             <TextInput
-              style={{ flex: 1, minWidth: 100, fontSize: 14, color: colors.text, paddingVertical: 0 }}
+              style={{
+                flex: 1,
+                minWidth: 100,
+                fontSize: 14,
+                color: colors.text,
+                paddingVertical: 0,
+              }}
               placeholder={tags.length === 0 ? 'Etiqueta, Enter...' : ''}
               placeholderTextColor={colors.textTertiary}
               value={tagInput}
@@ -620,6 +698,10 @@ function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>)
       color: colors.white,
       fontSize: 17,
       fontWeight: '700',
+    },
+    exchangeHint: {
+      fontSize: 13,
+      marginTop: spacing.xs,
     },
   });
 }

@@ -62,6 +62,7 @@ const CreateTransferSchema = z.object({
   date: flexDate,
   description: z.string().min(1).max(500),
   currency: z.string().length(3).toUpperCase().optional(),
+  exchangeRate: z.number().positive().optional(),
   tags: z.array(z.string()).optional(),
 });
 
@@ -106,10 +107,7 @@ const CashflowQuerySchema = z.object({
 
 // ---- Error handler -----------------------------------------------------------
 
-function handleTxError(
-  error: unknown,
-  reply: FastifyReply,
-): void | FastifyReply {
+function handleTxError(error: unknown, reply: FastifyReply): void | FastifyReply {
   if (error instanceof TransactionError) {
     return reply.status(error.statusCode).send({
       error: { code: error.code, message: error.message },
@@ -120,9 +118,7 @@ function handleTxError(
 
 // ---- Route registration ------------------------------------------------------
 
-export async function registerTransactionRoutes(
-  fastify: FastifyInstance,
-): Promise<void> {
+export async function registerTransactionRoutes(fastify: FastifyInstance): Promise<void> {
   // GET /transactions/stats/spending-by-category
   fastify.get(
     '/transactions/stats/spending-by-category',
@@ -142,87 +138,65 @@ export async function registerTransactionRoutes(
     async (request, reply) => {
       const { userId } = request.user;
       const query = CashflowQuerySchema.parse(request.query);
-      const months = typeof query.months === 'string'
-        ? parseInt(query.months, 10)
-        : query.months;
+      const months = typeof query.months === 'string' ? parseInt(query.months, 10) : query.months;
       const data = await getCashflow(userId, months);
       return reply.send({ data });
     },
   );
 
   // GET /transactions/tags
-  fastify.get(
-    '/transactions/tags',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const tags = await getDistinctTags(userId);
-      return reply.send({ data: tags });
-    },
-  );
+  fastify.get('/transactions/tags', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const tags = await getDistinctTags(userId);
+    return reply.send({ data: tags });
+  });
 
   // GET /transactions
-  fastify.get(
-    '/transactions',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const filters = ListQuerySchema.parse(request.query);
-      const result = await getTransactions(userId, filters as any);
-      return reply.send({ data: result });
-    },
-  );
+  fastify.get('/transactions', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const filters = ListQuerySchema.parse(request.query);
+    const result = await getTransactions(userId, filters as any);
+    return reply.send({ data: result });
+  });
 
   // POST /transactions/transfer
-  fastify.post(
-    '/transactions/transfer',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const body = CreateTransferSchema.parse(request.body);
+  fastify.post('/transactions/transfer', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const body = CreateTransferSchema.parse(request.body);
 
-      try {
-        const result = await createTransfer(userId, body as any);
-        return reply.status(201).send({ data: result });
-      } catch (err) {
-        return handleTxError(err, reply);
-      }
-    },
-  );
+    try {
+      const result = await createTransfer(userId, body as any);
+      return reply.status(201).send({ data: result });
+    } catch (err) {
+      return handleTxError(err, reply);
+    }
+  });
 
   // POST /transactions/bulk
-  fastify.post(
-    '/transactions/bulk',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const body = BulkCreateSchema.parse(request.body);
+  fastify.post('/transactions/bulk', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const body = BulkCreateSchema.parse(request.body);
 
-      const result = await bulkCreate(
-        userId,
-        body.transactions.map((t) => ({ ...t, userId })) as any,
-      );
+    const result = await bulkCreate(
+      userId,
+      body.transactions.map((t) => ({ ...t, userId })) as any,
+    );
 
-      return reply.status(201).send({ data: result });
-    },
-  );
+    return reply.status(201).send({ data: result });
+  });
 
   // POST /transactions
-  fastify.post(
-    '/transactions',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const body = CreateTransactionSchema.parse(request.body);
+  fastify.post('/transactions', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const body = CreateTransactionSchema.parse(request.body);
 
-      try {
-        const tx = await createTransaction(userId, { ...body, userId } as any);
-        return reply.status(201).send({ data: tx });
-      } catch (err) {
-        return handleTxError(err, reply);
-      }
-    },
-  );
+    try {
+      const tx = await createTransaction(userId, { ...body, userId } as any);
+      return reply.status(201).send({ data: tx });
+    } catch (err) {
+      return handleTxError(err, reply);
+    }
+  });
 
   // GET /transactions/:id
   fastify.get(
