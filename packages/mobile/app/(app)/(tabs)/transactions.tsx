@@ -14,10 +14,25 @@ import {
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronDown, ChevronUp, ChevronLeft, X, Pencil, Trash2, Plus, Tag } from 'lucide-react-native';
+import {
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  X,
+  Pencil,
+  Trash2,
+  Plus,
+  Tag,
+} from 'lucide-react-native';
 import { useState, useMemo, useRef, useCallback, memo, type ReactNode } from 'react';
 import * as Haptics from 'expo-haptics';
-import { useTransactions, useAccounts, useCategories, useDeleteTransaction, useTransactionTags } from '@/api/transactions';
+import {
+  useInfiniteTransactions,
+  useAccounts,
+  useCategories,
+  useDeleteTransaction,
+  useTransactionTags,
+} from '@/api/transactions';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { radius, spacing, type ThemeColors, getShadow } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
@@ -26,74 +41,82 @@ import { EditTransactionModal } from '@/components/EditTransactionModal';
 
 const SWIPE_DELETE_WIDTH = 80;
 
-const SwipeableRow = memo(({
-  children,
-  onDelete,
-  deleteColor,
-  rowBg,
-}: {
-  children: ReactNode;
-  onDelete: () => void;
-  deleteColor: string;
-  rowBg: string;
-}) => {
-  const translateX = useRef(new Animated.Value(0)).current;
-  // Tracks the resting offset so gestures compose from the correct baseline
-  const offset = useRef(0);
+const SwipeableRow = memo(
+  ({
+    children,
+    onDelete,
+    deleteColor,
+    rowBg,
+  }: {
+    children: ReactNode;
+    onDelete: () => void;
+    deleteColor: string;
+    rowBg: string;
+  }) => {
+    const translateX = useRef(new Animated.Value(0)).current;
+    // Tracks the resting offset so gestures compose from the correct baseline
+    const offset = useRef(0);
 
-  const panResponder = useRef(
-    PanResponder.create({
-      // When row is already open, grab the touch immediately before TouchableOpacity claims it
-      onStartShouldSetPanResponder: () => offset.current !== 0,
-      onMoveShouldSetPanResponder: (_, gs) => {
-        if (Math.abs(gs.dy) > Math.abs(gs.dx)) return false;
-        return gs.dx < -8;
-      },
-      onPanResponderMove: (_, gs) => {
-        const next = Math.max(-SWIPE_DELETE_WIDTH, Math.min(0, offset.current + gs.dx));
-        translateX.setValue(next);
-      },
-      onPanResponderRelease: (_, gs) => {
-        const landed = offset.current + gs.dx;
-        if (landed < -(SWIPE_DELETE_WIDTH / 2)) {
-          Animated.spring(translateX, { toValue: -SWIPE_DELETE_WIDTH, useNativeDriver: true }).start();
-          offset.current = -SWIPE_DELETE_WIDTH;
-        } else {
-          Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
-          offset.current = 0;
-        }
-      },
-    })
-  ).current;
+    const panResponder = useRef(
+      PanResponder.create({
+        // When row is already open, grab the touch immediately before TouchableOpacity claims it
+        onStartShouldSetPanResponder: () => offset.current !== 0,
+        onMoveShouldSetPanResponder: (_, gs) => {
+          if (Math.abs(gs.dy) > Math.abs(gs.dx)) return false;
+          return gs.dx < -8;
+        },
+        onPanResponderMove: (_, gs) => {
+          const next = Math.max(-SWIPE_DELETE_WIDTH, Math.min(0, offset.current + gs.dx));
+          translateX.setValue(next);
+        },
+        onPanResponderRelease: (_, gs) => {
+          const landed = offset.current + gs.dx;
+          if (landed < -(SWIPE_DELETE_WIDTH / 2)) {
+            Animated.spring(translateX, {
+              toValue: -SWIPE_DELETE_WIDTH,
+              useNativeDriver: true,
+            }).start();
+            offset.current = -SWIPE_DELETE_WIDTH;
+          } else {
+            Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
+            offset.current = 0;
+          }
+        },
+      }),
+    ).current;
 
-  const close = useCallback(() => {
-    Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
-    offset.current = 0;
-  }, [translateX]);
+    const close = useCallback(() => {
+      Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
+      offset.current = 0;
+    }, [translateX]);
 
-  return (
-    <View style={{ backgroundColor: deleteColor }}>
-      {/* Delete action — visible at right edge as row slides left */}
-      <View style={swipeStyles.deleteAction}>
-        <TouchableOpacity
-          onPress={() => { close(); onDelete(); }}
-          style={swipeStyles.deleteBtn}
-          activeOpacity={0.8}
+    return (
+      <View style={{ backgroundColor: deleteColor }}>
+        {/* Delete action — visible at right edge as row slides left */}
+        <View style={swipeStyles.deleteAction}>
+          <TouchableOpacity
+            onPress={() => {
+              close();
+              onDelete();
+            }}
+            style={swipeStyles.deleteBtn}
+            activeOpacity={0.8}
+          >
+            <Trash2 size={20} color="#fff" />
+            <Text style={swipeStyles.deleteBtnText}>Eliminar</Text>
+          </TouchableOpacity>
+        </View>
+        {/* Opaque row slides on top of the red background */}
+        <Animated.View
+          style={{ transform: [{ translateX }], backgroundColor: rowBg }}
+          {...panResponder.panHandlers}
         >
-          <Trash2 size={20} color="#fff" />
-          <Text style={swipeStyles.deleteBtnText}>Eliminar</Text>
-        </TouchableOpacity>
+          {children}
+        </Animated.View>
       </View>
-      {/* Opaque row slides on top of the red background */}
-      <Animated.View
-        style={{ transform: [{ translateX }], backgroundColor: rowBg }}
-        {...panResponder.panHandlers}
-      >
-        {children}
-      </Animated.View>
-    </View>
-  );
-});
+    );
+  },
+);
 
 const swipeStyles = StyleSheet.create({
   deleteAction: {
@@ -198,20 +221,34 @@ export default function TransactionsScreen() {
     ...(categoryId && { categoryId }),
     ...(type && { type }),
     ...(selectedTags.length > 0 && { tags: selectedTags }),
-    page: 1,
-    limit: 100,
   };
 
-  const { data: response, isLoading } = useTransactions(filters);
+  const {
+    data: infiniteData,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteTransactions(filters);
 
   const categoryMap = useMemo(
     () => Object.fromEntries(categoriesData.map((c) => [c._id, c])),
     [categoriesData],
   );
 
-  const transactions: Transaction[] = response?.data || [];
+  const transactions: Transaction[] = useMemo(
+    () => infiniteData?.pages.flatMap((p) => p.data) ?? [],
+    [infiniteData],
+  );
+  const totalCount = infiniteData?.pages[0]?.meta.total ?? 0;
+
   const hasActiveFilters =
-    from !== DEFAULT_FROM || to !== DEFAULT_TO || accountId || categoryId || type || selectedTags.length > 0;
+    from !== DEFAULT_FROM ||
+    to !== DEFAULT_TO ||
+    accountId ||
+    categoryId ||
+    type ||
+    selectedTags.length > 0;
 
   const handleClearFilters = () => {
     setFrom(DEFAULT_FROM);
@@ -235,28 +272,31 @@ export default function TransactionsScreen() {
 
   const getTransactionId = (tx: Transaction) => tx._id || tx.id || '';
 
-  const confirmDelete = useCallback((id: string, onSuccess?: () => void) => {
-    Alert.alert(
-      'Eliminar transacción',
-      '¿Estás seguro de que quieres eliminar esta transacción?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: () => {
-            deleteTransaction(id, {
-              onSuccess: async () => {
-                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                onSuccess?.();
-              },
-              onError: () => Alert.alert('Error', 'No se pudo eliminar la transacción'),
-            });
+  const confirmDelete = useCallback(
+    (id: string, onSuccess?: () => void) => {
+      Alert.alert(
+        'Eliminar transacción',
+        '¿Estás seguro de que quieres eliminar esta transacción?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Eliminar',
+            style: 'destructive',
+            onPress: () => {
+              deleteTransaction(id, {
+                onSuccess: async () => {
+                  await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  onSuccess?.();
+                },
+                onError: () => Alert.alert('Error', 'No se pudo eliminar la transacción'),
+              });
+            },
           },
-        },
-      ],
-    );
-  }, [deleteTransaction]);
+        ],
+      );
+    },
+    [deleteTransaction],
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -265,10 +305,10 @@ export default function TransactionsScreen() {
         <View>
           <Text style={styles.title}>Movimientos</Text>
           <Text style={styles.subtitle}>
-            {transactions.length > 0
-              ? `${transactions.length} transacciones`
-              : isLoading
+            {isLoading
               ? 'Cargando...'
+              : totalCount > 0
+              ? `${totalCount} transacciones`
               : 'Historial de movimientos'}
           </Text>
         </View>
@@ -362,7 +402,9 @@ export default function TransactionsScreen() {
                 style={[styles.chip, selectedTags.length > 0 && styles.chipActive]}
                 onPress={() => setTagsModalVisible(true)}
               >
-                <Text style={[styles.chipLabel, selectedTags.length > 0 && styles.chipLabelActive]}>Etiquetas</Text>
+                <Text style={[styles.chipLabel, selectedTags.length > 0 && styles.chipLabelActive]}>
+                  Etiquetas
+                </Text>
                 <Text style={[styles.chipValue, selectedTags.length > 0 && styles.chipValueActive]}>
                   {selectedTags.length === 0
                     ? 'Todas'
@@ -397,6 +439,15 @@ export default function TransactionsScreen() {
           keyExtractor={getTransactionId}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
+          onEndReachedThreshold={0.3}
+          onEndReached={() => {
+            if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+          }}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <ActivityIndicator size="small" color={colors.primary} style={styles.footerLoader} />
+            ) : null
+          }
           renderItem={({ item }) => (
             <SwipeableRow
               onDelete={() => confirmDelete(getTransactionId(item))}
@@ -411,7 +462,9 @@ export default function TransactionsScreen() {
                   setDetailModalVisible(true);
                 }}
               >
-                <View style={[styles.txIconWrap, { backgroundColor: getTypeBg(item.type, colors) }]}>
+                <View
+                  style={[styles.txIconWrap, { backgroundColor: getTypeBg(item.type, colors) }]}
+                >
                   <Text style={[styles.txIconText, { color: getTypeColor(item.type, colors) }]}>
                     {getTypeLabel(item.type)}
                   </Text>
@@ -460,7 +513,14 @@ export default function TransactionsScreen() {
       >
         <View style={{ flex: 1, justifyContent: 'flex-end' }}>
           <Pressable
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' }}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.4)',
+            }}
             onPress={() => setDatePickerFor(null)}
           />
           <View style={styles.dateSheet}>
@@ -492,7 +552,14 @@ export default function TransactionsScreen() {
       >
         <View style={{ flex: 1, justifyContent: 'flex-end' }}>
           <Pressable
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' }}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.4)',
+            }}
             onPress={() => setTagsModalVisible(false)}
           />
           <View style={styles.dateSheet}>
@@ -512,9 +579,13 @@ export default function TransactionsScreen() {
                   <TouchableOpacity
                     key={tag}
                     style={{
-                      flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-                      paddingVertical: 14, paddingHorizontal: spacing.sm,
-                      borderBottomWidth: 1, borderBottomColor: colors.border,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: spacing.md,
+                      paddingVertical: 14,
+                      paddingHorizontal: spacing.sm,
+                      borderBottomWidth: 1,
+                      borderBottomColor: colors.border,
                     }}
                     onPress={() =>
                       setSelectedTags((prev) =>
@@ -525,16 +596,27 @@ export default function TransactionsScreen() {
                   >
                     <View
                       style={{
-                        width: 22, height: 22, borderRadius: 4,
+                        width: 22,
+                        height: 22,
+                        borderRadius: 4,
                         borderWidth: 1.5,
                         borderColor: active ? colors.primary : colors.border,
                         backgroundColor: active ? colors.primary : 'transparent',
-                        justifyContent: 'center', alignItems: 'center',
+                        justifyContent: 'center',
+                        alignItems: 'center',
                       }}
                     >
-                      {active && <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>✓</Text>}
+                      {active && (
+                        <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>✓</Text>
+                      )}
                     </View>
-                    <Text style={{ fontSize: 15, fontWeight: '600', color: active ? colors.primary : colors.text }}>
+                    <Text
+                      style={{
+                        fontSize: 15,
+                        fontWeight: '600',
+                        color: active ? colors.primary : colors.text,
+                      }}
+                    >
                       {tag}
                     </Text>
                   </TouchableOpacity>
@@ -546,7 +628,9 @@ export default function TransactionsScreen() {
                 style={{ marginTop: spacing.md, paddingVertical: spacing.sm, alignItems: 'center' }}
                 onPress={() => setSelectedTags([])}
               >
-                <Text style={{ fontSize: 14, color: colors.expense, fontWeight: '600' }}>Limpiar etiquetas</Text>
+                <Text style={{ fontSize: 14, color: colors.expense, fontWeight: '600' }}>
+                  Limpiar etiquetas
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -661,10 +745,7 @@ export default function TransactionsScreen() {
                                 <Text style={styles.detailValue}>{destAccount.name}</Text>
                                 <Text style={styles.detailSub}>
                                   Saldo:{' '}
-                                  {formatCurrency(
-                                    destAccount.currentBalance,
-                                    destAccount.currency,
-                                  )}
+                                  {formatCurrency(destAccount.currentBalance, destAccount.currency)}
                                 </Text>
                               </View>
                             </View>
@@ -733,7 +814,9 @@ export default function TransactionsScreen() {
                       }}
                     >
                       <Pencil size={16} color={colors.primary} />
-                      <Text style={[styles.detailActionText, { color: colors.primary }]}>Editar</Text>
+                      <Text style={[styles.detailActionText, { color: colors.primary }]}>
+                        Editar
+                      </Text>
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity
@@ -747,7 +830,9 @@ export default function TransactionsScreen() {
                     }
                   >
                     <Trash2 size={16} color={colors.expense} />
-                    <Text style={[styles.detailActionText, { color: colors.expense }]}>Eliminar</Text>
+                    <Text style={[styles.detailActionText, { color: colors.expense }]}>
+                      Eliminar
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </ScrollView>
@@ -861,6 +946,9 @@ function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>)
     listContent: {
       paddingHorizontal: spacing.xl,
       paddingBottom: 100,
+    },
+    footerLoader: {
+      paddingVertical: spacing.xl,
     },
     txRow: {
       flexDirection: 'row',
