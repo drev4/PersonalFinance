@@ -1,10 +1,13 @@
 import { apiClient } from '../lib/api';
 import type {
+  AddDividendDTO,
   Holding,
+  HoldingIncome,
   HoldingWithValue,
+  IncomeHistory,
+  ImportResult,
   PortfolioSummary,
   TickerSearchResult,
-  ImportResult,
   CreateHoldingDTO,
   UpdateHoldingDTO,
 } from '../types/api';
@@ -43,10 +46,7 @@ export async function searchTicker(
   return response.data.data;
 }
 
-export async function importFromCsv(
-  accountId: string,
-  csvContent: string,
-): Promise<ImportResult> {
+export async function importFromCsv(accountId: string, csvContent: string): Promise<ImportResult> {
   const response = await apiClient.post<{ data: ImportResult }>('/holdings/import-csv', {
     accountId,
     csvContent,
@@ -56,5 +56,18 @@ export async function importFromCsv(
 
 export async function getPortfolioSummary(): Promise<PortfolioSummary> {
   const response = await apiClient.get<{ data: PortfolioSummary }>('/holdings/portfolio/summary');
+  return response.data.data;
+}
+
+export async function addDividend(holdingId: string, data: AddDividendDTO): Promise<HoldingIncome> {
+  const response = await apiClient.post<{ data: HoldingIncome }>(
+    `/holdings/${holdingId}/dividend`,
+    data,
+  );
+  return response.data.data;
+}
+
+export async function getHoldingIncome(holdingId: string): Promise<IncomeHistory> {
+  const response = await apiClient.get<{ data: IncomeHistory }>(`/holdings/${holdingId}/income`);
   return response.data.data;
 }

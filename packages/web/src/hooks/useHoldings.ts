@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { UseQueryResult, UseMutationResult } from '@tanstack/react-query';
 import {
+  addDividend,
   getHoldings,
+  getHoldingIncome,
   getPortfolioSummary,
   createHolding,
   updateHolding,
@@ -9,17 +11,20 @@ import {
   searchTicker,
   importFromCsv,
 } from '../api/holdings.api';
-import { dashboardKeys } from './useDashboard';
-import { accountKeys } from './useAccounts';
 import type {
+  AddDividendDTO,
   Holding,
+  HoldingIncome,
   HoldingWithValue,
+  IncomeHistory,
+  ImportResult,
   PortfolioSummary,
   TickerSearchResult,
-  ImportResult,
   CreateHoldingDTO,
   UpdateHoldingDTO,
 } from '../types/api';
+import { accountKeys } from './useAccounts';
+import { dashboardKeys } from './useDashboard';
 
 // Precios cambian con más frecuencia que otros datos financieros
 const STALE_TIME = 1000 * 60 * 2; // 2 minutos
@@ -28,6 +33,7 @@ export const holdingKeys = {
   all: ['holdings'] as const,
   lists: () => [...holdingKeys.all, 'list'] as const,
   detail: (id: string) => [...holdingKeys.all, 'detail', id] as const,
+  income: (id: string) => [...holdingKeys.all, 'income', id] as const,
   portfolio: () => ['portfolio'] as const,
   ticker: (query: string, type: string) => ['ticker', query, type] as const,
 };
@@ -99,6 +105,32 @@ export function useDeleteHolding(): UseMutationResult<void, Error, string> {
       void queryClient.invalidateQueries({ queryKey: holdingKeys.portfolio() });
       void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+    },
+  });
+}
+
+export function useHoldingIncome(holdingId: string, enabled = true): UseQueryResult<IncomeHistory> {
+  return useQuery({
+    queryKey: holdingKeys.income(holdingId),
+    queryFn: () => getHoldingIncome(holdingId),
+    enabled: enabled && holdingId.length > 0,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useAddDividend(): UseMutationResult<
+  HoldingIncome,
+  Error,
+  { holdingId: string; data: AddDividendDTO }
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ holdingId, data }) => addDividend(holdingId, data),
+    onSuccess: (_result, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: holdingKeys.income(variables.holdingId),
+      });
+      void queryClient.invalidateQueries({ queryKey: holdingKeys.portfolio() });
     },
   });
 }

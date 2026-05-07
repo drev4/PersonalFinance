@@ -154,6 +154,7 @@ export interface CreateTransferDTO {
   amount: number;
   date: string;
   description: string;
+  exchangeRate?: number;
 }
 
 export interface CreateCategoryDTO {
@@ -360,8 +361,37 @@ export interface PortfolioSummary {
   totalCost: number;
   totalPnl: number;
   totalPnlPercentage: number;
+  totalDividendsYtd: number;
   byAssetType: { type: AssetType; value: number; percentage: number }[];
   topHoldings: HoldingWithValue[];
+}
+
+export type IncomeType = 'dividend' | 'staking';
+
+export interface HoldingIncome {
+  _id: string;
+  holdingId: string;
+  userId: string;
+  type: IncomeType;
+  amount: number;
+  currency: string;
+  date: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IncomeHistory {
+  records: HoldingIncome[];
+  totalYtd: number;
+}
+
+export interface AddDividendDTO {
+  type?: IncomeType;
+  amount: number;
+  currency: string;
+  date: string;
+  notes?: string;
 }
 
 export interface TickerSearchResult {
