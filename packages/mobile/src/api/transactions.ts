@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import client from './client';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -96,8 +96,47 @@ export interface TransactionResponse {
     total: number;
     page: number;
     limit: number;
+    totalPages: number;
   };
 }
+
+export type InfiniteTransactionFilters = Omit<TransactionFilters, 'page' | 'limit'>;
+
+const PAGE_SIZE = 30;
+
+function buildTransactionParams(
+  filters: InfiniteTransactionFilters,
+  page: number,
+): URLSearchParams {
+  const { tags, ...rest } = filters;
+  const params = new URLSearchParams();
+  Object.entries(rest).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') params.append(key, String(value));
+  });
+  if (tags && tags.length > 0) params.append('tags', tags.join(','));
+  params.append('page', String(page));
+  params.append('limit', String(PAGE_SIZE));
+  return params;
+}
+
+export const useInfiniteTransactions = (filters: InfiniteTransactionFilters) => {
+  const accessToken = useAuthStore((state) => state.accessToken);
+
+  return useInfiniteQuery({
+    queryKey: ['transactions', 'infinite', filters],
+    queryFn: async ({ pageParam }) => {
+      const params = buildTransactionParams(filters, pageParam as number);
+      const response = await client.get<{ data: TransactionResponse }>(
+        `/transactions?${params.toString()}`,
+      );
+      return response.data.data;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.page < lastPage.meta.totalPages ? lastPage.meta.page + 1 : undefined,
+    enabled: !!accessToken,
+  });
+};
 
 export const useTransactionTags = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
