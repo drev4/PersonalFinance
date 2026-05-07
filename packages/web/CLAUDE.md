@@ -2,147 +2,274 @@
 
 ## Stack
 
-React 18 · Vite 5 · React Router 6 · TanStack Query 5 · Zustand 4 · Axios · Tailwind 3 · Radix UI · Zod 4 · i18next · Recharts
+React 18 · Vite 5 · React Router 6 · TanStack Query 5 · Zustand 4 · Axios · Tailwind 3 · Radix UI · Zod 4 · i18next · Recharts · lucide-react
 
 ## Arranque
 
 ```bash
-pnpm dev      # Vite dev server — http://localhost:5173
-pnpm build    # build producción
+pnpm dev        # Vite dev server — http://localhost:5173
+pnpm build
 pnpm typecheck
 ```
 
-`VITE_API_URL` en `.env` apunta al API (default: `http://localhost:3001`)
+`VITE_API_URL` en `.env` (default: `http://localhost:3001`)
+
+---
 
 ## Estructura
 
 ```
 src/
-├── api/           # Funciones de llamada HTTP (una por dominio)
-├── hooks/         # React Query hooks (una por dominio)
+├── api/           # Funciones HTTP por dominio (una por dominio)
+├── hooks/         # TanStack Query hooks (una por dominio)
 ├── stores/        # Zustand stores
-├── pages/         # Páginas/rutas
+│   ├── authStore.ts       usuario + accessToken + localStorage
+│   └── uiStore.ts
+├── pages/         # Páginas → carpeta por dominio
+│   ├── auth/      login.tsx, register.tsx
+│   ├── accounts/
+│   ├── transactions/
+│   ├── budgets/
+│   ├── goals/
+│   ├── holdings/
+│   ├── simulators/
+│   ├── reports/
+│   ├── notifications/
+│   └── settings/
 ├── components/    # Componentes reutilizables
-├── routes/        # ProtectedRoute, PublicRoute
+│   ├── ui/        # Primitivos: Button, Input, Dialog, Card, Badge…
+│   ├── layout/    # AppLayout, Sidebar, Header
+│   ├── dashboard/ # NetWorthCard, CashflowChart, HealthScoreWidget…
+│   ├── transactions/
+│   ├── accounts/
+│   ├── budgets/
+│   ├── goals/
+│   ├── holdings/
+│   ├── simulators/
+│   ├── reports/
+│   ├── notifications/
+│   ├── integrations/
+│   └── search/    # CommandPalette
+├── routes/
+│   ├── ProtectedRoute.tsx
+│   └── PublicRoute.tsx
 ├── lib/
-│   ├── api.ts         # apiClient Axios (con interceptor de refresh)
+│   ├── api.ts         # apiClient Axios con interceptor de refresh
 │   ├── queryClient.ts # TanStack Query config
-│   ├── formatters.ts  # Formateo de moneda, fechas
-│   └── i18n.ts        # Configuración i18next
-└── types/api.ts   # Tipos de respuesta del API
+│   ├── formatters.ts  # formatCurrency, formatDate
+│   └── i18n.ts        # configuración i18next
+├── locales/
+│   ├── es/            # Traducciones en español
+│   └── en/            # Traducciones en inglés
+├── types/
+│   └── api.ts         # Tipos de respuesta del API
+└── utils/
 ```
 
-## Patrón de datos (obligatorio)
+---
 
-Siempre: `api/<dominio>.api.ts` → `hooks/use<Dominio>.ts` → componente
+## Arquitectura de capas (obligatorio)
 
-**Nunca** llamar Axios directamente desde un componente o página.
+```
+Componente / Página
+       ↓
+   Hook (TanStack Query)
+       ↓
+  api/<dominio>.api.ts
+       ↓
+   apiClient (Axios)
+```
 
-### Ejemplo: currency
+**Nunca** llamar Axios directamente desde un componente o página. Siempre a través del hook correspondiente.
+
+### Capa API (`src/api/<dominio>.api.ts`)
+
+Funciones async puras que llaman al API y devuelven datos (no la respuesta Axios completa):
 
 ```ts
-// src/api/currency.api.ts
-export async function getCurrencyRates(base: string): Promise<CurrencyRates> {
-  const res = await apiClient.get<{ data: CurrencyRates }>('/currency/rates', { params: { base } });
+// src/api/transactions.api.ts
+export async function getTransactions(filters: TransactionFilters) {
+  const res = await apiClient.get<{ data: PaginatedResponse<Transaction> }>('/transactions', {
+    params: filters,
+  });
   return res.data.data;
 }
 
-// src/hooks/useCurrency.ts
-export function useCurrencyRates(base?: string) { ... }
-export function useCurrencyConverter() {
-  // Devuelve: { convert(amount, from, to): number | null, baseCurrency, isLoading }
+export async function createTransaction(dto: CreateTransactionDto) {
+  const res = await apiClient.post<{ data: Transaction }>('/transactions', dto);
+  return res.data.data;
 }
 ```
+
+### Capa Hook (`src/hooks/use<Dominio>.ts`)
+
+Envuelve las funciones de API con TanStack Query. Define query keys con factory:
+
+```ts
+// src/hooks/useTransactions.ts
+export const transactionKeys = {
+  all: ['transactions'] as const,
+  list: (f: TransactionFilters) => [...transactionKeys.all, 'list', f] as const,
+  detail: (id: string) => [...transactionKeys.all, 'detail', id] as const,
+};
+
+export function useTransactions(filters: TransactionFilters) {
+  return useQuery({
+    queryKey: transactionKeys.list(filters),
+    queryFn: () => getTransactions(filters),
+  });
+}
+
+export function useCreateTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createTransaction,
+    onSuccess: () => qc.invalidateQueries({ queryKey: transactionKeys.all }),
+  });
+}
+```
+
+---
 
 ## Cliente HTTP (`src/lib/api.ts`)
 
 - Base URL: `VITE_API_URL`
-- Adjunta `Authorization: Bearer <token>` automáticamente
-- En 401: refresca token via `POST /auth/refresh` (cookie httpOnly)
-- Cola de peticiones fallidas durante refresh para no hacer múltiples refreshes
-- `withCredentials: true` (necesario para la cookie del refresh token)
+- Adjunta `Authorization: Bearer <token>` automáticamente desde `authStore`
+- En 401: refresca token via `POST /auth/refresh` (cookie httpOnly), encola peticiones fallidas
+- `withCredentials: true` para la cookie del refresh token
 
-## Autenticación (`src/stores/authStore.ts`)
+---
+
+## Autenticación
 
 ```ts
 const { user, accessToken, setAuth, clearAuth } = useAuthStore();
+// setAuth(user, token) — guarda en Zustand + localStorage
+// clearAuth() — limpia y redirige a /login
+// user.baseCurrency — para conversión de moneda
 ```
 
-- `setAuth(user, token)` — guarda en Zustand + localStorage
-- `clearAuth()` — limpia y redirige a `/login`
-- `user.baseCurrency` — moneda base del usuario (para conversión)
+Rutas protegidas con `ProtectedRoute` en `src/routes/`. Auth guard redirige a `/login` si no hay token.
+
+---
 
 ## Hooks disponibles
 
-| Hook                   | Archivo                     | Qué hace                                              |
-| ---------------------- | --------------------------- | ----------------------------------------------------- |
-| `useAuth`              | `hooks/useAuth.ts`          | Login, register, logout, user actual                  |
-| `useAccounts`          | `hooks/useAccounts.ts`      | CRUD de cuentas, net worth                            |
-| `useTransactions`      | `hooks/useTransactions.ts`  | Lista, crea, edita, elimina transacciones             |
-| `useCategories`        | `hooks/useCategories.ts`    | CRUD de categorías                                    |
-| `useBudgets`           | `hooks/useBudgets.ts`       | CRUD de presupuestos, progreso, alertas               |
-| `useGoals`             | `hooks/useGoals.ts`         | CRUD de objetivos + `useDepositGoal` mutation         |
-| `useHoldings`          | `hooks/useHoldings.ts`      | Portfolio, búsqueda de tickers, import CSV            |
-| `useIntegrations`      | `hooks/useIntegrations.ts`  | Conectar/desconectar Binance                          |
-| `useSimulators`        | `hooks/useSimulators.ts`    | Calculadoras + simulaciones guardadas                 |
-| `useNotifications`     | `hooks/useNotifications.ts` | Notificaciones, marcar leídas                         |
-| `useReports`           | `hooks/useReports.ts`       | Descargar PDF/CSV                                     |
-| `useDashboard`         | `hooks/useDashboard.ts`     | Net worth, cashflow, spending                         |
-| `useHealthScore`       | `hooks/useDashboard.ts`     | Score 0-100 de salud financiera con desglose por área |
-| `useCurrencyRates`     | `hooks/useCurrency.ts`      | Tipos de cambio (1h cache)                            |
-| `useCurrencyConverter` | `hooks/useCurrency.ts`      | `convert(amount, from, to)`                           |
+| Hook                   | Archivo                     | Qué hace                                          |
+| ---------------------- | --------------------------- | ------------------------------------------------- |
+| `useAuth`              | `hooks/useAuth.ts`          | Login, register, logout, usuario actual           |
+| `useAccounts`          | `hooks/useAccounts.ts`      | CRUD de cuentas, net worth                        |
+| `useTransactions`      | `hooks/useTransactions.ts`  | Lista, crea, edita, elimina transacciones         |
+| `useCategories`        | `hooks/useCategories.ts`    | CRUD de categorías                                |
+| `useBudgets`           | `hooks/useBudgets.ts`       | CRUD, progreso, alertas                           |
+| `useGoals`             | `hooks/useGoals.ts`         | CRUD + `useDepositGoal` mutation                  |
+| `useHoldings`          | `hooks/useHoldings.ts`      | Portfolio, búsqueda tickers, import CSV           |
+| `useIntegrations`      | `hooks/useIntegrations.ts`  | Conectar/desconectar Binance                      |
+| `useSimulators`        | `hooks/useSimulators.ts`    | Calculadoras + simulaciones guardadas             |
+| `useNotifications`     | `hooks/useNotifications.ts` | Lista, marcar leídas, eliminar                    |
+| `useReports`           | `hooks/useReports.ts`       | Descargar PDF/CSV                                 |
+| `useDashboard`         | `hooks/useDashboard.ts`     | Net worth, cashflow, spending, upcoming recurring |
+| `useHealthScore`       | `hooks/useDashboard.ts`     | Score 0-100 con desglose por área                 |
+| `useCurrencyRates`     | `hooks/useCurrency.ts`      | Tipos de cambio (1h cache)                        |
+| `useCurrencyConverter` | `hooks/useCurrency.ts`      | `convert(amount, from, to): number \| null`       |
 
-## Query Keys
+---
 
-Cada hook define sus propias keys siguiendo el patrón:
+## Componentes UI (`src/components/ui/`)
+
+Primitivos construidos sobre Radix UI + Tailwind. Disponibles:
+`Button` · `Input` · `Label` · `Card` · `Dialog` · `Select` · `Combobox` · `Badge` · `Progress` · `Skeleton` · `Switch` · `Table` · `Tabs` · `Tooltip` · `Alert` · `EmptyState`
+
+Usar siempre estos primitivos en lugar de HTML nativo cuando exista el equivalente.
+
+---
+
+## Estilos
+
+Tailwind 3 con `clsx` + `tailwind-merge` para clases condicionales:
 
 ```ts
-export const transactionKeys = {
-  all: ['transactions'] as const,
-  list: (filters) => [...transactionKeys.all, 'list', filters] as const,
-  detail: (id) => [...transactionKeys.all, 'detail', id] as const,
-};
+import { cn } from '../lib/utils'; // clsx + twMerge
+<div className={cn('base-class', condition && 'conditional-class')} />;
 ```
 
-## Conversión de moneda (web)
+No usar `style={{}}` inline salvo para valores dinámicos que Tailwind no puede generar.
+
+---
+
+## i18n
+
+```ts
+import { useTranslation } from 'react-i18next';
+const { t } = useTranslation();
+// t('transactions.title'), t('common.save')
+```
+
+Traducciones en `src/locales/es/` y `src/locales/en/`. Todo texto visible al usuario debe pasar por `t()`.
+
+---
+
+## Formateo de moneda y fechas
+
+```ts
+import { formatCurrency, formatDate } from '../lib/formatters';
+formatCurrency(1999, 'EUR'); // → "19,99 €"
+formatDate('2024-01-15'); // → "15 ene 2024"
+```
+
+`amount` en centavos (integer). Nunca formatear manualmente con division por 100.
+
+---
+
+## Conversión de moneda
 
 ```ts
 const { convert, baseCurrency, isLoading } = useCurrencyConverter();
-// convert(amount, 'USD', 'EUR') → number | null
-// amount es en la unidad que uses (no necesariamente centavos)
+convert(amount, 'USD', 'EUR'); // → number | null
 ```
 
 Los rates se cachean 1h en TanStack Query (mismo TTL que Redis).
 
-## Rutas
+---
 
-- `/login`, `/register` — públicas (redirigen a `/` si ya autenticado)
-- `/*` — protegidas (redirigen a `/login` si no autenticado)
-- `ProtectedRoute` en `src/routes/ProtectedRoute.tsx`
-- `PublicRoute` en `src/routes/PublicRoute.tsx`
+## Directrices de código limpio
 
-## i18n
+### Componentes
 
-- `src/lib/i18n.ts` — configuración i18next con detección de idioma del browser
-- Usar `useTranslation()` hook de `react-i18next` en componentes
+- Una página = un fichero de página en `src/pages/`. Extraer subcomponentes a `src/components/<dominio>/`.
+- Props tipadas siempre con `interface Props { ... }` explícita.
+- Separar la lógica del componente del JSX. Si el cuerpo del componente supera 200 líneas, dividir.
+- No usar `useEffect` para cargar datos remotos. Usar hooks TanStack Query.
 
-## Formateo
+### Formularios
+
+Usar `react-hook-form` + `@hookform/resolvers/zod` + schema Zod de `@finanzas/shared`:
 
 ```ts
-import { formatCurrency, formatDate } from '../lib/formatters';
-// formatCurrency(amountCents, 'EUR') → "19,99 €"
+const schema = CreateTransactionSchema;
+const form = useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema) });
 ```
 
-## Componentes destacados
+### Estado global vs local
 
-| Componente          | Ruta                                         | Descripción                                                            |
-| ------------------- | -------------------------------------------- | ---------------------------------------------------------------------- |
-| `HealthScoreWidget` | `components/dashboard/HealthScoreWidget.tsx` | Muestra score 0-100 con colores semáforo y desglose por área           |
-| `GoalDepositDialog` | `components/goals/GoalDepositDialog.tsx`     | Dialog rápido para aportar a una meta (reemplaza `GoalProgressDialog`) |
+- Estado de UI efímero (modal abierto, tab activo) → `useState` local.
+- Datos del servidor → TanStack Query (nunca duplicar en Zustand).
+- Estado compartido entre rutas (usuario, preferencias) → Zustand store.
 
-## Añadir una nueva feature al web
+### Carga y errores
 
-1. Crear `src/api/<feature>.api.ts` — funciones que llaman al API
-2. Crear `src/hooks/use<Feature>.ts` — hooks TanStack Query
-3. Crear páginas/componentes en `src/pages/` o `src/components/`
-4. Añadir rutas en `src/App.tsx`
+Siempre manejar los tres estados: loading, error, data:
+
+```tsx
+const { data, isLoading, error } = useTransactions(filters);
+if (isLoading) return <Skeleton />;
+if (error) return <Alert variant="error">{error.message}</Alert>;
+return <TransactionList items={data.items} />;
+```
+
+### Páginas nuevas
+
+1. Crear `src/api/<feature>.api.ts`
+2. Crear `src/hooks/use<Feature>.ts`
+3. Crear `src/pages/<feature>/index.tsx` (y subcomponentes en `src/components/<feature>/`)
+4. Añadir ruta en `src/App.tsx`
