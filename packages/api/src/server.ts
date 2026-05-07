@@ -31,6 +31,7 @@ import { registerNotificationRoutes } from './modules/notifications/notification
 import { registerReportRoutes } from './modules/reports/report.routes.js';
 import { registerCurrencyRoutes } from './modules/currency/currency.routes.js';
 import { registerPriceAlertRoutes } from './modules/holdings/priceAlert.routes.js';
+import { registerDebtRoutes } from './modules/debts/debt.routes.js';
 import { scheduleAllJobs } from './jobs/index.js';
 
 const fastify = Fastify({
@@ -247,6 +248,9 @@ await fastify.register(registerReportRoutes);
 // Currency rates route: /currency/rates
 await fastify.register(registerCurrencyRoutes);
 await fastify.register(registerPriceAlertRoutes);
+
+// Debt management routes: /debts
+await fastify.register(registerDebtRoutes);
 
 // ---- Server startup --------------------------------------------------------
 

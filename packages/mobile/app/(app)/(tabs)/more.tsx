@@ -6,6 +6,7 @@ import {
   Landmark,
   ChartPie,
   Target,
+  TrendingDown,
   Repeat2,
   FileText,
   Calculator,
@@ -69,6 +70,13 @@ export default function MoreScreen() {
           route: '/goals',
           iconColor: colors.income,
           iconBg: colors.incomeLight,
+        },
+        {
+          label: 'Deudas',
+          icon: TrendingDown,
+          route: '/debts',
+          iconColor: colors.expense,
+          iconBg: colors.expenseLight,
         },
         {
           label: 'Recurrentes',

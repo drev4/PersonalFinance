@@ -1,11 +1,14 @@
-import type React from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Skeleton } from '../ui/skeleton';
+import { useState } from 'react';
+import type React from 'react';
 import { formatCurrency } from '../../lib/formatters';
-import type { NetWorthSummary, NetWorthPoint } from '../../types/api';
 import { cn } from '../../lib/utils';
+import type { NetWorthSummary, NetWorthPoint } from '../../types/api';
+import { Badge } from '../ui/badge';
+import { Card, CardHeader, CardContent } from '../ui/card';
+import { Skeleton } from '../ui/skeleton';
+
+type NetWorthView = 'neto' | 'activos' | 'pasivos';
 
 interface NetWorthCardProps {
   data: NetWorthSummary | undefined;
@@ -50,11 +53,19 @@ function getMonthlyVariation(
   return { amount: diff, percent };
 }
 
+const VIEW_LABELS: Record<NetWorthView, string> = {
+  neto: 'Neto',
+  activos: 'Activos',
+  pasivos: 'Pasivos',
+};
+
 export default function NetWorthCard({
   data,
   history,
   isLoading,
 }: NetWorthCardProps): React.ReactElement {
+  const [view, setView] = useState<NetWorthView>('activos');
+
   if (isLoading) {
     return (
       <Card>
@@ -78,7 +89,7 @@ export default function NetWorthCard({
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold text-gray-600">Patrimonio neto</CardTitle>
+          <p className="text-base font-semibold text-gray-600">Patrimonio neto</p>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-400">Sin datos disponibles.</p>
@@ -91,22 +102,50 @@ export default function NetWorthCard({
   const isPositiveVariation = variation ? variation.amount >= 0 : true;
   const currency = data.currency;
 
+  const displayValue =
+    view === 'neto' ? data.total : view === 'activos' ? data.assets : data.liabilities;
+
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold text-gray-600">Patrimonio neto</CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-base font-semibold text-gray-600">
+            {view === 'neto'
+              ? 'Patrimonio neto'
+              : view === 'activos'
+              ? 'Activos totales'
+              : 'Pasivos totales'}
+          </p>
+          <div className="flex gap-0.5 rounded-full bg-gray-100 p-0.5">
+            {(Object.keys(VIEW_LABELS) as NetWorthView[]).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setView(v)}
+                className={cn(
+                  'rounded-full px-2.5 py-0.5 text-xs font-medium capitalize transition-all',
+                  view === v
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700',
+                )}
+              >
+                {VIEW_LABELS[v]}
+              </button>
+            ))}
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
-        {/* Total */}
+        {/* Main value */}
         <p
           className="mb-1 text-4xl font-bold tracking-tight text-gray-900"
-          aria-label={`Patrimonio neto: ${formatCurrency(data.total, currency)}`}
+          aria-label={`${VIEW_LABELS[view]}: ${formatCurrency(displayValue, currency)}`}
         >
-          {formatCurrency(data.total, currency)}
+          {formatCurrency(displayValue, currency)}
         </p>
 
-        {/* Monthly variation */}
-        {variation && (
+        {/* Monthly variation — only in Neto mode */}
+        {view === 'neto' && variation && (
           <div
             className={cn(
               'mb-4 flex items-center gap-1 text-sm font-medium',
@@ -119,8 +158,7 @@ export default function NetWorthCard({
               <TrendingDown className="h-4 w-4" aria-hidden="true" />
             )}
             <span>
-              {formatCompact(variation.amount, currency)} (
-              {variation.percent >= 0 ? '+' : ''}
+              {formatCompact(variation.amount, currency)} ({variation.percent >= 0 ? '+' : ''}
               {variation.percent.toLocaleString('es-ES', {
                 minimumFractionDigits: 1,
                 maximumFractionDigits: 1,

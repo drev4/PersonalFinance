@@ -43,6 +43,7 @@ const RetirementPage = lazy(() => import('./pages/simulators/RetirementPage'));
 const SavedSimulationsPage = lazy(() => import('./pages/simulators/SavedSimulationsPage'));
 const NotificationsPage = lazy(() => import('./pages/notifications/NotificationsPage'));
 const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
+const DebtsPage = lazy(() => import('./pages/debts/DebtsPage'));
 
 // Syncs user server preference → local themeStore on login,
 // and applies the `dark` class to <html> whenever the theme changes.
@@ -128,6 +129,7 @@ export default function App(): React.ReactElement {
                     <Route path="/simulators/saved" element={<SavedSimulationsPage />} />
                     <Route path="/notifications" element={<NotificationsPage />} />
                     <Route path="/reports" element={<ReportsPage />} />
+                    <Route path="/debts" element={<DebtsPage />} />
                   </Route>
                 </Route>
 

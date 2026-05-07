@@ -602,6 +602,63 @@ export interface IntegrationStatus {
   lastSyncError?: string;
 }
 
+// ─── Debts ────────────────────────────────────────────────────────────────────
+
+export type DebtType =
+  | 'credit_card'
+  | 'personal_loan'
+  | 'mortgage'
+  | 'student_loan'
+  | 'car_loan'
+  | 'other';
+
+export interface DebtInfo {
+  paidAmount: number;
+  percentPaid: number;
+  monthsToPayoff: number | null;
+  totalInterestEstimate: number | null;
+  monthlyInterestCharge: number | null;
+}
+
+export interface Debt {
+  _id: string;
+  userId: string;
+  name: string;
+  type: DebtType;
+  currency: string;
+  originalAmount: number;
+  currentBalance: number;
+  interestRate: number;
+  minimumPayment: number;
+  nextPaymentDate?: string;
+  linkedAccountId?: string;
+  color?: string;
+  icon?: string;
+  notes?: string;
+  isPaidOff: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  info?: DebtInfo;
+}
+
+export interface CreateDebtDTO {
+  name: string;
+  type: DebtType;
+  currency: string;
+  originalAmount: number;
+  currentBalance: number;
+  interestRate: number;
+  minimumPayment: number;
+  nextPaymentDate?: string;
+  linkedAccountId?: string;
+  color?: string;
+  icon?: string;
+  notes?: string;
+}
+
+export type UpdateDebtDTO = Partial<CreateDebtDTO>;
+
 // ─── Price Alerts ─────────────────────────────────────────────────────────────
 
 export interface PriceAlert {

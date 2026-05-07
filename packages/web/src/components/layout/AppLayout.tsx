@@ -16,6 +16,7 @@ import {
   Sun,
   Tag,
   Target,
+  TrendingDown,
   TrendingUp,
   User,
   X,
@@ -65,6 +66,11 @@ const NAV_ITEMS: NavItem[] = [
     to: '/goals',
     icon: <Target className="h-5 w-5 flex-shrink-0" aria-hidden="true" />,
     label: 'Metas',
+  },
+  {
+    to: '/debts',
+    icon: <TrendingDown className="h-5 w-5 flex-shrink-0" aria-hidden="true" />,
+    label: 'Deudas',
   },
   {
     to: '/holdings',
