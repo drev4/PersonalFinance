@@ -5,6 +5,7 @@ import {
   Bell,
   Calculator,
   ChartPie,
+  FileText,
   Home,
   Landmark,
   Plus,
@@ -50,6 +51,10 @@ export default function TabLayout() {
         <Tabs.Screen
           name="portfolio"
           options={{ title: 'Cartera', tabBarIcon: createIcon(Wallet) }}
+        />
+        <Tabs.Screen
+          name="reports"
+          options={{ title: 'Informes', tabBarIcon: createIcon(FileText) }}
         />
         <Tabs.Screen
           name="budgets"
