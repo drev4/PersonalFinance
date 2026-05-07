@@ -4,6 +4,7 @@ import { BudgetModel } from '../modules/budgets/budget.model.js';
 import { checkBudgetAlerts } from '../modules/budgets/budget.service.js';
 import { NotificationModel } from '../modules/notifications/notification.model.js';
 import { createNotification } from '../modules/notifications/notification.service.js';
+import { checkAndFireAlerts } from '../modules/holdings/priceAlert.service.js';
 
 const logger = pino({ name: 'job.notifications' });
 
@@ -87,6 +88,15 @@ export function scheduleNotificationJobs(): void {
     '0 9 * * *',
     () => {
       void runBudgetAlertJob();
+    },
+    { timezone: 'UTC' },
+  );
+
+  // Every 15 minutes — check price alerts after price updates run
+  cron.schedule(
+    '*/15 * * * *',
+    () => {
+      void checkAndFireAlerts().catch((err) => logger.error({ err }, 'Price alert job failed'));
     },
     { timezone: 'UTC' },
   );

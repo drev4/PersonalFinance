@@ -30,6 +30,7 @@ import { registerSimulatorRoutes } from './modules/simulators/simulator.routes.j
 import { registerNotificationRoutes } from './modules/notifications/notification.routes.js';
 import { registerReportRoutes } from './modules/reports/report.routes.js';
 import { registerCurrencyRoutes } from './modules/currency/currency.routes.js';
+import { registerPriceAlertRoutes } from './modules/holdings/priceAlert.routes.js';
 import { scheduleAllJobs } from './jobs/index.js';
 
 const fastify = Fastify({
@@ -130,54 +131,52 @@ await fastify.register(cookie);
 
 // ---- Error handler ---------------------------------------------------------
 
-fastify.setErrorHandler(
-  (error: FastifyError | ZodError | Error, _request, reply) => {
-    // Zod validation errors
-    if (error instanceof ZodError) {
-      return reply.status(400).send({
+fastify.setErrorHandler((error: FastifyError | ZodError | Error, _request, reply) => {
+  // Zod validation errors
+  if (error instanceof ZodError) {
+    return reply.status(400).send({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Request validation failed',
+        details: error.issues,
+      },
+    });
+  }
+
+  // Fastify-native errors (e.g. rate limit, 404, etc.)
+  if ('statusCode' in error && typeof error.statusCode === 'number') {
+    const statusCode = error.statusCode;
+
+    // Rate limit errors from @fastify/rate-limit already return formatted responses
+    if (statusCode === 429) {
+      return reply.status(429).send({
         error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Request validation failed',
-          details: error.issues,
-        },
-      });
-    }
-
-    // Fastify-native errors (e.g. rate limit, 404, etc.)
-    if ('statusCode' in error && typeof error.statusCode === 'number') {
-      const statusCode = error.statusCode;
-
-      // Rate limit errors from @fastify/rate-limit already return formatted responses
-      if (statusCode === 429) {
-        return reply.status(429).send({
-          error: {
-            code: 'RATE_LIMIT_EXCEEDED',
-            message: error.message,
-          },
-        });
-      }
-
-      return reply.status(statusCode).send({
-        error: {
-          code: 'REQUEST_ERROR',
+          code: 'RATE_LIMIT_EXCEEDED',
           message: error.message,
         },
       });
     }
 
-    // Generic / unhandled errors
-    fastify.log.error(error);
-    return reply.status(500).send({
+    return reply.status(statusCode).send({
       error: {
-        code: 'INTERNAL_ERROR',
-        message:
-          env.NODE_ENV === 'production'
-            ? 'An unexpected error occurred'
-            : (error.message ?? 'An unexpected error occurred'),
+        code: 'REQUEST_ERROR',
+        message: error.message,
       },
     });
-  },
-);
+  }
+
+  // Generic / unhandled errors
+  fastify.log.error(error);
+  return reply.status(500).send({
+    error: {
+      code: 'INTERNAL_ERROR',
+      message:
+        env.NODE_ENV === 'production'
+          ? 'An unexpected error occurred'
+          : error.message ?? 'An unexpected error occurred',
+    },
+  });
+});
 
 // ---- Decorators ------------------------------------------------------------
 
@@ -247,6 +246,7 @@ await fastify.register(registerReportRoutes);
 
 // Currency rates route: /currency/rates
 await fastify.register(registerCurrencyRoutes);
+await fastify.register(registerPriceAlertRoutes);
 
 // ---- Server startup --------------------------------------------------------
 
@@ -288,7 +288,11 @@ const shutdown = async (): Promise<void> => {
   process.exit(0);
 };
 
-process.on('SIGTERM', () => { void shutdown(); });
-process.on('SIGINT', () => { void shutdown(); });
+process.on('SIGTERM', () => {
+  void shutdown();
+});
+process.on('SIGINT', () => {
+  void shutdown();
+});
 
 start();
