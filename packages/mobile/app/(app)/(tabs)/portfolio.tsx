@@ -13,16 +13,27 @@ import {
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useState, useMemo } from 'react';
-import { ChevronLeft, TrendingUp, TrendingDown, Pencil, Trash2 } from 'lucide-react-native';
+import {
+  ChevronLeft,
+  TrendingUp,
+  TrendingDown,
+  Pencil,
+  Trash2,
+  Banknote,
+  Plus,
+} from 'lucide-react-native';
 import {
   useHoldings,
   usePortfolioSummary,
   useCreateHolding,
   useUpdateHolding,
   useDeleteHolding,
+  useHoldingIncomeHistory,
+  useAddDividend,
   type HoldingWithValue,
   type AssetType,
   type CreateHoldingDTO,
+  type IncomeType,
 } from '@/api/holdings';
 import { useAccounts } from '@/api/transactions';
 import { formatCurrency, formatPercentage } from '@/lib/formatters';
@@ -54,6 +65,16 @@ export default function PortfolioScreen() {
     currency: 'EUR',
   });
 
+  const [incomeModalHolding, setIncomeModalHolding] = useState<HoldingWithValue | null>(null);
+  const [incomeView, setIncomeView] = useState<'history' | 'form'>('history');
+  const [incomeForm, setIncomeForm] = useState({
+    type: 'dividend' as IncomeType,
+    amount: '',
+    currency: 'EUR',
+    date: new Date().toISOString().split('T')[0]!,
+    notes: '',
+  });
+
   const { colors, shadow, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadow), [isDark]);
 
@@ -64,6 +85,11 @@ export default function PortfolioScreen() {
   const { mutate: createHolding, isPending: createPending } = useCreateHolding();
   const { mutate: updateHolding, isPending: updatePending } = useUpdateHolding();
   const { mutate: deleteHolding, isPending: deletePending } = useDeleteHolding();
+
+  const { data: incomeHistory, isLoading: incomeLoading } = useHoldingIncomeHistory(
+    incomeModalHolding?._id ?? null,
+  );
+  const { mutate: addDividend, isPending: addPending } = useAddDividend();
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -177,6 +203,50 @@ export default function PortfolioScreen() {
     ]);
   };
 
+  const handleOpenIncomeModal = (holding: HoldingWithValue) => {
+    setIncomeModalHolding(holding);
+    setIncomeView('history');
+    setIncomeForm({
+      type: 'dividend',
+      amount: '',
+      currency: holding.currency,
+      date: new Date().toISOString().split('T')[0]!,
+      notes: '',
+    });
+  };
+
+  const handleCloseIncomeModal = () => {
+    setIncomeModalHolding(null);
+  };
+
+  const handleIncomeSubmit = () => {
+    if (!incomeModalHolding || !incomeForm.amount) return;
+    const parsed = parseFloat(incomeForm.amount);
+    if (isNaN(parsed) || parsed <= 0) {
+      Alert.alert('Error', 'Introduce un importe válido');
+      return;
+    }
+    addDividend(
+      {
+        holdingId: incomeModalHolding._id,
+        data: {
+          type: incomeForm.type,
+          amount: Math.round(parsed * 100),
+          currency: incomeForm.currency,
+          date: incomeForm.date,
+          notes: incomeForm.notes || undefined,
+        },
+      },
+      {
+        onSuccess: () => {
+          setIncomeView('history');
+          setIncomeForm((prev) => ({ ...prev, amount: '', notes: '' }));
+        },
+        onError: () => Alert.alert('Error', 'No se pudo registrar el ingreso'),
+      },
+    );
+  };
+
   const isFormValid = !!(
     formData.symbol &&
     formData.quantity &&
@@ -247,6 +317,24 @@ export default function PortfolioScreen() {
                     </Text>
                   </View>
                 </View>
+                {(summary.totalDividendsYtd ?? 0) > 0 && (
+                  <>
+                    <View style={styles.summaryDivider} />
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>Dividendos YTD</Text>
+                      <Text style={[styles.pnlValue, { color: '#D97706' }]}>
+                        +{formatCurrency(summary.totalDividendsYtd)}
+                      </Text>
+                    </View>
+                    <View style={styles.summaryDivider} />
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>Rendimiento total</Text>
+                      <Text style={[styles.pnlValue, { color: colors.income }]}>
+                        +{formatCurrency(summary.totalPnl + summary.totalDividendsYtd)}
+                      </Text>
+                    </View>
+                  </>
+                )}
                 {summary.byAssetType.length > 0 && (
                   <>
                     <View style={styles.summaryDivider} />
@@ -347,6 +435,13 @@ export default function PortfolioScreen() {
                   </Text>
                   <View style={styles.holdingActions}>
                     <TouchableOpacity
+                      style={[styles.actionBtn, { backgroundColor: '#D9770618' }]}
+                      onPress={() => handleOpenIncomeModal(item)}
+                      disabled={isPending}
+                    >
+                      <Banknote size={14} color="#D97706" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
                       style={styles.actionBtn}
                       onPress={() => handleOpenModal(item)}
                       disabled={isPending}
@@ -387,6 +482,214 @@ export default function PortfolioScreen() {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Income Modal */}
+      <Modal
+        visible={incomeModalHolding !== null}
+        animationType="slide"
+        onRequestClose={handleCloseIncomeModal}
+      >
+        <SafeAreaProvider>
+          <SafeAreaView style={styles.modalContainer} edges={['top', 'left', 'right', 'bottom']}>
+            <View style={styles.modalNav}>
+              <TouchableOpacity
+                onPress={
+                  incomeView === 'form' ? () => setIncomeView('history') : handleCloseIncomeModal
+                }
+                style={styles.backButton}
+              >
+                <ChevronLeft size={20} color={colors.text} />
+              </TouchableOpacity>
+              <Text style={styles.modalNavTitle}>
+                {incomeModalHolding?.symbol} —{' '}
+                {incomeView === 'form' ? 'Registrar ingreso' : 'Dividendos'}
+              </Text>
+              <View style={{ width: 36 }} />
+            </View>
+
+            {incomeView === 'history' ? (
+              <>
+                {/* YTD summary + add button */}
+                <View style={styles.incomeHeaderRow}>
+                  {incomeHistory && incomeHistory.totalYtd > 0 ? (
+                    <View style={styles.incomeYtdBadge}>
+                      <Text style={styles.incomeYtdText}>
+                        YTD +{formatCurrency(incomeHistory.totalYtd)}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View />
+                  )}
+                  <TouchableOpacity
+                    style={styles.addIncomeBtn}
+                    onPress={() => setIncomeView('form')}
+                  >
+                    <Plus size={14} color={colors.white} />
+                    <Text style={styles.addIncomeBtnText}>Añadir</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {incomeLoading ? (
+                  <View style={{ padding: spacing.xl }}>
+                    <Skeleton height={64} borderRadius={radius.xl} marginBottom={spacing.md} />
+                    <Skeleton height={64} borderRadius={radius.xl} />
+                  </View>
+                ) : incomeHistory && incomeHistory.records.length > 0 ? (
+                  <FlatList
+                    data={incomeHistory.records}
+                    keyExtractor={(item) => item._id}
+                    contentContainerStyle={{
+                      paddingHorizontal: spacing.xl,
+                      paddingTop: spacing.sm,
+                    }}
+                    renderItem={({ item }) => (
+                      <View style={styles.incomeItem}>
+                        <View style={styles.incomeItemLeft}>
+                          <View
+                            style={[
+                              styles.incomeTypeBadge,
+                              {
+                                backgroundColor:
+                                  item.type === 'dividend' ? '#D9770618' : '#8B5CF618',
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.incomeTypeBadgeText,
+                                { color: item.type === 'dividend' ? '#D97706' : '#8B5CF6' },
+                              ]}
+                            >
+                              {item.type === 'dividend' ? 'Dividendo' : 'Staking'}
+                            </Text>
+                          </View>
+                          <Text style={styles.incomeItemDate}>
+                            {new Date(item.date).toLocaleDateString('es-ES', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </Text>
+                          {item.notes ? (
+                            <Text style={styles.incomeItemNotes} numberOfLines={1}>
+                              {item.notes}
+                            </Text>
+                          ) : null}
+                        </View>
+                        <Text style={styles.incomeItemAmount}>+{formatCurrency(item.amount)}</Text>
+                      </View>
+                    )}
+                  />
+                ) : (
+                  <View style={styles.incomeEmpty}>
+                    <Banknote size={36} color={colors.textTertiary} />
+                    <Text style={styles.emptyTitle}>Sin ingresos registrados</Text>
+                    <Text style={styles.emptyText}>
+                      Registra dividendos o recompensas de staking para esta posición
+                    </Text>
+                    <TouchableOpacity style={styles.emptyCTA} onPress={() => setIncomeView('form')}>
+                      <Text style={styles.emptyCTAText}>Registrar primer ingreso</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </>
+            ) : (
+              <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
+                {/* Income type */}
+                <View style={styles.formSection}>
+                  <Text style={styles.formLabel}>Tipo</Text>
+                  <View style={styles.typeRow}>
+                    {(['dividend', 'staking'] as const).map((t) => (
+                      <TouchableOpacity
+                        key={t}
+                        style={[
+                          styles.typeChip,
+                          incomeForm.type === t && {
+                            backgroundColor: t === 'dividend' ? '#D97706' : '#8B5CF6',
+                            borderColor: t === 'dividend' ? '#D97706' : '#8B5CF6',
+                          },
+                        ]}
+                        onPress={() => setIncomeForm({ ...incomeForm, type: t })}
+                        disabled={addPending}
+                      >
+                        <Text
+                          style={[
+                            styles.typeChipText,
+                            incomeForm.type === t && styles.typeChipTextActive,
+                          ]}
+                        >
+                          {t === 'dividend' ? 'Dividendo' : 'Staking'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Amount */}
+                <View style={styles.formSection}>
+                  <Text style={styles.formLabel}>Importe *</Text>
+                  <View style={styles.priceInputRow}>
+                    <Text style={styles.currencyPrefix}>
+                      {incomeForm.currency === 'EUR' ? '€' : incomeForm.currency}
+                    </Text>
+                    <TextInput
+                      style={styles.priceInput}
+                      placeholder="0.00"
+                      placeholderTextColor={colors.textTertiary}
+                      value={incomeForm.amount}
+                      onChangeText={(t) => setIncomeForm({ ...incomeForm, amount: t })}
+                      keyboardType="decimal-pad"
+                      editable={!addPending}
+                    />
+                  </View>
+                </View>
+
+                {/* Date */}
+                <View style={styles.formSection}>
+                  <Text style={styles.formLabel}>Fecha *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor={colors.textTertiary}
+                    value={incomeForm.date}
+                    onChangeText={(t) => setIncomeForm({ ...incomeForm, date: t })}
+                    editable={!addPending}
+                  />
+                </View>
+
+                {/* Notes */}
+                <View style={styles.formSection}>
+                  <Text style={styles.formLabel}>Notas (opcional)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="ej: Cobro Q1 2026"
+                    placeholderTextColor={colors.textTertiary}
+                    value={incomeForm.notes}
+                    onChangeText={(t) => setIncomeForm({ ...incomeForm, notes: t })}
+                    editable={!addPending}
+                  />
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.submitBtn,
+                    (!incomeForm.amount || addPending) && styles.submitBtnDisabled,
+                  ]}
+                  onPress={handleIncomeSubmit}
+                  disabled={!incomeForm.amount || addPending}
+                  activeOpacity={0.85}
+                >
+                  {addPending ? (
+                    <ActivityIndicator color={colors.white} />
+                  ) : (
+                    <Text style={styles.submitBtnText}>Guardar ingreso</Text>
+                  )}
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+          </SafeAreaView>
+        </SafeAreaProvider>
+      </Modal>
 
       {/* Form Modal */}
       <Modal visible={formModalVisible} animationType="slide" onRequestClose={handleCloseModal}>
@@ -922,6 +1225,84 @@ function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>)
     pickerItemSub: {
       fontSize: 12,
       color: colors.textSecondary,
+    },
+    incomeHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.md,
+    },
+    incomeYtdBadge: {
+      backgroundColor: '#D9770618',
+      paddingHorizontal: spacing.md,
+      paddingVertical: 6,
+      borderRadius: radius.full,
+    },
+    incomeYtdText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#D97706',
+    },
+    addIncomeBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 8,
+      borderRadius: radius.full,
+      ...shadow.sm,
+    },
+    addIncomeBtnText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.white,
+    },
+    incomeItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderRadius: radius.xl,
+      padding: spacing.lg,
+      marginBottom: spacing.md,
+      ...shadow.sm,
+    },
+    incomeItemLeft: {
+      flex: 1,
+      gap: 4,
+    },
+    incomeTypeBadge: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 3,
+      borderRadius: radius.full,
+    },
+    incomeTypeBadgeText: {
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    incomeItemDate: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      fontWeight: '500',
+    },
+    incomeItemNotes: {
+      fontSize: 12,
+      color: colors.textTertiary,
+    },
+    incomeItemAmount: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: '#D97706',
+      marginLeft: spacing.md,
+    },
+    incomeEmpty: {
+      alignItems: 'center',
+      paddingVertical: 48,
+      paddingHorizontal: spacing.xxxl,
+      gap: spacing.md,
     },
   });
 }
