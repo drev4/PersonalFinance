@@ -154,13 +154,14 @@ Tipos de cuenta: `checking | savings | cash | credit_card | real_estate | vehicl
 
 ### Objetivos — `/goals/*` (requireAuth)
 
-| Método | Ruta         | Descripción                                                             |
-| ------ | ------------ | ----------------------------------------------------------------------- |
-| GET    | `/goals`     | Lista objetivos de ahorro                                               |
-| POST   | `/goals`     | Crea. Body: `{ name, targetAmount, currency, targetDate?, accountId? }` |
-| GET    | `/goals/:id` | Detalle con progreso                                                    |
-| PATCH  | `/goals/:id` | Actualiza                                                               |
-| DELETE | `/goals/:id` | Elimina                                                                 |
+| Método | Ruta                 | Descripción                                                                                                 |
+| ------ | -------------------- | ----------------------------------------------------------------------------------------------------------- |
+| GET    | `/goals`             | Lista objetivos de ahorro                                                                                   |
+| POST   | `/goals`             | Crea. Body: `{ name, targetAmount, currency, targetDate?, accountId? }`                                     |
+| GET    | `/goals/:id`         | Detalle con progreso                                                                                        |
+| PATCH  | `/goals/:id`         | Actualiza                                                                                                   |
+| DELETE | `/goals/:id`         | Elimina                                                                                                     |
+| POST   | `/goals/:id/deposit` | Aporta. Body: `{ amount: number }` — incrementa `currentAmount`, marca `isCompleted` si alcanza el objetivo |
 
 ### Holdings (inversiones) — `/holdings/*` (requireAuth)
 
@@ -183,14 +184,15 @@ Tipos de cuenta: `checking | savings | cash | credit_card | real_estate | vehicl
 
 ### Dashboard — `/dashboard/*` (requireAuth)
 
-| Método | Ruta                              | Query                              | Respuesta                                                   |
-| ------ | --------------------------------- | ---------------------------------- | ----------------------------------------------------------- | --- | --- | ---- | ----------------------------- |
-| GET    | `/dashboard/net-worth`            | —                                  | `{ data: { total, assets, liabilities, accounts: [...] } }` |
-| GET    | `/dashboard/net-worth/history`    | `period: 1m                        | 3m                                                          | 6m  | 1y  | all` | `{ data: [{ date, total }] }` |
-| GET    | `/dashboard/cashflow`             | `months? (1-24)`                   | `{ data: [{ month, income, expenses, net }] }`              |
-| GET    | `/dashboard/spending-by-category` | `from?, to?` (default: mes actual) | `{ data: [{ categoryId, name, total, count }] }`            |
-| GET    | `/dashboard/upcoming-recurring`   | `days? (1-365, default 30)`        | `{ data: [{ transaction, nextDate, amount }] }`             |
-| POST   | `/dashboard/snapshot`             | —                                  | Fuerza snapshot de patrimonio → `{ data: { ok: true } }`    |
+| Método | Ruta                              | Query                              | Respuesta                                                                                                                                                         |
+| ------ | --------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | --- | ---- | ----------------------------- |
+| GET    | `/dashboard/net-worth`            | —                                  | `{ data: { total, assets, liabilities, accounts: [...] } }`                                                                                                       |
+| GET    | `/dashboard/net-worth/history`    | `period: 1m                        | 3m                                                                                                                                                                | 6m  | 1y  | all` | `{ data: [{ date, total }] }` |
+| GET    | `/dashboard/cashflow`             | `months? (1-24)`                   | `{ data: [{ month, income, expenses, net }] }`                                                                                                                    |
+| GET    | `/dashboard/spending-by-category` | `from?, to?` (default: mes actual) | `{ data: [{ categoryId, name, total, count }] }`                                                                                                                  |
+| GET    | `/dashboard/upcoming-recurring`   | `days? (1-365, default 30)`        | `{ data: [{ transaction, nextDate, amount }] }`                                                                                                                   |
+| GET    | `/dashboard/health-score`         | —                                  | `{ data: { score, label, color, areas: [{ key, label, score, max, detail }] } }` — puntuación 0-100 con desglose en 4 áreas (cashflow, presupuesto, metas, deuda) |
+| POST   | `/dashboard/snapshot`             | —                                  | Fuerza snapshot de patrimonio → `{ data: { ok: true } }`                                                                                                          |
 
 ### Transacciones recurrentes — `/transactions/recurring/*` (requireAuth)
 

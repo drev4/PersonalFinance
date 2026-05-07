@@ -34,10 +34,15 @@ src/
 ├── api/                # Funciones HTTP por dominio
 │   ├── client.ts       # Instancia Axios con interceptor de refresh
 │   ├── auth.ts
-│   ├── dashboard.ts
+│   ├── accounts.ts
+│   ├── budgets.ts
+│   ├── dashboard.ts    # incluye useHealthScore (score 0-100 de salud financiera)
+│   ├── goals.ts        # incluye depositGoal(id, amount)
 │   ├── holdings.ts
-│   ├── transactions.ts / transactions.api.ts
+│   ├── integrations.ts
 │   ├── notifications.ts
+│   ├── transactions.ts / transactions.api.ts
+│   ├── user.ts
 │   └── health.ts
 ├── stores/             # Zustand stores
 │   ├── authStore.ts        # Usuario + tokens (SecureStore)

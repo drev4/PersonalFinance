@@ -61,7 +61,7 @@ El API usa estructura modular: `src/modules/<dominio>/`:
 - `simulators` — calculadoras financieras (hipoteca, préstamo, inversión, retiro)
 - `notifications` — notificaciones push
 - `reports` — exportación PDF y CSV
-- `dashboard` — patrimonio neto, cashflow, resumen
+- `dashboard` — patrimonio neto, cashflow, resumen, health-score (0-100)
 - `currency` — tipos de cambio (Frankfurter API, caché Redis 1h)
 
 ## Cómo añadir una feature cross-platform

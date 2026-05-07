@@ -74,22 +74,23 @@ const { user, accessToken, setAuth, clearAuth } = useAuthStore();
 
 ## Hooks disponibles
 
-| Hook                   | Archivo                     | Qué hace                                   |
-| ---------------------- | --------------------------- | ------------------------------------------ |
-| `useAuth`              | `hooks/useAuth.ts`          | Login, register, logout, user actual       |
-| `useAccounts`          | `hooks/useAccounts.ts`      | CRUD de cuentas, net worth                 |
-| `useTransactions`      | `hooks/useTransactions.ts`  | Lista, crea, edita, elimina transacciones  |
-| `useCategories`        | `hooks/useCategories.ts`    | CRUD de categorías                         |
-| `useBudgets`           | `hooks/useBudgets.ts`       | CRUD de presupuestos, progreso, alertas    |
-| `useGoals`             | `hooks/useGoals.ts`         | CRUD de objetivos de ahorro                |
-| `useHoldings`          | `hooks/useHoldings.ts`      | Portfolio, búsqueda de tickers, import CSV |
-| `useIntegrations`      | `hooks/useIntegrations.ts`  | Conectar/desconectar Binance               |
-| `useSimulators`        | `hooks/useSimulators.ts`    | Calculadoras + simulaciones guardadas      |
-| `useNotifications`     | `hooks/useNotifications.ts` | Notificaciones, marcar leídas              |
-| `useReports`           | `hooks/useReports.ts`       | Descargar PDF/CSV                          |
-| `useDashboard`         | `hooks/useDashboard.ts`     | Net worth, cashflow, spending              |
-| `useCurrencyRates`     | `hooks/useCurrency.ts`      | Tipos de cambio (1h cache)                 |
-| `useCurrencyConverter` | `hooks/useCurrency.ts`      | `convert(amount, from, to)`                |
+| Hook                   | Archivo                     | Qué hace                                              |
+| ---------------------- | --------------------------- | ----------------------------------------------------- |
+| `useAuth`              | `hooks/useAuth.ts`          | Login, register, logout, user actual                  |
+| `useAccounts`          | `hooks/useAccounts.ts`      | CRUD de cuentas, net worth                            |
+| `useTransactions`      | `hooks/useTransactions.ts`  | Lista, crea, edita, elimina transacciones             |
+| `useCategories`        | `hooks/useCategories.ts`    | CRUD de categorías                                    |
+| `useBudgets`           | `hooks/useBudgets.ts`       | CRUD de presupuestos, progreso, alertas               |
+| `useGoals`             | `hooks/useGoals.ts`         | CRUD de objetivos + `useDepositGoal` mutation         |
+| `useHoldings`          | `hooks/useHoldings.ts`      | Portfolio, búsqueda de tickers, import CSV            |
+| `useIntegrations`      | `hooks/useIntegrations.ts`  | Conectar/desconectar Binance                          |
+| `useSimulators`        | `hooks/useSimulators.ts`    | Calculadoras + simulaciones guardadas                 |
+| `useNotifications`     | `hooks/useNotifications.ts` | Notificaciones, marcar leídas                         |
+| `useReports`           | `hooks/useReports.ts`       | Descargar PDF/CSV                                     |
+| `useDashboard`         | `hooks/useDashboard.ts`     | Net worth, cashflow, spending                         |
+| `useHealthScore`       | `hooks/useDashboard.ts`     | Score 0-100 de salud financiera con desglose por área |
+| `useCurrencyRates`     | `hooks/useCurrency.ts`      | Tipos de cambio (1h cache)                            |
+| `useCurrencyConverter` | `hooks/useCurrency.ts`      | `convert(amount, from, to)`                           |
 
 ## Query Keys
 
@@ -131,6 +132,13 @@ Los rates se cachean 1h en TanStack Query (mismo TTL que Redis).
 import { formatCurrency, formatDate } from '../lib/formatters';
 // formatCurrency(amountCents, 'EUR') → "19,99 €"
 ```
+
+## Componentes destacados
+
+| Componente          | Ruta                                         | Descripción                                                            |
+| ------------------- | -------------------------------------------- | ---------------------------------------------------------------------- |
+| `HealthScoreWidget` | `components/dashboard/HealthScoreWidget.tsx` | Muestra score 0-100 con colores semáforo y desglose por área           |
+| `GoalDepositDialog` | `components/goals/GoalDepositDialog.tsx`     | Dialog rápido para aportar a una meta (reemplaza `GoalProgressDialog`) |
 
 ## Añadir una nueva feature al web
 
