@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import client from './client';
 import { useAuthStore } from '@/stores/authStore';
 
-
 interface LoginRequest {
   email: string;
   password: string;
@@ -33,7 +32,7 @@ interface RegisterRequest {
 }
 
 export const useLogin = () => {
-  const { setUser, setTokens } = useAuthStore();
+  const { setUser, setTokens, setBiometricPassed } = useAuthStore();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -45,6 +44,7 @@ export const useLogin = () => {
       const { user, accessToken, refreshToken } = data;
       setUser(user);
       await setTokens(accessToken, refreshToken);
+      setBiometricPassed(true);
       queryClient.invalidateQueries();
     },
   });

@@ -18,6 +18,7 @@ interface AuthState {
   refreshToken: string | null;
   isLoading: boolean;
   error: string | null;
+  biometricPassed: boolean;
 
   // Actions
   setUser: (user: AuthUser | null) => void;
@@ -26,6 +27,8 @@ interface AuthState {
   setIsLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
   restoreTokens: () => Promise<void>;
+  setBiometricPassed: (value: boolean) => void;
+  lockApp: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -34,6 +37,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   refreshToken: null,
   isLoading: false,
   error: null,
+  biometricPassed: false,
 
   setUser: (user) => {
     set({ user });
@@ -59,7 +63,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   clearAuth: async () => {
-    set({ user: null, accessToken: null, refreshToken: null });
+    set({ user: null, accessToken: null, refreshToken: null, biometricPassed: false });
     try {
       await SecureStore.deleteItemAsync('accessToken');
       await SecureStore.deleteItemAsync('refreshToken');
@@ -71,6 +75,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setIsLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
+  setBiometricPassed: (value) => set({ biometricPassed: value }),
+
+  lockApp: () => set({ biometricPassed: false }),
 
   restoreTokens: async () => {
     try {
