@@ -1,5 +1,7 @@
 # Finanzas App - Monorepo
 
+[![CI](https://github.com/drev4/PersonalFinance/actions/workflows/ci.yml/badge.svg)](https://github.com/drev4/PersonalFinance/actions/workflows/ci.yml)
+
 Aplicación de gestión de finanzas personales basada en un monorepo pnpm con TypeScript, Fastify y React.
 
 ## Estructura
