@@ -14,6 +14,7 @@ import {
   getDistinctTags,
   TransactionError,
 } from './transaction.service.js';
+import { scanReceipt } from './receipt.service.js';
 
 // ---- Zod schemas -------------------------------------------------------------
 
@@ -103,6 +104,11 @@ const CashflowQuerySchema = z.object({
     .refine((n) => n >= 1 && n <= 24, { message: 'months must be between 1 and 24' })
     .optional()
     .default(6),
+});
+
+const ScanReceiptSchema = z.object({
+  image: z.string().min(100),
+  mimeType: z.enum(['image/jpeg', 'image/png']).default('image/jpeg'),
 });
 
 // ---- Error handler -----------------------------------------------------------
@@ -248,6 +254,17 @@ export async function registerTransactionRoutes(fastify: FastifyInstance): Promi
       } catch (err) {
         return handleTxError(err, reply);
       }
+    },
+  );
+
+  // POST /transactions/scan-receipt
+  fastify.post(
+    '/transactions/scan-receipt',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { image } = ScanReceiptSchema.parse(request.body);
+      const result = await scanReceipt(image);
+      return reply.send({ data: result });
     },
   );
 }
