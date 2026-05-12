@@ -25,7 +25,13 @@
     },
     "scheme": "finanzas",
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Necesitamos acceso a la cámara para escanear tickets y registrar gastos automáticamente."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

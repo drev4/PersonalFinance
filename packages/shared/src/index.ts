@@ -97,5 +97,8 @@ export {
   type DebtInfo,
 } from './schemas/debt.schema';
 
+// Receipt OCR schemas and types
+export { ScanReceiptResponseSchema, type ScanReceiptResponse } from './schemas/receipt.schema';
+
 // Constants
 export { CURRENCIES, SUPPORTED_EXCHANGES, DEFAULT_CATEGORIES } from './constants';
