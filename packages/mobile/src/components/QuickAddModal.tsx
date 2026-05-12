@@ -11,8 +11,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { X, Calendar, Tag } from 'lucide-react-native';
+import { X, Calendar, Tag, ScanLine } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useCreateTransaction, useCategories, useAccounts } from '@/api/transactions';
+import { useScanReceipt } from '@/api/receipts';
 import { formatCurrency } from '@/lib/formatters';
 import { DatePickerCalendar } from './DatePickerCalendar';
 import * as Haptics from 'expo-haptics';
@@ -59,6 +61,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
   const { data: categories = [] } = useCategories();
   const { data: accounts = [] } = useAccounts();
   const { mutate: createTransaction, isPending } = useCreateTransaction();
+  const { mutate: scanReceipt, isPending: isScanning } = useScanReceipt();
 
   useEffect(() => {
     if (accounts.length > 0 && !selectedAccountId) setSelectedAccountId(accounts[0]._id);
@@ -108,6 +111,47 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
     isCrossCurrency && parsedExchangeRate > 0 && parseFloat(amount.replace(',', '.')) > 0
       ? (parseFloat(amount.replace(',', '.')) * parsedExchangeRate).toFixed(2)
       : null;
+
+  const handleScanReceipt = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permiso necesario',
+        'Necesitamos acceso a la cámara para escanear tickets. Puedes activarlo en los ajustes del dispositivo.',
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      base64: true,
+      quality: 0.7,
+      allowsEditing: false,
+    });
+
+    if (result.canceled || !result.assets[0]?.base64) return;
+
+    scanReceipt(result.assets[0].base64, {
+      onSuccess: (data) => {
+        if (data.amount !== undefined) setAmount((data.amount / 100).toFixed(2));
+        if (data.merchant) setDescription(data.merchant);
+        if (data.date) setDate(data.date);
+        if (data.suggestedCategory) {
+          const match = categories.find(
+            (c) =>
+              c.type === 'expense' &&
+              c.isActive !== false &&
+              (c.name?.toLowerCase().includes(data.suggestedCategory!.toLowerCase()) ||
+                data.suggestedCategory!.toLowerCase().includes(c.name?.toLowerCase() ?? '')),
+          );
+          if (match) setSelectedCategoryId((match as any).id || (match as any)._id);
+        }
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      },
+      onError: () =>
+        Alert.alert('Error', 'No se pudo procesar el ticket. Rellena los datos manualmente.'),
+    });
+  };
 
   const handleSubmit = async () => {
     if (!amount || !selectedAccountId || !description) {
@@ -173,16 +217,32 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ onClose }) => {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Añadir movimiento</Text>
-        <TouchableOpacity
-          onPress={() => {
-            Keyboard.dismiss();
-            onClose();
-          }}
-          style={styles.closeBtn}
-          activeOpacity={0.7}
-        >
-          <X size={18} color={colors.textSecondary} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          {type === 'expense' && (
+            <TouchableOpacity
+              onPress={handleScanReceipt}
+              style={[styles.closeBtn, isScanning && { opacity: 0.5 }]}
+              activeOpacity={0.7}
+              disabled={isScanning}
+            >
+              {isScanning ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <ScanLine size={18} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            onPress={() => {
+              Keyboard.dismiss();
+              onClose();
+            }}
+            style={styles.closeBtn}
+            activeOpacity={0.7}
+          >
+            <X size={18} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -541,6 +601,11 @@ function createStyles(colors: ThemeColors, shadow: ReturnType<typeof getShadow>)
       fontSize: 20,
       fontWeight: '700',
       color: colors.text,
+    },
+    headerActions: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      alignItems: 'center',
     },
     closeBtn: {
       width: 36,
