@@ -2,7 +2,7 @@
 
 > **Rama:** `feature/e06-receipt-scan`  
 > **Fecha inicio:** 2026-05-12  
-> **Estado:** revisada
+> **Estado:** completada
 
 ---
 
