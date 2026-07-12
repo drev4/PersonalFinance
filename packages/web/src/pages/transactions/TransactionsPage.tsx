@@ -1,22 +1,33 @@
-import { useState, useEffect, useCallback } from 'react';
-import type React from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import {
   Plus,
-  ChevronDown,
-  ChevronUp,
   ChevronLeft,
   ChevronRight,
   ArrowLeftRight,
   X,
   Repeat,
   Tag,
+  Receipt,
+  RefreshCw,
+  Flag,
+  Share2,
+  Download,
+  SlidersHorizontal,
 } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import type React from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { TransactionFormDialog } from '../../components/transactions/TransactionFormDialog';
+import { TransactionRow } from '../../components/transactions/TransactionRow';
+import { TransferFormDialog } from '../../components/transactions/TransferFormDialog';
+import { Amount } from '../../components/ui/Amount';
 import { Button } from '../../components/ui/button';
+import { CatChip } from '../../components/ui/CatChip';
+import { EmptyState } from '../../components/ui/empty-state';
 import { Input } from '../../components/ui/input';
+import { Pill } from '../../components/ui/Pill';
 import { Select } from '../../components/ui/select';
 import { Skeleton } from '../../components/ui/skeleton';
-import { EmptyState } from '../../components/ui/empty-state';
 import {
   Table,
   TableHeader,
@@ -25,37 +36,181 @@ import {
   TableRow,
   TableCell,
 } from '../../components/ui/table';
-import { TransactionRow } from '../../components/transactions/TransactionRow';
-import { TransactionFormDialog } from '../../components/transactions/TransactionFormDialog';
-import { TransferFormDialog } from '../../components/transactions/TransferFormDialog';
-import { useTransactions, useTransactionTags } from '../../hooks/useTransactions';
+import { TopBar } from '../../components/ui/TopBar';
 import { useAccounts } from '../../hooks/useAccounts';
 import { useCategories } from '../../hooks/useCategories';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { useTransactions, useTransactionTags } from '../../hooks/useTransactions';
+import { formatDate } from '../../lib/formatters';
+import type { Transaction, Category, Account } from '../../types/api';
+
+// ─── Table skeleton ───────────────────────────────────────────────────────────
 
 function TableSkeleton(): React.ReactElement {
   return (
     <>
       {Array.from({ length: 8 }).map((_, i) => (
         <TableRow key={i}>
-          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+          <TableCell>
+            <Skeleton className="h-4 w-20" />
+          </TableCell>
           <TableCell>
             <Skeleton className="mb-1 h-4 w-48" />
             <Skeleton className="h-3 w-24" />
           </TableCell>
-          <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
-          <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-          <TableCell className="text-right"><Skeleton className="ml-auto h-5 w-20" /></TableCell>
-          <TableCell><Skeleton className="ml-auto h-6 w-6 rounded" /></TableCell>
+          <TableCell>
+            <Skeleton className="h-5 w-20 rounded-full" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-4 w-28" />
+          </TableCell>
+          <TableCell className="text-right">
+            <Skeleton className="ml-auto h-5 w-20" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="ml-auto h-6 w-6 rounded" />
+          </TableCell>
         </TableRow>
       ))}
     </>
   );
 }
 
+// ─── Detail panel ─────────────────────────────────────────────────────────────
+
+interface TxDetailPanelProps {
+  tx: Transaction;
+  categories: Category[];
+  accounts: Account[];
+}
+
+function TxDetailPanel({ tx, categories, accounts }: TxDetailPanelProps): React.ReactElement {
+  const cat = categories.find((c) => c._id === tx.categoryId);
+  const account = accounts.find((a) => a._id === tx.accountId);
+  const isIncome = tx.type === 'income';
+
+  const typeLabel =
+    tx.type === 'income'
+      ? 'Ingreso'
+      : tx.type === 'expense'
+        ? 'Gasto'
+        : tx.type === 'transfer'
+          ? 'Transferencia'
+          : 'Ajuste';
+
+  return (
+    <div className="animate-slide-in-right">
+      {/* Header centrado */}
+      <div style={{ textAlign: 'center', marginBottom: 24 }}>
+        <CatChip
+          icon={cat ? <span style={{ fontSize: 18 }}>{cat.icon}</span> : <Receipt size={18} />}
+          color={cat?.color ? `${cat.color}25` : 'var(--surface-3)'}
+          fg={cat?.color ?? 'var(--text-2)'}
+          size={56}
+        />
+        <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 12 }}>{tx.description}</div>
+        <div style={{ marginTop: 8 }}>
+          <Amount
+            value={tx.amount}
+            size={36}
+            sign
+            color={isIncome ? 'var(--accent)' : 'var(--text)'}
+          />
+        </div>
+        <div style={{ marginTop: 10, display: 'flex', justifyContent: 'center', gap: 6 }}>
+          <Pill>{typeLabel}</Pill>
+        </div>
+      </div>
+
+      {/* Ficha de datos */}
+      <div
+        style={{
+          background: 'var(--surface)',
+          border: '0.5px solid var(--hairline)',
+          borderRadius: 16,
+          marginBottom: 12,
+          overflow: 'hidden',
+        }}
+      >
+        {[
+          { label: 'Categoría', value: cat?.name ?? '—' },
+          { label: 'Fecha', value: formatDate(tx.date) },
+          { label: 'Cuenta', value: account?.name ?? tx.accountId },
+          { label: 'Referencia', value: tx._id.slice(-8).toUpperCase() },
+        ].map((row, i, arr) => (
+          <div
+            key={row.label}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              padding: '12px 16px',
+              borderBottom: i < arr.length - 1 ? '0.5px solid var(--hairline)' : 'none',
+            }}
+          >
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{row.label}</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{row.value}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Acciones 2×2 */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        {[
+          { icon: <Receipt size={16} />, label: 'Recibo' },
+          { icon: <RefreshCw size={16} />, label: 'Repetir' },
+          { icon: <Flag size={16} />, label: 'Marcar' },
+          { icon: <Share2 size={16} />, label: 'Compartir' },
+        ].map(({ icon, label }) => (
+          <button
+            key={label}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 6,
+              padding: 12,
+              background: 'var(--surface)',
+              border: '0.5px solid var(--hairline)',
+              borderRadius: 12,
+              color: 'var(--text-2)',
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            {icon}
+            <span>{label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EmptyDetailPanel(): React.ReactElement {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        color: 'var(--text-4)',
+        gap: 8,
+      }}
+    >
+      <Receipt size={32} style={{ opacity: 0.3 }} />
+      <span style={{ fontSize: 13 }}>Selecciona una transacción</span>
+    </div>
+  );
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 const today = new Date();
 const DEFAULT_FROM = format(startOfMonth(today), 'yyyy-MM-dd');
 const DEFAULT_TO = format(endOfMonth(today), 'yyyy-MM-dd');
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function TransactionsPage(): React.ReactElement {
   const [searchParams] = useSearchParams();
@@ -65,7 +220,9 @@ export default function TransactionsPage(): React.ReactElement {
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
 
-  // Filters state
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+
+  // Filter state
   const [from, setFrom] = useState(DEFAULT_FROM);
   const [to, setTo] = useState(DEFAULT_TO);
   const [accountId, setAccountId] = useState(searchParams.get('accountId') ?? '');
@@ -78,8 +235,8 @@ export default function TransactionsPage(): React.ReactElement {
   const [tagSearch, setTagSearch] = useState('');
   const [page, setPage] = useState(1);
 
-  const { data: accounts } = useAccounts();
-  const { data: categories } = useCategories();
+  const { data: accounts = [] } = useAccounts();
+  const { data: categories = [] } = useCategories();
   const { data: availableTags = [] } = useTransactionTags();
 
   // Debounce search
@@ -109,7 +266,6 @@ export default function TransactionsPage(): React.ReactElement {
   };
 
   const { data, isLoading } = useTransactions(filters);
-
   const transactions = data?.data ?? [];
   const meta = data?.meta;
   const totalPages = meta?.totalPages ?? 1;
@@ -138,19 +294,19 @@ export default function TransactionsPage(): React.ReactElement {
     t.toLowerCase().includes(tagSearch.toLowerCase()),
   );
 
-  return (
-    <div className="p-6">
-      <div className="mx-auto max-w-6xl">
-        {/* Header */}
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Transacciones</h1>
-            <p className="mt-1 text-sm text-gray-500">
-              {meta ? `${meta.total} transacciones encontradas` : 'Historial de movimientos'}
-            </p>
-          </div>
+  // Sync type filter from segmented control
+  function handleSetType(val: string): void {
+    setType(val);
+    setPage(1);
+  }
 
-          <div className="flex flex-wrap gap-2">
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <TopBar
+        title="Movimientos"
+        subtitle="Todas las cuentas"
+        action={
+          <div style={{ display: 'flex', gap: 8 }}>
             <Button
               size="sm"
               variant="outline"
@@ -169,11 +325,7 @@ export default function TransactionsPage(): React.ReactElement {
               <Plus className="h-4 w-4" aria-hidden="true" />
               Ingreso
             </Button>
-            <Button
-              size="sm"
-              onClick={() => setTransferOpen(true)}
-              className="gap-1.5"
-            >
+            <Button size="sm" onClick={() => setTransferOpen(true)} className="gap-1.5">
               <ArrowLeftRight className="h-4 w-4" aria-hidden="true" />
               Transferencia
             </Button>
@@ -184,37 +336,129 @@ export default function TransactionsPage(): React.ReactElement {
               </Link>
             </Button>
           </div>
-        </div>
+        }
+      />
 
-        {/* Filters panel */}
-        <div className="mb-4 rounded-xl border border-gray-200 bg-white">
-          <button
-            type="button"
-            className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            onClick={() => setFiltersOpen((v) => !v)}
-            aria-expanded={filtersOpen}
+      <div className="web-tx-grid" style={{ flex: 1, minHeight: 0 }}>
+        {/* ── Left: list ── */}
+        <div style={{ padding: '20px 32px 40px', overflow: 'auto' }}>
+          {/* Segmented control + filter/export buttons */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 16,
+            }}
           >
-            <span className="flex items-center gap-2">
-              Filtros
-              {hasActiveFilters && (
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-600 text-xs text-white">
-                  !
-                </span>
-              )}
-            </span>
-            {filtersOpen ? (
-              <ChevronUp className="h-4 w-4 text-gray-400" aria-hidden="true" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-gray-400" aria-hidden="true" />
-            )}
-          </button>
+            <div
+              style={{
+                display: 'flex',
+                background: 'var(--surface)',
+                border: '0.5px solid var(--hairline)',
+                borderRadius: 10,
+                padding: 3,
+              }}
+            >
+              {[
+                { id: '', label: 'Todo' },
+                { id: 'income', label: 'Entradas' },
+                { id: 'expense', label: 'Salidas' },
+              ].map((o) => (
+                <button
+                  key={o.id}
+                  onClick={() => handleSetType(o.id)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: 8,
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: type === o.id ? 'var(--surface-3)' : 'transparent',
+                    color: type === o.id ? 'var(--text)' : 'var(--text-3)',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    transition: 'background 150ms',
+                  }}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => setFiltersOpen((v) => !v)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '7px 12px',
+                  background: hasActiveFilters ? 'rgba(196,255,61,0.10)' : 'var(--surface)',
+                  border: `0.5px solid ${hasActiveFilters ? 'var(--accent)' : 'var(--hairline)'}`,
+                  borderRadius: 10,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: hasActiveFilters ? 'var(--accent)' : 'var(--text-3)',
+                  cursor: 'pointer',
+                }}
+              >
+                <SlidersHorizontal size={13} />
+                Filtros
+                {hasActiveFilters && (
+                  <span
+                    style={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: '50%',
+                      background: 'var(--accent)',
+                      color: '#0A0A0A',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    !
+                  </span>
+                )}
+              </button>
+              <button
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '7px 12px',
+                  background: 'var(--surface)',
+                  border: '0.5px solid var(--hairline)',
+                  borderRadius: 10,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: 'var(--text-3)',
+                  cursor: 'pointer',
+                }}
+              >
+                <Download size={13} />
+                Exportar
+              </button>
+            </div>
+          </div>
 
+          {/* Advanced filters panel */}
           {filtersOpen && (
-            <div className="border-t border-gray-100 px-4 pb-4 pt-3">
+            <div
+              style={{
+                background: 'var(--surface)',
+                border: '0.5px solid var(--hairline)',
+                borderRadius: 16,
+                padding: '16px',
+                marginBottom: 16,
+              }}
+            >
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {/* Date from */}
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Desde</label>
+                  <label className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>
+                    Desde
+                  </label>
                   <Input
                     type="date"
                     value={from}
@@ -222,10 +466,10 @@ export default function TransactionsPage(): React.ReactElement {
                     className="h-9 text-sm"
                   />
                 </div>
-
-                {/* Date to */}
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Hasta</label>
+                  <label className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>
+                    Hasta
+                  </label>
                   <Input
                     type="date"
                     value={to}
@@ -233,10 +477,10 @@ export default function TransactionsPage(): React.ReactElement {
                     className="h-9 text-sm"
                   />
                 </div>
-
-                {/* Account */}
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Cuenta</label>
+                  <label className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>
+                    Cuenta
+                  </label>
                   <Select
                     value={accountId}
                     onChange={(e) => setAccountId(e.target.value)}
@@ -250,59 +494,51 @@ export default function TransactionsPage(): React.ReactElement {
                     ))}
                   </Select>
                 </div>
-
-                {/* Category */}
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Categoria</label>
+                  <label className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>
+                    Categoría
+                  </label>
                   <Select
                     value={categoryId}
                     onChange={(e) => setCategoryId(e.target.value)}
                     className="h-9 text-sm"
                   >
-                    <option value="">Todas las categorias</option>
-                    {categories?.filter((c) => c.isActive).map((c) => (
-                      <option key={c._id} value={c._id}>
-                        {c.name}
-                      </option>
-                    ))}
+                    <option value="">Todas las categorías</option>
+                    {categories
+                      ?.filter((c) => c.isActive)
+                      .map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {c.name}
+                        </option>
+                      ))}
                   </Select>
                 </div>
-
-                {/* Type */}
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Tipo</label>
-                  <Select
-                    value={type}
-                    onChange={(e) => setType(e.target.value)}
-                    className="h-9 text-sm"
-                  >
-                    <option value="">Todos los tipos</option>
-                    <option value="income">Ingreso</option>
-                    <option value="expense">Gasto</option>
-                    <option value="transfer">Transferencia</option>
-                  </Select>
-                </div>
-
-                {/* Search */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Buscar</label>
+                  <label className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>
+                    Buscar
+                  </label>
                   <Input
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Descripcion, notas..."
+                    placeholder="Descripción, notas..."
                     className="h-9 text-sm"
                   />
                 </div>
 
-                {/* Tags multi-select */}
+                {/* Tags */}
                 <div className="space-y-1 sm:col-span-2 lg:col-span-3">
-                  <label className="text-xs font-medium text-gray-600">Etiquetas</label>
+                  <label className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>
+                    Etiquetas
+                  </label>
                   <div className="relative">
                     <button
                       type="button"
                       className="flex h-9 w-full items-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm text-left hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                      onClick={() => { setTagsOpen((v) => !v); setTagSearch(''); }}
+                      onClick={() => {
+                        setTagsOpen((v) => !v);
+                        setTagSearch('');
+                      }}
                     >
                       <Tag className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
                       {selectedTags.length === 0 ? (
@@ -310,11 +546,17 @@ export default function TransactionsPage(): React.ReactElement {
                       ) : (
                         <span className="flex flex-wrap gap-1">
                           {selectedTags.map((t) => (
-                            <span key={t} className="inline-flex items-center gap-0.5 rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700">
+                            <span
+                              key={t}
+                              className="inline-flex items-center gap-0.5 rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700"
+                            >
                               {t}
                               <button
                                 type="button"
-                                onClick={(e) => { e.stopPropagation(); setSelectedTags((prev) => prev.filter((x) => x !== t)); }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedTags((prev) => prev.filter((x) => x !== t));
+                                }}
                                 aria-label={`Quitar ${t}`}
                               >
                                 <X className="h-3 w-3" aria-hidden="true" />
@@ -326,7 +568,11 @@ export default function TransactionsPage(): React.ReactElement {
                     </button>
                     {tagsOpen && (
                       <>
-                        <div className="fixed inset-0 z-10" onClick={() => setTagsOpen(false)} aria-hidden="true" />
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={() => setTagsOpen(false)}
+                          aria-hidden="true"
+                        />
                         <div className="absolute left-0 top-10 z-20 w-64 rounded-lg border border-gray-200 bg-white shadow-lg">
                           <div className="p-2">
                             <Input
@@ -355,8 +601,12 @@ export default function TransactionsPage(): React.ReactElement {
                                       );
                                     }}
                                   >
-                                    <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${active ? 'border-primary-500 bg-primary-500' : 'border-gray-300'}`}>
-                                      {active && <span className="text-white text-xs leading-none">✓</span>}
+                                    <span
+                                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${active ? 'border-primary-500 bg-primary-500' : 'border-gray-300'}`}
+                                    >
+                                      {active && (
+                                        <span className="text-white text-xs leading-none">✓</span>
+                                      )}
                                     </span>
                                     {tag}
                                   </button>
@@ -387,90 +637,117 @@ export default function TransactionsPage(): React.ReactElement {
               )}
             </div>
           )}
-        </div>
 
-        {/* Table */}
-        <div className="rounded-xl border border-gray-200 bg-white">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Descripcion</TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead>Cuenta</TableHead>
-                <TableHead className="text-right">Importe</TableHead>
-                <TableHead className="w-10" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableSkeleton />
-              ) : transactions.length === 0 ? (
+          {/* Table */}
+          <div
+            style={{
+              background: 'var(--surface)',
+              border: '0.5px solid var(--hairline)',
+              borderRadius: 16,
+              overflow: 'hidden',
+            }}
+          >
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="py-0">
-                    <EmptyState
-                      title="No hay transacciones"
-                      description="No se encontraron transacciones con los filtros actuales. Prueba a cambiar el rango de fechas o crea una nueva."
-                      className="border-0 rounded-none"
-                    />
-                  </TableCell>
+                  {['Fecha', 'Descripción', 'Categoría', 'Cuenta', 'Importe', ''].map((h) => (
+                    <TableHead
+                      key={h}
+                      style={{
+                        padding: '12px 16px',
+                        fontSize: 11,
+                        color: 'var(--text-3)',
+                        fontWeight: 500,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.4,
+                      }}
+                      className={h === 'Importe' ? 'text-right' : h === '' ? 'w-10' : ''}
+                    >
+                      {h}
+                    </TableHead>
+                  ))}
                 </TableRow>
-              ) : (
-                transactions.map((tx) => (
-                  <TransactionRow key={tx._id} transaction={tx} />
-                ))
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableSkeleton />
+                ) : transactions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-0">
+                      <EmptyState
+                        title="No hay transacciones"
+                        description="No se encontraron transacciones con los filtros actuales."
+                        className="border-0 rounded-none"
+                      />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  transactions.map((tx) => (
+                    <TransactionRow
+                      key={tx._id}
+                      transaction={tx}
+                      isSelected={selectedTx?._id === tx._id}
+                      onSelect={() => setSelectedTx(tx)}
+                    />
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-between">
+              <p style={{ fontSize: 13, color: 'var(--text-3)' }}>
+                Página <strong>{page}</strong> de <strong>{totalPages}</strong>
+                {meta && <> · {meta.total} registros</>}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="gap-1"
+                >
+                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  className="gap-1"
+                >
+                  Siguiente
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="mt-4 flex items-center justify-between">
-            <p className="text-sm text-gray-500">
-              Pagina <span className="font-medium">{page}</span> de{' '}
-              <span className="font-medium">{totalPages}</span>
-              {meta && (
-                <> &middot; {meta.total} registros</>
-              )}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="gap-1"
-              >
-                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-                Anterior
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="gap-1"
-              >
-                Siguiente
-                <ChevronRight className="h-4 w-4" aria-hidden="true" />
-              </Button>
-            </div>
-          </div>
-        )}
+        {/* ── Right: detail panel ── */}
+        <aside
+          style={{
+            borderLeft: '0.5px solid var(--hairline)',
+            overflow: 'auto',
+            padding: 24,
+            background: 'rgba(20,20,20,0.4)',
+          }}
+        >
+          {selectedTx ? (
+            <TxDetailPanel tx={selectedTx} categories={categories} accounts={accounts} />
+          ) : (
+            <EmptyDetailPanel />
+          )}
+        </aside>
       </div>
 
       {/* Dialogs */}
-      <TransactionFormDialog
-        type="income"
-        open={incomeOpen}
-        onOpenChange={setIncomeOpen}
-      />
-      <TransactionFormDialog
-        type="expense"
-        open={expenseOpen}
-        onOpenChange={setExpenseOpen}
-      />
+      <TransactionFormDialog type="income" open={incomeOpen} onOpenChange={setIncomeOpen} />
+      <TransactionFormDialog type="expense" open={expenseOpen} onOpenChange={setExpenseOpen} />
       <TransferFormDialog open={transferOpen} onOpenChange={setTransferOpen} />
     </div>
   );

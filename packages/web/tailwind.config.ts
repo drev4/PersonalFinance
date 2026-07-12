@@ -5,6 +5,10 @@ const config: Config = {
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Geist', '-apple-system', 'system-ui', 'sans-serif'],
+        mono: ['Geist Mono', 'ui-monospace', 'monospace'],
+      },
       colors: {
         primary: {
           50: '#f0f9ff',
@@ -18,6 +22,24 @@ const config: Config = {
           800: '#075985',
           900: '#0c3d66',
         },
+        bg: 'var(--bg)',
+        surface: 'var(--surface)',
+        'surface-2': 'var(--surface-2)',
+        'surface-3': 'var(--surface-3)',
+        hairline: 'var(--hairline)',
+        'hairline-strong': 'var(--hairline-strong)',
+        text: 'var(--text)',
+        'text-2': 'var(--text-2)',
+        'text-3': 'var(--text-3)',
+        'text-4': 'var(--text-4)',
+        accent: 'var(--accent)',
+        'accent-dim': 'var(--accent-dim)',
+        negative: 'var(--negative)',
+        warn: 'var(--warn)',
+      },
+      borderRadius: {
+        card: 'var(--r-card)',
+        pill: '9999px',
       },
       keyframes: {
         'accordion-down': {
@@ -28,10 +50,15 @@ const config: Config = {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
+        'fade-in': {
+          from: { opacity: '0', transform: 'translateY(6px)' },
+          to: { opacity: '1', transform: 'none' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'fade-in': 'fade-in 320ms cubic-bezier(.2,.8,.2,1) both',
       },
     },
   },

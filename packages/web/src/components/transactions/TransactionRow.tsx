@@ -1,22 +1,28 @@
-import { useState } from 'react';
-import type React from 'react';
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
-import { TableRow, TableCell } from '../ui/table';
-import { Badge } from '../ui/badge';
-import { TransactionFormDialog } from './TransactionFormDialog';
-import { DeleteConfirmDialog } from './DeleteConfirmDialog';
-import { useDeleteTransaction } from '../../hooks/useTransactions';
+import type React from 'react';
+import { useState } from 'react';
 import { useAccounts } from '../../hooks/useAccounts';
 import { useCategories } from '../../hooks/useCategories';
+import { useDeleteTransaction } from '../../hooks/useTransactions';
 import { formatCurrency, formatDate, getTransactionTypeColor } from '../../lib/formatters';
-import type { Transaction } from '../../types/api';
 import { cn } from '../../lib/utils';
+import type { Transaction } from '../../types/api';
+import { Badge } from '../ui/badge';
+import { TableRow, TableCell } from '../ui/table';
+import { DeleteConfirmDialog } from './DeleteConfirmDialog';
+import { TransactionFormDialog } from './TransactionFormDialog';
 
 interface TransactionRowProps {
   transaction: Transaction;
+  isSelected?: boolean;
+  onSelect?: () => void;
 }
 
-export function TransactionRow({ transaction }: TransactionRowProps): React.ReactElement {
+export function TransactionRow({
+  transaction,
+  isSelected,
+  onSelect,
+}: TransactionRowProps): React.ReactElement {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -38,7 +44,13 @@ export function TransactionRow({ transaction }: TransactionRowProps): React.Reac
 
   return (
     <>
-      <TableRow>
+      <TableRow
+        onClick={onSelect}
+        style={{
+          background: isSelected ? 'var(--surface-2)' : undefined,
+          cursor: onSelect ? 'pointer' : undefined,
+        }}
+      >
         {/* Date */}
         <TableCell className="whitespace-nowrap text-gray-500">
           {formatDate(transaction.date, 'short')}
