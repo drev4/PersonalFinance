@@ -109,8 +109,8 @@ function CreateDialog({ open, accounts, onClose }: CreateDialogProps): React.Rea
       setApiError(null);
       const initial = emptyCreateForm();
       if (accounts.length > 0) {
-        initial.accountId = accounts[0]._id;
-        initial.currency = accounts[0].currency;
+        initial.accountId = accounts[0]!._id;
+        initial.currency = accounts[0]!.currency;
       }
       setForm(initial);
     }

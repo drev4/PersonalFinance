@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { requireAuth } from '../../middlewares/authenticate.js';
 import {
@@ -29,10 +29,7 @@ const flexDate = z.string().transform((s, ctx) => {
 
 const BudgetItemSchema = z.object({
   categoryId: z.string().min(1, 'categoryId is required'),
-  amount: z
-    .number()
-    .int('Amount must be an integer (cents)')
-    .positive('Amount must be positive'),
+  amount: z.number().int('Amount must be an integer (cents)').positive('Amount must be positive'),
 });
 
 const CreateBudgetSchema = z.object({
@@ -57,10 +54,7 @@ const ProgressQuerySchema = z.object({
 
 // ---- Error handler -----------------------------------------------------------
 
-function handleBudgetError(
-  error: unknown,
-  reply: Parameters<Parameters<FastifyInstance['get']>[2]>[1],
-): ReturnType<Parameters<FastifyInstance['get']>[2]> {
+function handleBudgetError(error: unknown, reply: FastifyReply): FastifyReply {
   if (error instanceof BudgetError) {
     return reply.status(error.statusCode).send({
       error: { code: error.code, message: error.message },
@@ -71,121 +65,87 @@ function handleBudgetError(
 
 // ---- Route registration ------------------------------------------------------
 
-export async function registerBudgetRoutes(
-  fastify: FastifyInstance,
-): Promise<void> {
+export async function registerBudgetRoutes(fastify: FastifyInstance): Promise<void> {
   // GET /budgets/alerts — must be before /:id to avoid param capture
-  fastify.get(
-    '/budgets/alerts',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const alerts = await checkBudgetAlerts(userId);
-      return reply.send({ data: alerts });
-    },
-  );
+  fastify.get('/budgets/alerts', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const alerts = await checkBudgetAlerts(userId);
+    return reply.send({ data: alerts });
+  });
 
   // GET /budgets
-  fastify.get(
-    '/budgets',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const budgets = await getUserBudgets(userId);
-      return reply.send({ data: budgets });
-    },
-  );
+  fastify.get('/budgets', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const budgets = await getUserBudgets(userId);
+    return reply.send({ data: budgets });
+  });
 
   // POST /budgets
-  fastify.post(
-    '/budgets',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const body = CreateBudgetSchema.parse(request.body);
+  fastify.post('/budgets', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const body = CreateBudgetSchema.parse(request.body);
 
-      try {
-        const budget = await createBudget(userId, { ...body, userId });
-        return reply.status(201).send({ data: budget });
-      } catch (err) {
-        return handleBudgetError(err, reply);
-      }
-    },
-  );
+    try {
+      const budget = await createBudget(userId, { ...body, userId });
+      return reply.status(201).send({ data: budget });
+    } catch (err) {
+      return handleBudgetError(err, reply);
+    }
+  });
 
   // GET /budgets/:id
-  fastify.get(
-    '/budgets/:id',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const { id } = request.params as { id: string };
+  fastify.get('/budgets/:id', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const { id } = request.params as { id: string };
 
-      const budget = await findById(id, userId);
-      if (budget === null) {
-        return reply.status(404).send({
-          error: { code: 'BUDGET_NOT_FOUND', message: 'Budget not found' },
-        });
-      }
+    const budget = await findById(id, userId);
+    if (budget === null) {
+      return reply.status(404).send({
+        error: { code: 'BUDGET_NOT_FOUND', message: 'Budget not found' },
+      });
+    }
 
-      return reply.send({ data: budget });
-    },
-  );
+    return reply.send({ data: budget });
+  });
 
   // PATCH /budgets/:id
-  fastify.patch(
-    '/budgets/:id',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const { id } = request.params as { id: string };
-      const body = UpdateBudgetSchema.parse(request.body);
+  fastify.patch('/budgets/:id', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const { id } = request.params as { id: string };
+    const body = UpdateBudgetSchema.parse(request.body);
 
-      try {
-        const budget = await updateBudget(userId, id, body);
-        return reply.send({ data: budget });
-      } catch (err) {
-        return handleBudgetError(err, reply);
-      }
-    },
-  );
+    try {
+      const budget = await updateBudget(userId, id, body);
+      return reply.send({ data: budget });
+    } catch (err) {
+      return handleBudgetError(err, reply);
+    }
+  });
 
   // DELETE /budgets/:id
-  fastify.delete(
-    '/budgets/:id',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const { id } = request.params as { id: string };
+  fastify.delete('/budgets/:id', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const { id } = request.params as { id: string };
 
-      try {
-        await deleteBudget(userId, id);
-        return reply.status(204).send();
-      } catch (err) {
-        return handleBudgetError(err, reply);
-      }
-    },
-  );
+    try {
+      await deleteBudget(userId, id);
+      return reply.status(204).send();
+    } catch (err) {
+      return handleBudgetError(err, reply);
+    }
+  });
 
   // GET /budgets/:id/progress
-  fastify.get(
-    '/budgets/:id/progress',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const { id } = request.params as { id: string };
-      const query = ProgressQuerySchema.parse(request.query);
+  fastify.get('/budgets/:id/progress', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const { id } = request.params as { id: string };
+    const query = ProgressQuerySchema.parse(request.query);
 
-      try {
-        const progress = await getBudgetProgress(
-          userId,
-          id,
-          query.referenceDate ?? new Date(),
-        );
-        return reply.send({ data: progress });
-      } catch (err) {
-        return handleBudgetError(err, reply);
-      }
-    },
-  );
+    try {
+      const progress = await getBudgetProgress(userId, id, query.referenceDate ?? new Date());
+      return reply.send({ data: progress });
+    } catch (err) {
+      return handleBudgetError(err, reply);
+    }
+  });
 }

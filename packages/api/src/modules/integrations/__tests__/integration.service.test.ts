@@ -234,12 +234,12 @@ describe('getIntegrations()', () => {
     const result = await getIntegrations(FAKE_USER_ID);
 
     expect(result).toHaveLength(1);
-    expect(result[0].provider).toBe('binance');
-    expect(result[0].connected).toBe(true);
-    expect(result[0].lastSyncStatus).toBe('never');
+    expect(result[0]!.provider).toBe('binance');
+    expect(result[0]!.connected).toBe(true);
+    expect(result[0]!.lastSyncStatus).toBe('never');
 
     // Security: no raw credential data must be returned
-    const keys = Object.keys(result[0]);
+    const keys = Object.keys(result[0]!);
     expect(keys).not.toContain('encryptedPayload');
     expect(keys).not.toContain('iv');
     expect(keys).not.toContain('apiKey');
@@ -281,9 +281,7 @@ describe('disconnectIntegration()', () => {
   });
 
   it('throws INTEGRATION_NOT_FOUND when no active integration exists', async () => {
-    const err = await disconnectIntegration(FAKE_USER_ID, 'binance').catch(
-      (e: unknown) => e,
-    );
+    const err = await disconnectIntegration(FAKE_USER_ID, 'binance').catch((e: unknown) => e);
 
     expect(err).toBeInstanceOf(IntegrationError);
     expect((err as IntegrationError).code).toBe('INTEGRATION_NOT_FOUND');
@@ -325,18 +323,14 @@ describe('triggerManualSync()', () => {
   });
 
   it('throws INTEGRATION_NOT_FOUND when integration is not connected', async () => {
-    const err = await triggerManualSync(FAKE_USER_ID, 'binance').catch(
-      (e: unknown) => e,
-    );
+    const err = await triggerManualSync(FAKE_USER_ID, 'binance').catch((e: unknown) => e);
 
     expect(err).toBeInstanceOf(IntegrationError);
     expect((err as IntegrationError).code).toBe('INTEGRATION_NOT_FOUND');
   });
 
   it('throws UNSUPPORTED_PROVIDER for unknown providers', async () => {
-    const err = await triggerManualSync(FAKE_USER_ID, 'unknown_provider').catch(
-      (e: unknown) => e,
-    );
+    const err = await triggerManualSync(FAKE_USER_ID, 'unknown_provider').catch((e: unknown) => e);
 
     expect(err).toBeInstanceOf(IntegrationError);
     expect((err as IntegrationError).code).toBe('UNSUPPORTED_PROVIDER');
@@ -440,7 +434,7 @@ describe('syncBinance()', () => {
     }).lean();
 
     expect(holdings).toHaveLength(1);
-    expect(holdings[0].symbol).toBe('ETH');
+    expect(holdings[0]!.symbol).toBe('ETH');
   });
 
   it('inserts new trades as transactions', async () => {
@@ -579,9 +573,7 @@ describe('syncBinance()', () => {
   it('updates lastSyncStatus to error when sync fails', async () => {
     await seedBinanceCredential();
 
-    getMocks().mockGetSpotBalances.mockRejectedValueOnce(
-      new Error('Network timeout'),
-    );
+    getMocks().mockGetSpotBalances.mockRejectedValueOnce(new Error('Network timeout'));
 
     await syncBinance(FAKE_USER_ID).catch(() => undefined);
 

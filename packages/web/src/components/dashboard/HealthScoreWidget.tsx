@@ -1,9 +1,9 @@
-import type React from 'react';
 import { Heart } from 'lucide-react';
+import type React from 'react';
+import type { HealthScoreArea } from '../../api/dashboard.api';
+import { useHealthScore } from '../../hooks/useDashboard';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
-import { useHealthScore } from '../../hooks/useDashboard';
-import type { HealthScoreArea } from '../../api/dashboard.api';
 
 // ─── Circular gauge SVG ───────────────────────────────────────────────────────
 
@@ -44,14 +44,7 @@ function ScoreGauge({ score, color }: GaugeProps): React.ReactElement {
         transform={`rotate(-90 ${cx} ${cy})`}
         style={{ transition: 'stroke-dashoffset 0.6s ease' }}
       />
-      <text
-        x={cx}
-        y={cy + 6}
-        textAnchor="middle"
-        fontSize={22}
-        fontWeight="bold"
-        fill={color}
-      >
+      <text x={cx} y={cy + 6} textAnchor="middle" fontSize={22} fontWeight="bold" fill={color}>
         {score}
       </text>
     </svg>
@@ -67,7 +60,15 @@ interface AreaBarProps {
 function AreaBar({ area }: AreaBarProps): React.ReactElement {
   const pct = Math.round((area.score / area.max) * 100);
   const barColor =
-    pct >= 80 ? '#22c55e' : pct >= 60 ? '#84cc16' : pct >= 40 ? '#f59e0b' : pct >= 20 ? '#f97316' : '#ef4444';
+    pct >= 80
+      ? '#22c55e'
+      : pct >= 60
+        ? '#84cc16'
+        : pct >= 40
+          ? '#f59e0b'
+          : pct >= 20
+            ? '#f97316'
+            : '#ef4444';
 
   return (
     <div className="space-y-1">
@@ -123,10 +124,7 @@ export default function HealthScoreWidget(): React.ReactElement {
             {/* Score gauge + label */}
             <div className="flex flex-col items-center gap-2">
               <ScoreGauge score={data.score} color={data.color} />
-              <span
-                className="text-sm font-bold"
-                style={{ color: data.color }}
-              >
+              <span className="text-sm font-bold" style={{ color: data.color }}>
                 {data.label}
               </span>
             </div>

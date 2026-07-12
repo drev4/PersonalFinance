@@ -1,13 +1,16 @@
+import { Tag, Plus, Trash2, Pencil, X } from 'lucide-react';
 import { useState, useEffect, useRef, type KeyboardEvent } from 'react';
 import type React from 'react';
-import { Tag, Plus, Trash2, Pencil, X } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
+import type { CategoryRule } from '../../api/categoryRules.api';
 import { Badge } from '../../components/ui/badge';
-import { Select } from '../../components/ui/select';
-import { Switch } from '../../components/ui/switch';
-import { Skeleton } from '../../components/ui/skeleton';
+import { Button } from '../../components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '../../components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -16,14 +19,17 @@ import {
   DialogFooter,
   DialogClose,
 } from '../../components/ui/dialog';
+import { Input } from '../../components/ui/input';
+import { Select } from '../../components/ui/select';
+import { Skeleton } from '../../components/ui/skeleton';
+import { Switch } from '../../components/ui/switch';
+import { useCategories } from '../../hooks/useCategories';
 import {
   useCategoryRules,
   useCreateCategoryRule,
   useUpdateCategoryRule,
   useDeleteCategoryRule,
 } from '../../hooks/useCategoryRules';
-import { useCategories } from '../../hooks/useCategories';
-import type { CategoryRule } from '../../api/categoryRules.api';
 import type { Category } from '../../types/api';
 
 // ─── Keyword tag input ────────────────────────────────────────────────────────
@@ -71,7 +77,10 @@ function KeywordInput({ keywords, onChange }: KeywordInputProps): React.ReactEle
           {kw}
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); removeKeyword(kw); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              removeKeyword(kw);
+            }}
             className="hover:text-primary-900 focus:outline-none"
             aria-label={`Eliminar palabra ${kw}`}
           >
@@ -113,7 +122,12 @@ interface RuleFormDialogProps {
   onClose: () => void;
 }
 
-function RuleFormDialog({ open, rule, categories, onClose }: RuleFormDialogProps): React.ReactElement {
+function RuleFormDialog({
+  open,
+  rule,
+  categories,
+  onClose,
+}: RuleFormDialogProps): React.ReactElement {
   const isEditing = !!rule;
   const createMutation = useCreateCategoryRule();
   const updateMutation = useUpdateCategoryRule();
@@ -125,7 +139,11 @@ function RuleFormDialog({ open, rule, categories, onClose }: RuleFormDialogProps
     if (open) {
       setForm(
         rule
-          ? { categoryId: rule.categoryId, keywords: rule.keywords, priority: String(rule.priority) }
+          ? {
+              categoryId: rule.categoryId,
+              keywords: rule.keywords,
+              priority: String(rule.priority),
+            }
           : emptyForm(),
       );
     }
@@ -152,7 +170,12 @@ function RuleFormDialog({ open, rule, categories, onClose }: RuleFormDialogProps
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Editar regla' : 'Nueva regla'}</DialogTitle>
@@ -205,7 +228,9 @@ function RuleFormDialog({ open, rule, categories, onClose }: RuleFormDialogProps
               max={999}
               placeholder="0"
             />
-            <p className="text-xs text-gray-400">Mayor número = mayor prioridad al aplicar reglas.</p>
+            <p className="text-xs text-gray-400">
+              Mayor número = mayor prioridad al aplicar reglas.
+            </p>
           </div>
 
           <DialogFooter>
@@ -256,9 +281,7 @@ function RuleRow({ rule, category, onEdit }: RuleRowProps): React.ReactElement {
               style={{ backgroundColor: category?.color ?? '#6b7280' }}
               aria-hidden="true"
             />
-            <span className="text-sm font-semibold text-gray-800">
-              {category?.name ?? '—'}
-            </span>
+            <span className="text-sm font-semibold text-gray-800">{category?.name ?? '—'}</span>
             <Badge variant="outline" className="ml-auto text-[10px]">
               Prioridad {rule.priority}
             </Badge>
@@ -302,13 +325,19 @@ function RuleRow({ rule, category, onEdit }: RuleRowProps): React.ReactElement {
       </div>
 
       {/* Delete confirm dialog */}
-      <Dialog open={confirmDelete} onOpenChange={(v) => { if (!v) setConfirmDelete(false); }}>
+      <Dialog
+        open={confirmDelete}
+        onOpenChange={(v) => {
+          if (!v) setConfirmDelete(false);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Eliminar regla</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-gray-600">
-            ¿Seguro que quieres eliminar esta regla de categorización? Esta acción no se puede deshacer.
+            ¿Seguro que quieres eliminar esta regla de categorización? Esta acción no se puede
+            deshacer.
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmDelete(false)}>
@@ -353,9 +382,7 @@ export default function CategoryRulesPage(): React.ReactElement {
     setEditingRule(undefined);
   }
 
-  const categoryMap = new Map<string, Category>(
-    (categories ?? []).map((c) => [c._id, c]),
-  );
+  const categoryMap = new Map<string, Category>((categories ?? []).map((c) => [c._id, c]));
 
   const activeRules = (rules ?? []).filter((r) => r.isActive);
   const inactiveRules = (rules ?? []).filter((r) => !r.isActive);

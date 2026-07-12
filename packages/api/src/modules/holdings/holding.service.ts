@@ -1,6 +1,6 @@
 import { parse } from 'csv-parse/sync';
 import axios from 'axios';
-import pino from 'pino';
+import { pino } from 'pino';
 import mongoose from 'mongoose';
 import { AccountModel } from '../accounts/account.model.js';
 import * as holdingRepository from './holding.repository.js';

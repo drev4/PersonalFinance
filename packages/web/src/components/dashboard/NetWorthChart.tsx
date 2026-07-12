@@ -1,3 +1,6 @@
+import { format, parseISO, es } from 'date-fns';
+
+import { TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 import type React from 'react';
 import {
@@ -9,14 +12,11 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { TrendingUp } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { useNetWorthHistory } from '../../hooks/useDashboard';
+import { cn } from '../../lib/utils';
+import type { NetWorthHistoryPeriod } from '../../types/api';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
-import { cn } from '../../lib/utils';
-import { useNetWorthHistory } from '../../hooks/useDashboard';
-import type { NetWorthHistoryPeriod } from '../../types/api';
 
 // ─── Period selector ──────────────────────────────────────────────────────────
 
@@ -138,9 +138,7 @@ export default function NetWorthChart(): React.ReactElement {
           >
             <TrendingUp className="mb-3 h-10 w-10 text-gray-300" aria-hidden="true" />
             <p className="text-sm font-medium text-gray-500">Aun no hay historial.</p>
-            <p className="mt-1 text-xs text-gray-400">
-              El grafico se actualizara manana.
-            </p>
+            <p className="mt-1 text-xs text-gray-400">El grafico se actualizara manana.</p>
           </div>
         )}
 

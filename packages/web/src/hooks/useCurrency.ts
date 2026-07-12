@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { UseQueryResult } from '@tanstack/react-query';
-import { useAuthStore } from '../stores/authStore';
 import { getCurrencyRates, type CurrencyRates } from '../api/currency.api';
+import { useAuthStore } from '../stores/authStore';
 
 export const currencyKeys = {
   all: ['currency'] as const,

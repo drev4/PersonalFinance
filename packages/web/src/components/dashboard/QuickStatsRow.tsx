@@ -1,10 +1,10 @@
-import type React from 'react';
 import { TrendingUp, TrendingDown, Wallet, PiggyBank } from 'lucide-react';
+import type React from 'react';
+import { useDashboardCashflow } from '../../hooks/useDashboard';
+import { formatCurrency } from '../../lib/formatters';
+import { cn } from '../../lib/utils';
 import { Card, CardContent } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
-import { formatCurrency } from '../../lib/formatters';
-import { useDashboardCashflow } from '../../hooks/useDashboard';
-import { cn } from '../../lib/utils';
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
 
@@ -16,13 +16,7 @@ interface StatCardProps {
   isLoading: boolean;
 }
 
-function StatCard({
-  label,
-  value,
-  icon,
-  trend,
-  isLoading,
-}: StatCardProps): React.ReactElement {
+function StatCard({ label, value, icon, trend, isLoading }: StatCardProps): React.ReactElement {
   return (
     <Card>
       <CardContent className="p-4">
@@ -108,7 +102,9 @@ export default function QuickStatsRow(): React.ReactElement {
       />
       <StatCard
         label="Tasa de ahorro"
-        value={income > 0 ? `${savingsRate.toLocaleString('es-ES', { maximumFractionDigits: 1 })}%` : '—'}
+        value={
+          income > 0 ? `${savingsRate.toLocaleString('es-ES', { maximumFractionDigits: 1 })}%` : '—'
+        }
         icon={<PiggyBank className="h-5 w-5" aria-hidden="true" />}
         trend={savingsRate > 0 ? 'positive' : savingsRate < 0 ? 'negative' : 'neutral'}
         isLoading={isLoading}

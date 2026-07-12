@@ -1,7 +1,9 @@
+import { CheckCircle } from 'lucide-react';
 import { useState } from 'react';
 import type React from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle } from 'lucide-react';
+import { useSaveSimulation } from '../../hooks/useSimulators';
+import { Button } from '../ui/button';
 import {
   Dialog,
   DialogContent,
@@ -10,9 +12,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '../ui/dialog';
-import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { useSaveSimulation } from '../../hooks/useSimulators';
 
 interface SaveSimulationDialogProps {
   open: boolean;
@@ -84,10 +84,7 @@ export default function SaveSimulationDialog({
             </DialogHeader>
 
             <div className="py-2">
-              <label
-                htmlFor="sim-name"
-                className="mb-1.5 block text-sm font-medium text-gray-700"
-              >
+              <label htmlFor="sim-name" className="mb-1.5 block text-sm font-medium text-gray-700">
                 Nombre de la simulacion
               </label>
               <Input
@@ -110,10 +107,7 @@ export default function SaveSimulationDialog({
               >
                 Cancelar
               </Button>
-              <Button
-                onClick={handleSave}
-                disabled={!name.trim() || saveMutation.isPending}
-              >
+              <Button onClick={handleSave} disabled={!name.trim() || saveMutation.isPending}>
                 {saveMutation.isPending ? 'Guardando...' : 'Guardar'}
               </Button>
             </DialogFooter>

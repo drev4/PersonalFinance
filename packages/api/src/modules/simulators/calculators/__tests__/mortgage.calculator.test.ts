@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  calculateMortgage,
-  calculateMixedMortgage,
-} from '../mortgage.calculator.js';
+import { calculateMortgage, calculateMixedMortgage } from '../mortgage.calculator.js';
 
 // ---- Helpers ----------------------------------------------------------------
 
@@ -48,7 +45,7 @@ describe('calculateMortgage() — standard mortgage', () => {
 
   it('final balance is 0', () => {
     const result = calculateMortgage({ principal: PRINCIPAL, annualRate: RATE, years: YEARS });
-    const lastRow = result.schedule[result.schedule.length - 1];
+    const lastRow = result.schedule[result.schedule.length - 1]!;
     expect(lastRow.balance).toBe(0);
   });
 
@@ -81,13 +78,15 @@ describe('calculateMortgage() — standard mortgage', () => {
   it('balance decreases monotonically', () => {
     const result = calculateMortgage({ principal: PRINCIPAL, annualRate: RATE, years: YEARS });
     for (let i = 1; i < result.schedule.length; i++) {
-      expect(result.schedule[i].balance).toBeLessThanOrEqual(result.schedule[i - 1].balance);
+      expect(result.schedule[i]!.balance).toBeLessThanOrEqual(result.schedule[i - 1]!.balance);
     }
   });
 
   it('totalPayment = totalInterest + principal', () => {
     const result = calculateMortgage({ principal: PRINCIPAL, annualRate: RATE, years: YEARS });
-    expect(Math.abs(result.totalPayment - (result.totalInterest + PRINCIPAL))).toBeLessThanOrEqual(100);
+    expect(Math.abs(result.totalPayment - (result.totalInterest + PRINCIPAL))).toBeLessThanOrEqual(
+      100,
+    );
   });
 
   it('effectiveRate (TAE) is positive', () => {
@@ -99,14 +98,14 @@ describe('calculateMortgage() — standard mortgage', () => {
     const result = calculateMortgage({ principal: 1_200_000, annualRate: 0, years: 10 });
     expect(result.totalInterest).toBe(0);
     expect(result.monthlyPayment).toBe(10_000); // 1_200_000 / 120
-    expect(result.schedule[result.schedule.length - 1].balance).toBe(0);
+    expect(result.schedule[result.schedule.length - 1]!.balance).toBe(0);
   });
 
   it('smaller 10-year case: sum of principal = initial principal (±100 cents)', () => {
     const result = calculateMortgage({ principal: 5_000_000, annualRate: 5, years: 10 });
     const sumPrincipal = result.schedule.reduce((s, r) => s + r.principal, 0);
     expect(Math.abs(sumPrincipal - 5_000_000)).toBeLessThanOrEqual(100);
-    expect(result.schedule[result.schedule.length - 1].balance).toBe(0);
+    expect(result.schedule[result.schedule.length - 1]!.balance).toBe(0);
   });
 });
 
@@ -157,7 +156,7 @@ describe('calculateMixedMortgage() — mixed rate mortgage', () => {
 
   it('final balance is 0', () => {
     const result = calculateMixedMortgage(INPUTS);
-    const lastRow = result.schedule[result.schedule.length - 1];
+    const lastRow = result.schedule[result.schedule.length - 1]!;
     expect(lastRow.balance).toBe(0);
   });
 

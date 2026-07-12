@@ -88,16 +88,18 @@ async function makeAccount(userId = FAKE_USER_ID) {
   });
 }
 
-async function makeHolding(overrides: Partial<{
-  userId: string;
-  accountId: string;
-  symbol: string;
-  assetType: 'crypto' | 'stock' | 'etf' | 'bond';
-  quantity: string;
-  averageBuyPrice: number;
-  currentPrice: number;
-  currency: string;
-}> = {}) {
+async function makeHolding(
+  overrides: Partial<{
+    userId: string;
+    accountId: string;
+    symbol: string;
+    assetType: 'crypto' | 'stock' | 'etf' | 'bond';
+    quantity: string;
+    averageBuyPrice: number;
+    currentPrice: number;
+    currency: string;
+  }> = {},
+) {
   const account = await makeAccount(overrides.userId ?? FAKE_USER_ID);
   return HoldingModel.create({
     userId: new mongoose.Types.ObjectId(overrides.userId ?? FAKE_USER_ID),
@@ -106,7 +108,7 @@ async function makeHolding(overrides: Partial<{
     assetType: overrides.assetType ?? 'crypto',
     quantity: overrides.quantity ?? '1',
     averageBuyPrice: overrides.averageBuyPrice ?? 3_000_000, // $30,000 in cents
-    currentPrice: overrides.currentPrice ?? 4_000_000,       // $40,000 in cents
+    currentPrice: overrides.currentPrice ?? 4_000_000, // $40,000 in cents
     priceUpdatedAt: new Date(),
     currency: overrides.currency ?? 'USD',
     source: 'manual',
@@ -130,7 +132,7 @@ describe('getUserHoldings()', () => {
 
     const holdings = await getUserHoldings(FAKE_USER_ID);
     expect(holdings).toHaveLength(1);
-    expect(holdings[0].currentValue).toBe(8_000_000);
+    expect(holdings[0]!.currentValue).toBe(8_000_000);
   });
 
   it('calculates totalCost correctly (quantity * averageBuyPrice)', async () => {
@@ -139,7 +141,7 @@ describe('getUserHoldings()', () => {
     await makeHolding({ quantity: '2', averageBuyPrice: 3_000_000, currentPrice: 4_000_000 });
 
     const holdings = await getUserHoldings(FAKE_USER_ID);
-    expect(holdings[0].totalCost).toBe(6_000_000);
+    expect(holdings[0]!.totalCost).toBe(6_000_000);
   });
 
   it('calculates pnl correctly (currentValue - totalCost)', async () => {
@@ -148,7 +150,7 @@ describe('getUserHoldings()', () => {
     await makeHolding({ quantity: '1', averageBuyPrice: 3_000_000, currentPrice: 4_000_000 });
 
     const holdings = await getUserHoldings(FAKE_USER_ID);
-    expect(holdings[0].pnl).toBe(1_000_000);
+    expect(holdings[0]!.pnl).toBe(1_000_000);
   });
 
   it('calculates pnlPercentage correctly', async () => {
@@ -157,7 +159,7 @@ describe('getUserHoldings()', () => {
     await makeHolding({ quantity: '1', averageBuyPrice: 3_000_000, currentPrice: 4_000_000 });
 
     const holdings = await getUserHoldings(FAKE_USER_ID);
-    expect(holdings[0].pnlPercentage).toBeCloseTo(33.33, 1);
+    expect(holdings[0]!.pnlPercentage).toBeCloseTo(33.33, 1);
   });
 
   it('calculates portfolioPercentage across multiple holdings', async () => {
@@ -165,8 +167,19 @@ describe('getUserHoldings()', () => {
     // ETH: qty=10, price=200_000  → value = 2_000_000
     // total = 6_000_000
     // BTC % = 66.67, ETH % = 33.33
-    await makeHolding({ symbol: 'BTC', quantity: '1', currentPrice: 4_000_000, averageBuyPrice: 3_000_000 });
-    await makeHolding({ symbol: 'ETH', quantity: '10', currentPrice: 200_000, averageBuyPrice: 150_000, assetType: 'crypto' });
+    await makeHolding({
+      symbol: 'BTC',
+      quantity: '1',
+      currentPrice: 4_000_000,
+      averageBuyPrice: 3_000_000,
+    });
+    await makeHolding({
+      symbol: 'ETH',
+      quantity: '10',
+      currentPrice: 200_000,
+      averageBuyPrice: 150_000,
+      assetType: 'crypto',
+    });
 
     const holdings = await getUserHoldings(FAKE_USER_ID);
     const btc = holdings.find((h) => h.symbol === 'BTC')!;
@@ -191,9 +204,9 @@ describe('getUserHoldings()', () => {
     });
 
     const holdings = await getUserHoldings(FAKE_USER_ID);
-    expect(holdings[0].currentValue).toBe(0);
-    expect(holdings[0].pnl).toBe(Math.round(0 - 5 * 100_00));
-    expect(holdings[0].portfolioPercentage).toBe(0);
+    expect(holdings[0]!.currentValue).toBe(0);
+    expect(holdings[0]!.pnl).toBe(Math.round(0 - 5 * 100_00));
+    expect(holdings[0]!.portfolioPercentage).toBe(0);
   });
 
   it('only returns holdings belonging to the requesting user', async () => {
@@ -202,7 +215,7 @@ describe('getUserHoldings()', () => {
 
     const holdings = await getUserHoldings(FAKE_USER_ID);
     expect(holdings).toHaveLength(1);
-    expect(holdings[0].symbol).toBe('BTC');
+    expect(holdings[0]!.symbol).toBe('BTC');
   });
 });
 
@@ -314,8 +327,8 @@ describe('createHolding()', () => {
       source: 'manual',
     });
 
-    expect(holding.symbol).toBe('ETH');           // uppercased
-    expect(holding.currency).toBe('USD');         // uppercased
+    expect(holding.symbol).toBe('ETH'); // uppercased
+    expect(holding.currency).toBe('USD'); // uppercased
     expect(holding.quantity).toBe('2.5');
     expect(holding.userId.toHexString()).toBe(FAKE_USER_ID);
   });
@@ -465,8 +478,20 @@ describe('getPortfolioSummary()', () => {
   it('aggregates totalValue and totalCost correctly', async () => {
     // BTC: qty=1, price=4_000_000, cost=3_000_000
     // ETH: qty=10, price=200_000, cost=150_000
-    await makeHolding({ symbol: 'BTC', quantity: '1', currentPrice: 4_000_000, averageBuyPrice: 3_000_000, assetType: 'crypto' });
-    await makeHolding({ symbol: 'ETH', quantity: '10', currentPrice: 200_000, averageBuyPrice: 150_000, assetType: 'crypto' });
+    await makeHolding({
+      symbol: 'BTC',
+      quantity: '1',
+      currentPrice: 4_000_000,
+      averageBuyPrice: 3_000_000,
+      assetType: 'crypto',
+    });
+    await makeHolding({
+      symbol: 'ETH',
+      quantity: '10',
+      currentPrice: 200_000,
+      averageBuyPrice: 150_000,
+      assetType: 'crypto',
+    });
 
     const summary = await getPortfolioSummary(FAKE_USER_ID);
 
@@ -478,8 +503,20 @@ describe('getPortfolioSummary()', () => {
   });
 
   it('groups holdings by assetType correctly', async () => {
-    await makeHolding({ symbol: 'BTC', assetType: 'crypto', quantity: '1', currentPrice: 4_000_000, averageBuyPrice: 3_000_000 });
-    await makeHolding({ symbol: 'AAPL', assetType: 'stock', quantity: '10', currentPrice: 20_000, averageBuyPrice: 18_000 });
+    await makeHolding({
+      symbol: 'BTC',
+      assetType: 'crypto',
+      quantity: '1',
+      currentPrice: 4_000_000,
+      averageBuyPrice: 3_000_000,
+    });
+    await makeHolding({
+      symbol: 'AAPL',
+      assetType: 'stock',
+      quantity: '10',
+      currentPrice: 20_000,
+      averageBuyPrice: 18_000,
+    });
 
     const summary = await getPortfolioSummary(FAKE_USER_ID);
 
@@ -515,11 +552,11 @@ describe('getPortfolioSummary()', () => {
     expect(summary.topHoldings).toHaveLength(5);
 
     // Top 5 by value desc: D(8000), F(6000), B(5000), G(4000), C(3000)
-    expect(summary.topHoldings[0].currentValue).toBe(8_000);
-    expect(summary.topHoldings[1].currentValue).toBe(6_000);
-    expect(summary.topHoldings[2].currentValue).toBe(5_000);
-    expect(summary.topHoldings[3].currentValue).toBe(4_000);
-    expect(summary.topHoldings[4].currentValue).toBe(3_000);
+    expect(summary.topHoldings[0]!.currentValue).toBe(8_000);
+    expect(summary.topHoldings[1]!.currentValue).toBe(6_000);
+    expect(summary.topHoldings[2]!.currentValue).toBe(5_000);
+    expect(summary.topHoldings[3]!.currentValue).toBe(4_000);
+    expect(summary.topHoldings[4]!.currentValue).toBe(3_000);
   });
 
   it('computes totalPnlPercentage correctly', async () => {
@@ -546,8 +583,8 @@ describe('searchTicker()', () => {
 
     expect(cmcClient.searchCrypto).toHaveBeenCalledWith('bit');
     expect(results).toHaveLength(1);
-    expect(results[0].symbol).toBe('BTC');
-    expect(results[0].type).toBe('crypto');
+    expect(results[0]!.symbol).toBe('BTC');
+    expect(results[0]!.type).toBe('crypto');
   });
 
   it('delegates stock search to Finnhub client', async () => {
@@ -559,8 +596,8 @@ describe('searchTicker()', () => {
 
     expect(finnhubClient.searchSymbol).toHaveBeenCalledWith('apple');
     expect(results).toHaveLength(1);
-    expect(results[0].symbol).toBe('AAPL');
-    expect(results[0].name).toBe('Apple Inc');
+    expect(results[0]!.symbol).toBe('AAPL');
+    expect(results[0]!.name).toBe('Apple Inc');
   });
 
   it('returns empty array when CMC returns no results', async () => {
@@ -592,9 +629,11 @@ describe('deleteHolding()', () => {
     expect((error as HoldingError).statusCode).toBe(404);
   });
 
-  it('cannot delete another user\'s holding', async () => {
+  it("cannot delete another user's holding", async () => {
     const holding = await makeHolding({ userId: OTHER_USER_ID });
-    const error = await deleteHolding(FAKE_USER_ID, holding._id.toHexString()).catch((e: unknown) => e);
+    const error = await deleteHolding(FAKE_USER_ID, holding._id.toHexString()).catch(
+      (e: unknown) => e,
+    );
 
     expect(error).toBeInstanceOf(HoldingError);
     expect((error as HoldingError).code).toBe('HOLDING_NOT_FOUND');

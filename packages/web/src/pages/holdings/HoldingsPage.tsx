@@ -127,7 +127,7 @@ function HoldingsTable({
   onDelete,
   onAdd,
 }: HoldingsTableProps): React.ReactElement {
-  const emptyMsg = EMPTY_STATE_MESSAGES[activeTab] ?? EMPTY_STATE_MESSAGES.all;
+  const emptyMsg = EMPTY_STATE_MESSAGES[activeTab] ?? EMPTY_STATE_MESSAGES.all!;
 
   if (!isLoading && holdings.length === 0) {
     return (

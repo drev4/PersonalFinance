@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance } from 'axios';
-import pino from 'pino';
+import { pino } from 'pino';
 import env from '../../../config/env.js';
 import { getRedisClient } from '../../../config/redis.js';
 
@@ -27,7 +27,7 @@ function createCmcAxios(): AxiosInstance {
     timeout: 10_000,
     headers: {
       'X-CMC_PRO_API_KEY': env.CMC_API_KEY ?? '',
-      'Accept': 'application/json',
+      Accept: 'application/json',
     },
   });
 }
@@ -39,9 +39,7 @@ const cmcAxios = createCmcAxios();
  * Results are cached in Redis for 5 minutes per symbol.
  * Never throws — returns empty object on error.
  */
-export async function getLatestQuotes(
-  symbols: string[],
-): Promise<Record<string, CmcQuote>> {
+export async function getLatestQuotes(symbols: string[]): Promise<Record<string, CmcQuote>> {
   if (symbols.length === 0) return {};
 
   const redis = getRedisClient();
@@ -126,14 +124,12 @@ export async function searchCrypto(query: string): Promise<CmcSearchResult[]> {
         params: { query: query.trim() },
       });
 
-      return response.data.coins
-        .slice(0, 20)
-        .map((coin, index) => ({
-          id: index, // CoinGecko uses string IDs, we map to index for CmcSearchResult compatibility
-          name: coin.name,
-          symbol: coin.symbol.toUpperCase(),
-          slug: coin.id,
-        }));
+      return response.data.coins.slice(0, 20).map((coin, index) => ({
+        id: index, // CoinGecko uses string IDs, we map to index for CmcSearchResult compatibility
+        name: coin.name,
+        symbol: coin.symbol.toUpperCase(),
+        slug: coin.id,
+      }));
     } catch (err) {
       logger.error({ err, query }, '[CryptoSearch] Fallback failed');
       return [];

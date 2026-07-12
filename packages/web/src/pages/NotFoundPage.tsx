@@ -1,6 +1,6 @@
+import { TrendingUp, Home } from 'lucide-react';
 import type React from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, Home } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
 export default function NotFoundPage(): React.ReactElement {
@@ -13,12 +13,9 @@ export default function NotFoundPage(): React.ReactElement {
       <h1 className="mb-2 text-7xl font-extrabold text-primary-600" aria-label="Error 404">
         404
       </h1>
-      <h2 className="mb-4 text-2xl font-semibold text-gray-900">
-        Pagina no encontrada
-      </h2>
+      <h2 className="mb-4 text-2xl font-semibold text-gray-900">Pagina no encontrada</h2>
       <p className="mb-8 max-w-sm text-gray-500">
-        La pagina que buscas no existe o ha sido movida. Verifica la URL o regresa al
-        inicio.
+        La pagina que buscas no existe o ha sido movida. Verifica la URL o regresa al inicio.
       </p>
 
       <Link to="/">

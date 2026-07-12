@@ -63,7 +63,7 @@ interface CustomTooltipProps {
 
 function CustomTooltip({ active, payload }: CustomTooltipProps): React.ReactElement | null {
   if (!active || !payload || payload.length === 0) return null;
-  const entry = payload[0];
+  const entry = payload[0]!;
   return (
     <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-md text-sm">
       <div className="flex items-center gap-2">

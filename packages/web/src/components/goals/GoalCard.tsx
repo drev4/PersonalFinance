@@ -1,5 +1,3 @@
-import { useState } from 'react';
-import type React from 'react';
 import {
   PiggyBank,
   Home,
@@ -14,15 +12,17 @@ import {
   Trash2,
   CheckCircle2,
 } from 'lucide-react';
-import { Card, CardContent } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
-import { GoalDepositDialog } from './GoalDepositDialog';
-import { GoalFormDialog } from './GoalFormDialog';
+import { useState } from 'react';
+import type React from 'react';
 import { useDeleteGoal } from '../../hooks/useGoals';
-import type { Goal } from '../../types/api';
 import { formatCurrency, formatDate } from '../../lib/formatters';
 import { cn } from '../../lib/utils';
+import type { Goal } from '../../types/api';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Card, CardContent } from '../ui/card';
+import { GoalDepositDialog } from './GoalDepositDialog';
+import { GoalFormDialog } from './GoalFormDialog';
 
 const ICON_MAP: Record<string, React.ElementType> = {
   PiggyBank,
@@ -73,14 +73,7 @@ function RadialProgress({
       aria-hidden="true"
       className="flex-shrink-0"
     >
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        fill="none"
-        stroke="#e5e7eb"
-        strokeWidth={6}
-      />
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e5e7eb" strokeWidth={6} />
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -109,9 +102,7 @@ export function GoalCard({ goal }: GoalCardProps): React.ReactElement {
   const IconComponent = ICON_MAP[goal.icon ?? ''] ?? PiggyBank;
 
   const pct =
-    goal.targetAmount > 0
-      ? Math.min(100, (goal.currentAmount / goal.targetAmount) * 100)
-      : 0;
+    goal.targetAmount > 0 ? Math.min(100, (goal.currentAmount / goal.targetAmount) * 100) : 0;
 
   const remaining = Math.max(0, goal.targetAmount - goal.currentAmount);
 
@@ -230,9 +221,7 @@ export function GoalCard({ goal }: GoalCardProps): React.ReactElement {
               <p className="text-sm font-semibold text-gray-900">
                 {formatCurrency(goal.currentAmount, 'EUR')}
               </p>
-              <p className="text-xs text-gray-500">
-                de {formatCurrency(goal.targetAmount, 'EUR')}
-              </p>
+              <p className="text-xs text-gray-500">de {formatCurrency(goal.targetAmount, 'EUR')}</p>
 
               {deadlineInfo && (
                 <p
@@ -267,16 +256,8 @@ export function GoalCard({ goal }: GoalCardProps): React.ReactElement {
         </CardContent>
       </Card>
 
-      <GoalDepositDialog
-        goal={goal}
-        open={progressOpen}
-        onOpenChange={setProgressOpen}
-      />
-      <GoalFormDialog
-        goal={goal}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-      />
+      <GoalDepositDialog goal={goal} open={progressOpen} onOpenChange={setProgressOpen} />
+      <GoalFormDialog goal={goal} open={editOpen} onOpenChange={setEditOpen} />
     </>
   );
 }

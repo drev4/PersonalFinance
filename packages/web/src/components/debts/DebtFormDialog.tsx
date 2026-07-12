@@ -37,13 +37,13 @@ const debtFormSchema = z.object({
   type: z.enum(['credit_card', 'personal_loan', 'mortgage', 'student_loan', 'car_loan', 'other']),
   currency: z.string().min(3).max(3).toUpperCase().default('EUR'),
   originalAmount: z
-    .number({ invalid_type_error: 'Introduce un importe válido' })
+    .number({ error: 'Introduce un importe válido' })
     .positive('El importe original debe ser mayor que 0'),
   currentBalance: z
-    .number({ invalid_type_error: 'Introduce un importe válido' })
+    .number({ error: 'Introduce un importe válido' })
     .min(0, 'El saldo no puede ser negativo'),
-  interestRate: z.number({ invalid_type_error: 'Introduce una tasa válida' }).min(0).max(100),
-  minimumPayment: z.number({ invalid_type_error: 'Introduce un importe válido' }).min(0),
+  interestRate: z.number({ error: 'Introduce una tasa válida' }).min(0).max(100),
+  minimumPayment: z.number({ error: 'Introduce un importe válido' }).min(0),
   nextPaymentDate: z.string().optional(),
   notes: z.string().max(500).optional(),
   color: z.string().optional(),
@@ -78,7 +78,7 @@ export function DebtFormDialog({
       minimumPayment: debt ? debt.minimumPayment / 100 : 0,
       nextPaymentDate: debt?.nextPaymentDate ? debt.nextPaymentDate.slice(0, 10) : '',
       notes: debt?.notes ?? '',
-      color: debt?.color ?? PRESET_COLORS[0].value,
+      color: debt?.color ?? PRESET_COLORS[0]!.value,
     },
   });
 
@@ -94,12 +94,12 @@ export function DebtFormDialog({
         minimumPayment: debt ? debt.minimumPayment / 100 : 0,
         nextPaymentDate: debt?.nextPaymentDate ? debt.nextPaymentDate.slice(0, 10) : '',
         notes: debt?.notes ?? '',
-        color: debt?.color ?? PRESET_COLORS[0].value,
+        color: debt?.color ?? PRESET_COLORS[0]!.value,
       });
     }
   }, [open, debt, form]);
 
-  const watchedColor = form.watch('color') ?? PRESET_COLORS[0].value;
+  const watchedColor = form.watch('color') ?? PRESET_COLORS[0]!.value;
 
   async function onSubmit(values: DebtFormValues): Promise<void> {
     const payload = {
@@ -371,8 +371,8 @@ export function DebtFormDialog({
                     ? 'Guardando...'
                     : 'Creando...'
                   : isEditing
-                  ? 'Guardar cambios'
-                  : 'Crear deuda'}
+                    ? 'Guardar cambios'
+                    : 'Crear deuda'}
               </Button>
             </DialogFooter>
           </form>

@@ -1,21 +1,21 @@
+import { ArrowLeft, Pencil, SlidersHorizontal, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import type React from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import {
-  ArrowLeft,
-  Pencil,
-  SlidersHorizontal,
-  ArrowRight,
-} from 'lucide-react';
-import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
-import { Skeleton } from '../../components/ui/skeleton';
-import { EmptyState } from '../../components/ui/empty-state';
 import { AccountFormDialog } from '../../components/accounts/AccountFormDialog';
 import { AdjustBalanceDialog } from '../../components/accounts/AdjustBalanceDialog';
+import { Badge } from '../../components/ui/badge';
+import { Button } from '../../components/ui/button';
+import { EmptyState } from '../../components/ui/empty-state';
+import { Skeleton } from '../../components/ui/skeleton';
 import { useAccount } from '../../hooks/useAccounts';
 import { useTransactions } from '../../hooks/useTransactions';
-import { formatCurrency, formatDate, getAccountTypeLabel, getTransactionTypeColor } from '../../lib/formatters';
+import {
+  formatCurrency,
+  formatDate,
+  getAccountTypeLabel,
+  getTransactionTypeColor,
+} from '../../lib/formatters';
 
 function AccountDetailSkeleton(): React.ReactElement {
   return (
@@ -96,9 +96,7 @@ export default function AccountDetailPage(): React.ReactElement {
               <div className="mt-3">
                 <p className="text-xs text-gray-500 mb-0.5">Saldo actual</p>
                 <p
-                  className={`text-3xl font-bold ${
-                    isLiability ? 'text-red-600' : 'text-gray-900'
-                  }`}
+                  className={`text-3xl font-bold ${isLiability ? 'text-red-600' : 'text-gray-900'}`}
                 >
                   {formatCurrency(account.currentBalance, account.currency)}
                 </p>
@@ -156,9 +154,7 @@ export default function AccountDetailPage(): React.ReactElement {
             </div>
           ) : transactions.length === 0 ? (
             <div className="px-6 py-12 text-center">
-              <p className="text-sm text-gray-500">
-                Esta cuenta no tiene transacciones aun.
-              </p>
+              <p className="text-sm text-gray-500">Esta cuenta no tiene transacciones aun.</p>
               <Link
                 to="/transactions"
                 className="mt-2 inline-block text-sm text-primary-600 hover:underline"
@@ -169,14 +165,15 @@ export default function AccountDetailPage(): React.ReactElement {
           ) : (
             <div className="divide-y divide-gray-100">
               {transactions.map((tx) => (
-                <div key={tx._id} className="flex items-center justify-between px-6 py-4 hover:bg-gray-50">
+                <div
+                  key={tx._id}
+                  className="flex items-center justify-between px-6 py-4 hover:bg-gray-50"
+                >
                   <div>
                     <p className="text-sm font-medium text-gray-900">{tx.description}</p>
                     <p className="text-xs text-gray-500">{formatDate(tx.date, 'long')}</p>
                   </div>
-                  <p
-                    className={`text-sm font-semibold ${getTransactionTypeColor(tx.type)}`}
-                  >
+                  <p className={`text-sm font-semibold ${getTransactionTypeColor(tx.type)}`}>
                     {tx.type === 'expense' ? '-' : '+'}
                     {formatCurrency(tx.amount, tx.currency)}
                   </p>

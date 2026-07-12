@@ -18,7 +18,7 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
     await authScope.register(rateLimit, {
       max: env.NODE_ENV === 'development' ? 100 : 10,
       timeWindow: '15 minutes',
-      skip(request) {
+      allowList(request) {
         return request.method === 'OPTIONS';
       },
       keyGenerator(request) {

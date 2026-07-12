@@ -52,11 +52,7 @@ beforeEach(async () => {
 
 // ---- Helpers -----------------------------------------------------------------
 
-async function makeAccount(
-  balance = 100000,
-  currency = 'EUR',
-  userId = FAKE_USER_ID,
-) {
+async function makeAccount(balance = 100000, currency = 'EUR', userId = FAKE_USER_ID) {
   const account = new AccountModel({
     userId: new mongoose.Types.ObjectId(userId),
     name: 'Test Account',
@@ -178,7 +174,7 @@ describe('createTransfer()', () => {
     const fromBalance = await freshBalance(from._id.toHexString());
     const toBalance = await freshBalance(to._id.toHexString());
     expect(fromBalance).toBe(30000); // 50000 - 20000
-    expect(toBalance).toBe(30000);  // 10000 + 20000
+    expect(toBalance).toBe(30000); // 10000 + 20000
 
     // Transaction types
     expect(fromTx.type).toBe('transfer');
@@ -303,14 +299,12 @@ describe('deleteTransaction()', () => {
 
   it('throws TRANSACTION_NOT_FOUND for a non-existent transaction', async () => {
     const fakeId = new mongoose.Types.ObjectId().toHexString();
-    const error = await deleteTransaction(FAKE_USER_ID, fakeId).catch(
-      (e: unknown) => e,
-    );
+    const error = await deleteTransaction(FAKE_USER_ID, fakeId).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(TransactionError);
     expect((error as TransactionError).code).toBe('TRANSACTION_NOT_FOUND');
   });
 
-  it('cannot delete another user\'s transaction', async () => {
+  it("cannot delete another user's transaction", async () => {
     const otherUser = new mongoose.Types.ObjectId().toHexString();
     const account = await makeAccount(5000, 'EUR', otherUser);
     const tx = await createTransaction(otherUser, {
@@ -628,13 +622,15 @@ describe('getTransactions() — filters', () => {
     accountId = account._id.toHexString();
   });
 
-  async function createTx(overrides: {
-    type?: 'income' | 'expense';
-    amount?: number;
-    description?: string;
-    date?: Date;
-    tags?: string[];
-  } = {}) {
+  async function createTx(
+    overrides: {
+      type?: 'income' | 'expense';
+      amount?: number;
+      description?: string;
+      date?: Date;
+      tags?: string[];
+    } = {},
+  ) {
     return createTransaction(FAKE_USER_ID, {
       userId: FAKE_USER_ID,
       accountId,
@@ -679,7 +675,7 @@ describe('getTransactions() — filters', () => {
     });
 
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].description).toBe('Test');
+    expect(result.data[0]!.description).toBe('Test');
   });
 
   it('filters by description search (case-insensitive)', async () => {
@@ -707,7 +703,7 @@ describe('getTransactions() — filters', () => {
 
     const result = await getTransactions(FAKE_USER_ID, { accountId });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].accountId.toHexString()).toBe(accountId);
+    expect(result.data[0]!.accountId.toHexString()).toBe(accountId);
   });
 
   it('paginates correctly', async () => {
@@ -744,6 +740,6 @@ describe('getTransactions() — filters', () => {
 
     const result = await getTransactions(FAKE_USER_ID, {});
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].description).toBe('My transaction');
+    expect(result.data[0]!.description).toBe('My transaction');
   });
 });

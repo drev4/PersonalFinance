@@ -1,6 +1,9 @@
 import cron from 'node-cron';
-import pino from 'pino';
-import { TransactionModel, type RecurringFrequency } from '../modules/transactions/transaction.model.js';
+import { pino } from 'pino';
+import {
+  TransactionModel,
+  type RecurringFrequency,
+} from '../modules/transactions/transaction.model.js';
 
 const logger = pino({ name: 'job.recurringTransactions' });
 
@@ -8,11 +11,7 @@ const logger = pino({ name: 'job.recurringTransactions' });
 // Helper — advance a date by the given frequency + interval
 // ---------------------------------------------------------------------------
 
-function advanceDate(
-  base: Date,
-  frequency: RecurringFrequency,
-  interval: number,
-): Date {
+function advanceDate(base: Date, frequency: RecurringFrequency, interval: number): Date {
   const next = new Date(base);
   switch (frequency) {
     case 'daily':
@@ -42,9 +41,7 @@ async function processRecurringTransactions(): Promise<{
 }> {
   const now = new Date();
   // Normalize to midnight UTC so we catch anything due today
-  const today = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-  );
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
   // Find all recurring templates whose nextDate is on or before today
   const templates = await TransactionModel.find({

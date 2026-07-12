@@ -1,7 +1,3 @@
-import { useState } from 'react';
-import type React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useCurrencyConverter } from '../../hooks/useCurrency';
 import {
   MoreVertical,
   Pencil,
@@ -19,13 +15,17 @@ import {
   TrendingUp,
   Wallet,
 } from 'lucide-react';
-import { Card } from '../ui/card';
+import { useState } from 'react';
+import type React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useArchiveAccount } from '../../hooks/useAccounts';
+import { useCurrencyConverter } from '../../hooks/useCurrency';
+import { formatCurrency, getAccountTypeLabel } from '../../lib/formatters';
+import type { Account } from '../../types/api';
 import { Badge } from '../ui/badge';
+import { Card } from '../ui/card';
 import { AccountFormDialog } from './AccountFormDialog';
 import { AdjustBalanceDialog } from './AdjustBalanceDialog';
-import type { Account } from '../../types/api';
-import { formatCurrency, getAccountTypeLabel } from '../../lib/formatters';
-import { useArchiveAccount } from '../../hooks/useAccounts';
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Landmark,
@@ -41,18 +41,20 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Wallet,
 };
 
-function AccountIcon({ iconName, color }: { iconName: string; color?: string }): React.ReactElement {
+function AccountIcon({
+  iconName,
+  color,
+}: {
+  iconName: string;
+  color?: string;
+}): React.ReactElement {
   const Icon = ICON_MAP[iconName] ?? Wallet;
   return (
     <div
       className="flex h-10 w-10 items-center justify-center rounded-lg"
       style={{ backgroundColor: color ? `${color}20` : '#3B82F620' }}
     >
-      <Icon
-        className="h-5 w-5"
-        style={{ color: color ?? '#3B82F6' }}
-        aria-hidden="true"
-      />
+      <Icon className="h-5 w-5" style={{ color: color ?? '#3B82F6' }} aria-hidden="true" />
     </div>
   );
 }
@@ -86,8 +88,7 @@ export function AccountCard({ account }: AccountCardProps): React.ReactElement {
   const iconName = ICON_BY_TYPE[account.type] ?? 'Wallet';
   const isLiability = ['loan', 'mortgage', 'credit_card'].includes(account.type);
 
-  const showConversion =
-    account.currency.toUpperCase() !== baseCurrency.toUpperCase();
+  const showConversion = account.currency.toUpperCase() !== baseCurrency.toUpperCase();
 
   const convertedBalance = showConversion
     ? convert(account.currentBalance / 100, account.currency, baseCurrency)
@@ -204,11 +205,7 @@ export function AccountCard({ account }: AccountCardProps): React.ReactElement {
         {/* Balance */}
         <div className="mb-3">
           <p className="text-xs text-gray-500 mb-0.5">Saldo actual</p>
-          <p
-            className={`text-xl font-bold ${
-              isLiability ? 'text-red-600' : 'text-gray-900'
-            }`}
-          >
+          <p className={`text-xl font-bold ${isLiability ? 'text-red-600' : 'text-gray-900'}`}>
             {formatCurrency(account.currentBalance, account.currency)}
           </p>
           {showConversion && (

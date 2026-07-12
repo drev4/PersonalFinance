@@ -1,9 +1,8 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Download, Save } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Download, Save } from 'lucide-react';
 import {
   AreaChart,
   Area,
@@ -16,6 +15,12 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { z } from 'zod';
+import { downloadSimulationPdf } from '../../api/simulators.api';
+import AmortizationTable from '../../components/simulators/AmortizationTable';
+import ResultsCard from '../../components/simulators/ResultsCard';
+import SaveSimulationDialog from '../../components/simulators/SaveSimulationDialog';
+import SimulatorLayout from '../../components/simulators/SimulatorLayout';
 import { Button } from '../../components/ui/button';
 import {
   Form,
@@ -26,12 +31,7 @@ import {
   FormMessage,
 } from '../../components/ui/form';
 import { Input } from '../../components/ui/input';
-import SimulatorLayout from '../../components/simulators/SimulatorLayout';
-import ResultsCard from '../../components/simulators/ResultsCard';
-import AmortizationTable from '../../components/simulators/AmortizationTable';
-import SaveSimulationDialog from '../../components/simulators/SaveSimulationDialog';
 import { useCalculateMortgage } from '../../hooks/useSimulators';
-import { downloadSimulationPdf } from '../../api/simulators.api';
 import type { MortgageResult, AmortizationRow } from '../../types/api';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
@@ -71,7 +71,7 @@ function buildChartData(schedule: AmortizationRow[]): ChartPoint[] {
   let cumIntereses = 0;
 
   for (let i = 0; i < schedule.length; i++) {
-    const row = schedule[i];
+    const row = schedule[i]!;
     cumCapital += row.principal;
     cumIntereses += row.interest;
     if (i % step === 0 || i === schedule.length - 1) {
@@ -97,7 +97,7 @@ function EmptyResults(): React.ReactElement {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white py-16 text-center shadow-sm">
       <p className="text-sm text-gray-400">
-        Rellena el formulario y pulsa "Calcular" para ver los resultados.
+        Rellena el formulario y pulsa &quot;Calcular&quot; para ver los resultados.
       </p>
     </div>
   );
@@ -199,7 +199,13 @@ function Results({ result, inputs }: ResultsProps): React.ReactElement {
               dataKey="mes"
               tick={{ fontSize: 11, fill: '#9ca3af' }}
               tickLine={false}
-              label={{ value: 'Mes', position: 'insideBottom', offset: -2, fontSize: 11, fill: '#9ca3af' }}
+              label={{
+                value: 'Mes',
+                position: 'insideBottom',
+                offset: -2,
+                fontSize: 11,
+                fill: '#9ca3af',
+              }}
             />
             <YAxis
               tickFormatter={formatEurAxis}
@@ -210,7 +216,9 @@ function Results({ result, inputs }: ResultsProps): React.ReactElement {
             />
             <Tooltip
               formatter={(value: number, name: string) => [
-                new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(value),
+                new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(
+                  value,
+                ),
                 name,
               ]}
               labelFormatter={(label: number) => `Mes ${label}`}
@@ -245,11 +253,7 @@ function Results({ result, inputs }: ResultsProps): React.ReactElement {
         <ResponsiveContainer width="100%" height={180}>
           <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-            <XAxis
-              dataKey="mes"
-              tick={{ fontSize: 11, fill: '#9ca3af' }}
-              tickLine={false}
-            />
+            <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} />
             <YAxis
               tickFormatter={formatEurAxis}
               tick={{ fontSize: 11, fill: '#9ca3af' }}
@@ -259,7 +263,9 @@ function Results({ result, inputs }: ResultsProps): React.ReactElement {
             />
             <Tooltip
               formatter={(value: number) => [
-                new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(value),
+                new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(
+                  value,
+                ),
                 'Capital pendiente',
               ]}
               labelFormatter={(label: number) => `Mes ${label}`}
@@ -325,9 +331,11 @@ export default function MortgagePage(): React.ReactElement {
     if (!mutation.data) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      form.handleSubmit(onSubmit)().catch(() => {
-        // validation errors are handled by react-hook-form field state
-      });
+      form
+        .handleSubmit(onSubmit)()
+        .catch(() => {
+          // validation errors are handled by react-hook-form field state
+        });
     }, 500);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -426,7 +434,14 @@ export default function MortgagePage(): React.ReactElement {
                 <FormItem>
                   <FormLabel>Tipo variable (%)</FormLabel>
                   <FormControl>
-                    <Input type="number" min="0.1" max="20" step="0.05" placeholder="2.50" {...field} />
+                    <Input
+                      type="number"
+                      min="0.1"
+                      max="20"
+                      step="0.05"
+                      placeholder="2.50"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -448,12 +463,11 @@ export default function MortgagePage(): React.ReactElement {
     </Form>
   );
 
-  const resultsNode =
-    mutation.data ? (
-      <Results result={mutation.data} inputs={form.getValues()} />
-    ) : (
-      <EmptyResults />
-    );
+  const resultsNode = mutation.data ? (
+    <Results result={mutation.data} inputs={form.getValues()} />
+  ) : (
+    <EmptyResults />
+  );
 
   return (
     <SimulatorLayout

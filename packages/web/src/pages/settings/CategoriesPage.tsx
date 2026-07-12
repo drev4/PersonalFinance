@@ -1,5 +1,3 @@
-import { useState, useEffect } from 'react';
-import type React from 'react';
 import {
   Tag,
   Plus,
@@ -43,12 +41,11 @@ import {
   Receipt,
   type LucideIcon,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
+import { useState, useEffect } from 'react';
+import type React from 'react';
 import { Badge } from '../../components/ui/badge';
-import { Select } from '../../components/ui/select';
-import { Skeleton } from '../../components/ui/skeleton';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -57,6 +54,9 @@ import {
   DialogFooter,
   DialogClose,
 } from '../../components/ui/dialog';
+import { Input } from '../../components/ui/input';
+import { Select } from '../../components/ui/select';
+import { Skeleton } from '../../components/ui/skeleton';
 import {
   useCategories,
   useCreateCategory,
@@ -68,12 +68,42 @@ import type { Category, CreateCategoryDTO } from '../../types/api';
 // ─── Icon registry ────────────────────────────────────────────────────────────
 
 const ICON_MAP: Record<string, LucideIcon> = {
-  ShoppingCart, Car, Home, Heart, Gamepad2, Shirt, UtensilsCrossed,
-  BookOpen, Plane, Smartphone, MoreHorizontal, Briefcase, Code,
-  TrendingUp, Building, Wallet, Coffee, Music, Gift, Zap, Globe,
-  Baby, Dumbbell, Stethoscope, GraduationCap, ShoppingBag, Fuel,
-  PiggyBank, Utensils, Wrench, Bus, DollarSign, CreditCard,
-  Receipt, Plus, Tag,
+  ShoppingCart,
+  Car,
+  Home,
+  Heart,
+  Gamepad2,
+  Shirt,
+  UtensilsCrossed,
+  BookOpen,
+  Plane,
+  Smartphone,
+  MoreHorizontal,
+  Briefcase,
+  Code,
+  TrendingUp,
+  Building,
+  Wallet,
+  Coffee,
+  Music,
+  Gift,
+  Zap,
+  Globe,
+  Baby,
+  Dumbbell,
+  Stethoscope,
+  GraduationCap,
+  ShoppingBag,
+  Fuel,
+  PiggyBank,
+  Utensils,
+  Wrench,
+  Bus,
+  DollarSign,
+  CreditCard,
+  Receipt,
+  Plus,
+  Tag,
 };
 
 const ICON_NAMES = Object.keys(ICON_MAP);
@@ -105,9 +135,18 @@ function CategoryIcon({
 // ─── Preset colors ────────────────────────────────────────────────────────────
 
 const PRESET_COLORS = [
-  '#4CAF50', '#2196F3', '#FF9800', '#F44336',
-  '#9C27B0', '#E91E63', '#FF5722', '#3F51B5',
-  '#00BCD4', '#607D8B', '#795548', '#9E9E9E',
+  '#4CAF50',
+  '#2196F3',
+  '#FF9800',
+  '#F44336',
+  '#9C27B0',
+  '#E91E63',
+  '#FF5722',
+  '#3F51B5',
+  '#00BCD4',
+  '#607D8B',
+  '#795548',
+  '#9E9E9E',
 ];
 
 // ─── Icon picker ──────────────────────────────────────────────────────────────
@@ -138,7 +177,12 @@ function IconPicker({ value, color, onChange }: IconPickerProps): React.ReactEle
             aria-pressed={isSelected}
             aria-label={name}
           >
-            <Icon size={15} strokeWidth={1.8} aria-hidden="true" />
+            <Icon
+              size={15}
+              strokeWidth={1.8}
+              aria-hidden="true"
+              style={isSelected ? { color } : undefined}
+            />
           </button>
         );
       })}
@@ -159,7 +203,7 @@ interface CategoryFormState {
 const emptyForm = (type: 'income' | 'expense' = 'expense'): CategoryFormState => ({
   name: '',
   type,
-  color: PRESET_COLORS[0],
+  color: PRESET_COLORS[0]!,
   icon: 'ShoppingCart',
   parentId: '',
 });
@@ -210,7 +254,8 @@ function CategoryFormDialog({
     }
   }, [open, category, parentCategory, defaultType]);
 
-  const isValid = form.name.trim().length > 0 && /^#[0-9a-fA-F]{6}$/.test(form.color) && form.icon.length > 0;
+  const isValid =
+    form.name.trim().length > 0 && /^#[0-9a-fA-F]{6}$/.test(form.color) && form.icon.length > 0;
 
   const rootCategories = allCategories.filter(
     (c) => !c.parentId && c._id !== category?._id && c.type === form.type,
@@ -243,15 +288,20 @@ function CategoryFormDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
             {isEditing
               ? 'Editar categoría'
               : parentCategory
-              ? `Nueva subcategoría de "${parentCategory.name}"`
-              : 'Nueva categoría'}
+                ? `Nueva subcategoría de "${parentCategory.name}"`
+                : 'Nueva categoría'}
           </DialogTitle>
         </DialogHeader>
 
@@ -284,7 +334,11 @@ function CategoryFormDialog({
               <Select
                 value={form.type}
                 onChange={(e) =>
-                  setForm((f) => ({ ...f, type: e.target.value as 'income' | 'expense', parentId: '' }))
+                  setForm((f) => ({
+                    ...f,
+                    type: e.target.value as 'income' | 'expense',
+                    parentId: '',
+                  }))
                 }
               >
                 <option value="expense">Gasto</option>
@@ -305,7 +359,9 @@ function CategoryFormDialog({
               >
                 <option value="">Sin categoría padre</option>
                 {rootCategories.map((c) => (
-                  <option key={c._id} value={c._id}>{c.name}</option>
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                  </option>
                 ))}
               </Select>
             </div>
@@ -408,13 +464,19 @@ function DeleteDialog({ open, category, onClose }: DeleteDialogProps): React.Rea
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Eliminar categoría</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-gray-600">
-          ¿Seguro que quieres eliminar <strong>{category?.name}</strong>? Las subcategorías también serán eliminadas.
+          ¿Seguro que quieres eliminar <strong>{category?.name}</strong>? Las subcategorías también
+          serán eliminadas.
         </p>
         {apiError && (
           <p className="flex items-center gap-1.5 text-sm text-red-600">
@@ -423,7 +485,9 @@ function DeleteDialog({ open, category, onClose }: DeleteDialogProps): React.Rea
           </p>
         )}
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
           <Button variant="destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>
             {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar'}
           </Button>
@@ -481,7 +545,9 @@ function CategoryRow({
         <span className="flex-1 text-sm font-medium text-gray-800">{category.name}</span>
 
         {category.isDefault && (
-          <Badge variant="outline" className="text-[10px]">Por defecto</Badge>
+          <Badge variant="outline" className="text-[10px]">
+            Por defecto
+          </Badge>
         )}
 
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -715,7 +781,10 @@ export default function CategoriesPage(): React.ReactElement {
       <DeleteDialog
         open={deleteOpen}
         category={deletingCategory}
-        onClose={() => { setDeleteOpen(false); setDeletingCategory(null); }}
+        onClose={() => {
+          setDeleteOpen(false);
+          setDeletingCategory(null);
+        }}
       />
     </div>
   );

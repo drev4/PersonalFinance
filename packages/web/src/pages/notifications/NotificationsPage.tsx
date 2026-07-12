@@ -1,11 +1,11 @@
+import { Bell, CheckCheck, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type React from 'react';
-import { Bell, CheckCheck, Trash2 } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
-import { Button } from '../../components/ui/button';
-import { Skeleton } from '../../components/ui/skeleton';
-import { EmptyState } from '../../components/ui/empty-state';
 import { NotificationItem } from '../../components/notifications/NotificationItem';
+import { Button } from '../../components/ui/button';
+import { EmptyState } from '../../components/ui/empty-state';
+import { Skeleton } from '../../components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
 import {
   useNotifications,
   useMarkAsRead,
@@ -42,9 +42,7 @@ interface NotificationTabContentProps {
   unreadOnly?: boolean;
 }
 
-function NotificationTabContent({
-  unreadOnly,
-}: NotificationTabContentProps): React.ReactElement {
+function NotificationTabContent({ unreadOnly }: NotificationTabContentProps): React.ReactElement {
   const [page, setPage] = useState(1);
   const { data, isLoading } = useNotifications({ unreadOnly, page });
   const markAsRead = useMarkAsRead();

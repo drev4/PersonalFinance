@@ -1,12 +1,12 @@
+import { ArrowRight, TrendingUp, TrendingDown, BarChart2 } from 'lucide-react';
 import type React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, TrendingUp, TrendingDown, BarChart2 } from 'lucide-react';
+import { usePortfolioSummary } from '../../hooks/useHoldings';
+import { formatCurrency, formatPercentage } from '../../lib/formatters';
+import { cn } from '../../lib/utils';
+import type { HoldingWithValue } from '../../types/api';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
-import { formatCurrency, formatPercentage } from '../../lib/formatters';
-import { usePortfolioSummary } from '../../hooks/useHoldings';
-import type { HoldingWithValue } from '../../types/api';
-import { cn } from '../../lib/utils';
 
 // ─── Skeleton row ─────────────────────────────────────────────────────────────
 
@@ -53,10 +53,7 @@ function HoldingItem({ holding }: HoldingItemProps): React.ReactElement {
         style={{ backgroundColor: `${assetColor}22` }}
         aria-hidden="true"
       >
-        <span
-          className="text-xs font-bold"
-          style={{ color: assetColor }}
-        >
+        <span className="text-xs font-bold" style={{ color: assetColor }}>
           {holding.symbol.slice(0, 2)}
         </span>
       </div>
@@ -101,9 +98,7 @@ export default function TopHoldingsWidget(): React.ReactElement {
     <Card className="flex h-full flex-col">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold text-gray-600">
-            Top inversiones
-          </CardTitle>
+          <CardTitle className="text-base font-semibold text-gray-600">Top inversiones</CardTitle>
           <BarChart2 className="h-4 w-4 text-gray-400" aria-hidden="true" />
         </div>
       </CardHeader>
@@ -137,10 +132,7 @@ export default function TopHoldingsWidget(): React.ReactElement {
         {/* List */}
         {!isLoading && topHoldings.length > 0 && (
           <>
-            <ul
-              className="divide-y divide-gray-100"
-              aria-label="Top posiciones del portfolio"
-            >
+            <ul className="divide-y divide-gray-100" aria-label="Top posiciones del portfolio">
               {topHoldings.map((holding) => (
                 <HoldingItem key={holding._id} holding={holding} />
               ))}

@@ -1,9 +1,15 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { format } from 'date-fns';
+import { X } from 'lucide-react';
 import { useEffect, useState, KeyboardEvent } from 'react';
 import type React from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X } from 'lucide-react';
+import { useAccounts } from '../../hooks/useAccounts';
+import { useCategories } from '../../hooks/useCategories';
+import { useCreateTransaction, useUpdateTransaction } from '../../hooks/useTransactions';
+import type { Transaction } from '../../types/api';
+import { Button } from '../ui/button';
 import {
   Dialog,
   DialogContent,
@@ -12,28 +18,13 @@ import {
   DialogFooter,
   DialogClose,
 } from '../ui/dialog';
-import { Button } from '../ui/button';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '../ui/form';
 import { Input } from '../ui/input';
 import { Select } from '../ui/select';
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from '../ui/form';
-import { useCreateTransaction, useUpdateTransaction } from '../../hooks/useTransactions';
-import { useAccounts } from '../../hooks/useAccounts';
-import { useCategories } from '../../hooks/useCategories';
-import type { Transaction } from '../../types/api';
-import { format } from 'date-fns';
 
 const transactionSchema = z.object({
   description: z.string().min(1, 'La descripcion es obligatoria').max(200),
-  amount: z
-    .number({ invalid_type_error: 'Ingresa un importe valido' })
-    .positive('El importe debe ser positivo'),
+  amount: z.number({ error: 'Ingresa un importe valido' }).positive('El importe debe ser positivo'),
   date: z.string().min(1, 'La fecha es obligatoria'),
   accountId: z.string().min(1, 'Selecciona una cuenta'),
   categoryId: z.string().optional(),
@@ -268,9 +259,7 @@ export function TransactionFormDialog({
 
             {/* Tags */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-gray-700">
-                Etiquetas
-              </label>
+              <label className="text-sm font-medium text-gray-700">Etiquetas</label>
               <div className="flex min-h-[40px] w-full flex-wrap gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2">
                 {tags.map((tag) => (
                   <span

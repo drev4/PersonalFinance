@@ -1,9 +1,12 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Eye, EyeOff, Lock, CheckCircle2, ExternalLink } from 'lucide-react';
 import { useState } from 'react';
 import type React from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, Lock, CheckCircle2, ExternalLink } from 'lucide-react';
+import { useConnectBinance } from '../../hooks/useIntegrations';
+import { Alert, AlertDescription } from '../ui/alert';
+import { Button } from '../ui/button';
 import {
   Dialog,
   DialogContent,
@@ -12,28 +15,14 @@ import {
   DialogDescription,
   DialogFooter,
 } from '../ui/dialog';
-import { Button } from '../ui/button';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '../ui/form';
 import { Input } from '../ui/input';
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from '../ui/form';
-import { Alert, AlertDescription } from '../ui/alert';
-import { useConnectBinance } from '../../hooks/useIntegrations';
 
 // ─── Zod schema ───────────────────────────────────────────────────────────────
 
 const binanceSchema = z.object({
-  apiKey: z
-    .string()
-    .min(20, 'La API Key debe tener al menos 20 caracteres'),
-  apiSecret: z
-    .string()
-    .min(20, 'El API Secret debe tener al menos 20 caracteres'),
+  apiKey: z.string().min(20, 'La API Key debe tener al menos 20 caracteres'),
+  apiSecret: z.string().min(20, 'El API Secret debe tener al menos 20 caracteres'),
 });
 
 type BinanceFormValues = z.infer<typeof binanceSchema>;
@@ -67,11 +56,7 @@ function StepIndicator({ current }: StepIndicatorProps): React.ReactElement {
               ].join(' ')}
               aria-current={n === current ? 'step' : undefined}
             >
-              {n < current ? (
-                <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-              ) : (
-                n
-              )}
+              {n < current ? <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> : n}
             </div>
             <span
               className={[
@@ -130,9 +115,7 @@ function Step1Instructions({ onNext, onCancel }: Step1Props): React.ReactElement
       text: (
         <>
           Activa{' '}
-          <strong className="font-semibold text-yellow-700 bg-yellow-50 px-1 rounded">
-            SOLO
-          </strong>{' '}
+          <strong className="font-semibold text-yellow-700 bg-yellow-50 px-1 rounded">SOLO</strong>{' '}
           &ldquo;Lectura de datos spot y margen&rdquo;.
         </>
       ),
@@ -141,8 +124,8 @@ function Step1Instructions({ onNext, onCancel }: Step1Props): React.ReactElement
       n: 4,
       text: (
         <>
-          <span className="font-semibold text-red-600">Nunca actives</span>{' '}
-          &ldquo;Permitir trading&rdquo; ni &ldquo;Permitir retiros&rdquo;.
+          <span className="font-semibold text-red-600">Nunca actives</span> &ldquo;Permitir
+          trading&rdquo; ni &ldquo;Permitir retiros&rdquo;.
         </>
       ),
     },
@@ -273,9 +256,8 @@ function Step2Credentials({ onBack, onSuccess }: Step2Props): React.ReactElement
           <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5">
             <Lock className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600" aria-hidden="true" />
             <p className="text-xs leading-relaxed text-blue-800">
-              Tus credenciales se cifran con{' '}
-              <strong className="font-semibold">AES-256-GCM</strong> antes de almacenarse.
-              Nunca se comparten con terceros.
+              Tus credenciales se cifran con <strong className="font-semibold">AES-256-GCM</strong>{' '}
+              antes de almacenarse. Nunca se comparten con terceros.
             </p>
           </div>
 
@@ -374,26 +356,16 @@ export default function BinanceConnectDialog({
             </DialogDescription>
           )}
           {step === 2 && (
-            <DialogDescription>
-              Introduce tus credenciales de la API de Binance.
-            </DialogDescription>
+            <DialogDescription>Introduce tus credenciales de la API de Binance.</DialogDescription>
           )}
         </DialogHeader>
 
         {step !== 3 && <StepIndicator current={step} />}
 
         {step === 1 && (
-          <Step1Instructions
-            onNext={() => setStep(2)}
-            onCancel={() => handleOpenChange(false)}
-          />
+          <Step1Instructions onNext={() => setStep(2)} onCancel={() => handleOpenChange(false)} />
         )}
-        {step === 2 && (
-          <Step2Credentials
-            onBack={() => setStep(1)}
-            onSuccess={() => setStep(3)}
-          />
-        )}
+        {step === 2 && <Step2Credentials onBack={() => setStep(1)} onSuccess={() => setStep(3)} />}
         {step === 3 && <Step3Success onClose={() => handleOpenChange(false)} />}
       </DialogContent>
     </Dialog>

@@ -1,20 +1,11 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Eye, EyeOff, Loader2, TrendingUp, CheckCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
-import { Eye, EyeOff, Loader2, TrendingUp, CheckCircle } from 'lucide-react';
-import { useRegister } from '../../hooks/useAuth';
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from '../../components/ui/form';
-import { Input } from '../../components/ui/input';
+import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import {
   Card,
@@ -24,7 +15,16 @@ import {
   CardContent,
   CardFooter,
 } from '../../components/ui/card';
-import { Alert, AlertDescription } from '../../components/ui/alert';
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from '../../components/ui/form';
+import { Input } from '../../components/ui/input';
+import { useRegister } from '../../hooks/useAuth';
 
 const registerSchema = z
   .object({
@@ -96,16 +96,13 @@ export default function RegisterPage(): React.ReactElement {
         <div className="w-full max-w-md">
           <Card>
             <CardContent className="pt-6 text-center">
-              <CheckCircle
-                className="mx-auto mb-4 h-16 w-16 text-green-500"
-                aria-hidden="true"
-              />
+              <CheckCircle className="mx-auto mb-4 h-16 w-16 text-green-500" aria-hidden="true" />
               <h2 className="mb-2 text-xl font-semibold text-gray-900">
                 Cuenta creada exitosamente
               </h2>
               <p className="text-gray-600">
-                Revisa tu correo electronico para verificar tu cuenta. Seras redirigido
-                al inicio de sesion en unos segundos.
+                Revisa tu correo electronico para verificar tu cuenta. Seras redirigido al inicio de
+                sesion en unos segundos.
               </p>
             </CardContent>
           </Card>
@@ -142,11 +139,7 @@ export default function RegisterPage(): React.ReactElement {
             )}
 
             <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                noValidate
-                className="space-y-4"
-              >
+              <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-4">
                 <FormField
                   control={form.control}
                   name="name"
@@ -206,9 +199,7 @@ export default function RegisterPage(): React.ReactElement {
                         </FormControl>
                         <button
                           type="button"
-                          aria-label={
-                            showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'
-                          }
+                          aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
                           onClick={() => setShowPassword((prev) => !prev)}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
                         >
@@ -244,9 +235,7 @@ export default function RegisterPage(): React.ReactElement {
                         <button
                           type="button"
                           aria-label={
-                            showConfirmPassword
-                              ? 'Ocultar confirmacion'
-                              : 'Mostrar confirmacion'
+                            showConfirmPassword ? 'Ocultar confirmacion' : 'Mostrar confirmacion'
                           }
                           onClick={() => setShowConfirmPassword((prev) => !prev)}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
@@ -263,11 +252,7 @@ export default function RegisterPage(): React.ReactElement {
                   )}
                 />
 
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={registerMutation.isPending}
-                >
+                <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
                   {registerMutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

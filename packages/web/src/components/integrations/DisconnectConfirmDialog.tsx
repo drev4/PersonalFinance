@@ -1,5 +1,7 @@
-import type React from 'react';
 import { AlertTriangle } from 'lucide-react';
+import type React from 'react';
+import type { IntegrationProvider } from '../../types/api';
+import { Button } from '../ui/button';
 import {
   Dialog,
   DialogContent,
@@ -8,8 +10,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from '../ui/dialog';
-import { Button } from '../ui/button';
-import type { IntegrationProvider } from '../../types/api';
 
 const PROVIDER_LABELS: Record<IntegrationProvider, string> = {
   binance: 'Binance',
@@ -43,24 +43,16 @@ export default function DisconnectConfirmDialog({
           </div>
           <DialogTitle>¿Desconectar {providerLabel}?</DialogTitle>
           <DialogDescription>
-            Se eliminarán las credenciales almacenadas. Tus holdings y transacciones importadas
-            se conservarán.
+            Se eliminarán las credenciales almacenadas. Tus holdings y transacciones importadas se
+            conservarán.
           </DialogDescription>
         </DialogHeader>
 
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isPending}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
             Cancelar
           </Button>
-          <Button
-            variant="destructive"
-            onClick={onConfirm}
-            disabled={isPending}
-          >
+          <Button variant="destructive" onClick={onConfirm} disabled={isPending}>
             {isPending ? (
               <>
                 <span

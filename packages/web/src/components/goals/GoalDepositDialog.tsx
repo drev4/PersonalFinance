@@ -1,18 +1,12 @@
 import { useState, useEffect } from 'react';
 import type React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '../ui/dialog';
-import { Input } from '../ui/input';
-import { Button } from '../ui/button';
-import { Progress } from '../ui/progress';
 import { useDepositGoal } from '../../hooks/useGoals';
-import type { Goal } from '../../types/api';
 import { formatCurrency } from '../../lib/formatters';
+import type { Goal } from '../../types/api';
+import { Button } from '../ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
+import { Input } from '../ui/input';
+import { Progress } from '../ui/progress';
 
 interface GoalDepositDialogProps {
   goal: Goal;
@@ -38,8 +32,7 @@ export function GoalDepositDialog({
 
   const amountCents = Math.round(parseFloat(raw.replace(',', '.')) * 100) || 0;
   const previewCurrent = goal.currentAmount + amountCents;
-  const pct =
-    goal.targetAmount > 0 ? Math.min(100, (previewCurrent / goal.targetAmount) * 100) : 0;
+  const pct = goal.targetAmount > 0 ? Math.min(100, (previewCurrent / goal.targetAmount) * 100) : 0;
 
   async function handleConfirm(): Promise<void> {
     if (amountCents <= 0) {

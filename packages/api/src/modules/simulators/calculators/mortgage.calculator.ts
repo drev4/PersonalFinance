@@ -1,26 +1,26 @@
 // ---- Types ------------------------------------------------------------------
 
 export interface MortgageInputs {
-  principal: number;      // céntimos
-  annualRate: number;     // % anual, ej: 3.5
+  principal: number; // céntimos
+  annualRate: number; // % anual, ej: 3.5
   years: number;
-  fixedYears?: number;    // para hipoteca mixta
-  variableRate?: number;  // % para el tramo variable
+  fixedYears?: number; // para hipoteca mixta
+  variableRate?: number; // % para el tramo variable
 }
 
 export interface AmortizationRow {
   month: number;
-  payment: number;    // céntimos
-  interest: number;   // céntimos
-  principal: number;  // céntimos
-  balance: number;    // capital pendiente, céntimos
+  payment: number; // céntimos
+  interest: number; // céntimos
+  principal: number; // céntimos
+  balance: number; // capital pendiente, céntimos
 }
 
 export interface MortgageResult {
-  monthlyPayment: number;        // céntimos
-  totalPayment: number;          // céntimos
-  totalInterest: number;         // céntimos
-  effectiveRate: number;         // TAE aproximada
+  monthlyPayment: number; // céntimos
+  totalPayment: number; // céntimos
+  totalInterest: number; // céntimos
+  effectiveRate: number; // TAE aproximada
   schedule: AmortizationRow[];
   fixedPhasePayment?: number;
   variablePhasePayment?: number;
@@ -40,7 +40,7 @@ function frenchPayment(principalCents: number, annualRate: number, months: numbe
   }
   const i = annualRate / 12 / 100;
   const factor = Math.pow(1 + i, months);
-  return Math.round(principalCents * (i * factor) / (factor - 1));
+  return Math.round((principalCents * (i * factor)) / (factor - 1));
 }
 
 /**
@@ -121,7 +121,9 @@ export function calculateMortgage(inputs: MortgageInputs): MortgageResult {
  * Returns a unified schedule merging both phases.
  */
 export function calculateMixedMortgage(
-  inputs: Required<Pick<MortgageInputs, 'principal' | 'annualRate' | 'years' | 'fixedYears' | 'variableRate'>>,
+  inputs: Required<
+    Pick<MortgageInputs, 'principal' | 'annualRate' | 'years' | 'fixedYears' | 'variableRate'>
+  >,
 ): MortgageResult {
   const { principal, annualRate, years, fixedYears, variableRate } = inputs;
 
@@ -134,22 +136,26 @@ export function calculateMixedMortgage(
   const fixedSchedule = buildSchedule(principal, annualRate, fixedMonths, 0);
 
   // Remaining principal after fixed phase
-  const remainingPrincipal = fixedSchedule[fixedSchedule.length - 1].balance;
+  const remainingPrincipal = fixedSchedule[fixedSchedule.length - 1]!.balance;
 
   // Variable phase
   const variablePhasePayment = frenchPayment(remainingPrincipal, variableRate, variableMonths);
-  const variableSchedule = buildSchedule(remainingPrincipal, variableRate, variableMonths, fixedMonths);
+  const variableSchedule = buildSchedule(
+    remainingPrincipal,
+    variableRate,
+    variableMonths,
+    fixedMonths,
+  );
 
   const schedule = [...fixedSchedule, ...variableSchedule];
   const totalPayment = schedule.reduce((s, r) => s + r.payment, 0);
   const totalInterest = totalPayment - principal;
 
   // Weighted effective rate approximation
-  const weightedRate =
-    (annualRate * fixedMonths + variableRate * variableMonths) / totalMonths;
+  const weightedRate = (annualRate * fixedMonths + variableRate * variableMonths) / totalMonths;
 
   return {
-    monthlyPayment: fixedPhasePayment,  // first payment (fixed phase)
+    monthlyPayment: fixedPhasePayment, // first payment (fixed phase)
     totalPayment,
     totalInterest,
     effectiveRate: approximateTae(weightedRate),

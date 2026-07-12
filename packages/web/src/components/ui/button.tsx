@@ -1,6 +1,6 @@
-import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
+import * as React from 'react';
 import { cn } from '../../lib/utils';
 
 const buttonVariants = cva(
@@ -8,16 +8,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default:
-          'bg-primary-600 text-white shadow hover:bg-primary-700 active:bg-primary-800',
+        default: 'bg-primary-600 text-white shadow hover:bg-primary-700 active:bg-primary-800',
         outline:
           'border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:text-gray-900',
-        ghost:
-          'text-gray-700 hover:bg-gray-100 hover:text-gray-900',
-        destructive:
-          'bg-red-600 text-white shadow hover:bg-red-700 active:bg-red-800',
-        link:
-          'text-primary-600 underline-offset-4 hover:underline',
+        ghost: 'text-gray-700 hover:bg-gray-100 hover:text-gray-900',
+        destructive: 'bg-red-600 text-white shadow hover:bg-red-700 active:bg-red-800',
+        link: 'text-primary-600 underline-offset-4 hover:underline',
       },
       size: {
         default: 'h-10 px-4 py-2',
@@ -34,14 +30,16 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   asChild?: boolean;
   isLoading?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, isLoading = false, children, disabled, ...props }, ref) => {
+  (
+    { className, variant, size, asChild = false, isLoading = false, children, disabled, ...props },
+    ref,
+  ) => {
     const Comp = asChild ? Slot : 'button';
     const isDisabled = disabled || isLoading;
 

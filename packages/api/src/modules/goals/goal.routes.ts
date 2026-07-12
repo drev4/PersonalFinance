@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { requireAuth } from '../../middlewares/authenticate.js';
 import {
@@ -47,24 +47,13 @@ const CreateGoalSchema = z.object({
 });
 
 const DepositGoalSchema = z.object({
-  amount: z
-    .number()
-    .int('Amount must be an integer (cents)')
-    .positive('Amount must be positive'),
+  amount: z.number().int('Amount must be an integer (cents)').positive('Amount must be positive'),
 });
 
 const UpdateGoalSchema = z.object({
   name: z.string().min(1).max(100).optional(),
-  targetAmount: z
-    .number()
-    .int('Amount must be an integer (cents)')
-    .positive()
-    .optional(),
-  currentAmount: z
-    .number()
-    .int('Amount must be an integer (cents)')
-    .nonnegative()
-    .optional(),
+  targetAmount: z.number().int('Amount must be an integer (cents)').positive().optional(),
+  currentAmount: z.number().int('Amount must be an integer (cents)').nonnegative().optional(),
   deadline: flexDate.optional(),
   linkedAccountId: z.string().optional(),
   color: z
@@ -76,10 +65,7 @@ const UpdateGoalSchema = z.object({
 
 // ---- Error handler -----------------------------------------------------------
 
-function handleGoalError(
-  error: unknown,
-  reply: Parameters<Parameters<FastifyInstance['get']>[2]>[1],
-): ReturnType<Parameters<FastifyInstance['get']>[2]> {
+function handleGoalError(error: unknown, reply: FastifyReply): FastifyReply {
   if (error instanceof GoalError) {
     return reply.status(error.statusCode).send({
       error: { code: error.code, message: error.message },
@@ -90,108 +76,82 @@ function handleGoalError(
 
 // ---- Route registration ------------------------------------------------------
 
-export async function registerGoalRoutes(
-  fastify: FastifyInstance,
-): Promise<void> {
+export async function registerGoalRoutes(fastify: FastifyInstance): Promise<void> {
   // GET /goals
-  fastify.get(
-    '/goals',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const goals = await getUserGoals(userId);
-      return reply.send({ data: goals });
-    },
-  );
+  fastify.get('/goals', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const goals = await getUserGoals(userId);
+    return reply.send({ data: goals });
+  });
 
   // POST /goals
-  fastify.post(
-    '/goals',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const body = CreateGoalSchema.parse(request.body);
+  fastify.post('/goals', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const body = CreateGoalSchema.parse(request.body);
 
-      const goal = await createGoal(userId, { ...body, userId });
-      const monthlySuggestion = calculateMonthlySuggestion(goal);
+    const goal = await createGoal(userId, { ...body, userId });
+    const monthlySuggestion = calculateMonthlySuggestion(goal);
 
-      return reply.status(201).send({
-        data: goal,
-        meta: { monthlySuggestion },
-      });
-    },
-  );
+    return reply.status(201).send({
+      data: goal,
+      meta: { monthlySuggestion },
+    });
+  });
 
   // GET /goals/:id
-  fastify.get(
-    '/goals/:id',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const { id } = request.params as { id: string };
+  fastify.get('/goals/:id', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const { id } = request.params as { id: string };
 
-      try {
-        const goal = await getGoal(userId, id);
-        const monthlySuggestion = calculateMonthlySuggestion(goal);
-        return reply.send({ data: goal, meta: { monthlySuggestion } });
-      } catch (err) {
-        return handleGoalError(err, reply);
-      }
-    },
-  );
+    try {
+      const goal = await getGoal(userId, id);
+      const monthlySuggestion = calculateMonthlySuggestion(goal);
+      return reply.send({ data: goal, meta: { monthlySuggestion } });
+    } catch (err) {
+      return handleGoalError(err, reply);
+    }
+  });
 
   // PATCH /goals/:id
-  fastify.patch(
-    '/goals/:id',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const { id } = request.params as { id: string };
-      const body = UpdateGoalSchema.parse(request.body);
+  fastify.patch('/goals/:id', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const { id } = request.params as { id: string };
+    const body = UpdateGoalSchema.parse(request.body);
 
-      try {
-        const goal = await updateGoal(userId, id, body);
-        const monthlySuggestion = calculateMonthlySuggestion(goal);
-        return reply.send({ data: goal, meta: { monthlySuggestion } });
-      } catch (err) {
-        return handleGoalError(err, reply);
-      }
-    },
-  );
+    try {
+      const goal = await updateGoal(userId, id, body);
+      const monthlySuggestion = calculateMonthlySuggestion(goal);
+      return reply.send({ data: goal, meta: { monthlySuggestion } });
+    } catch (err) {
+      return handleGoalError(err, reply);
+    }
+  });
 
   // POST /goals/:id/deposit
-  fastify.post(
-    '/goals/:id/deposit',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const { id } = request.params as { id: string };
-      const body = DepositGoalSchema.parse(request.body);
+  fastify.post('/goals/:id/deposit', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const { id } = request.params as { id: string };
+    const body = DepositGoalSchema.parse(request.body);
 
-      try {
-        const goal = await depositGoal(userId, id, body.amount);
-        const monthlySuggestion = calculateMonthlySuggestion(goal);
-        return reply.send({ data: goal, meta: { monthlySuggestion } });
-      } catch (err) {
-        return handleGoalError(err, reply);
-      }
-    },
-  );
+    try {
+      const goal = await depositGoal(userId, id, body.amount);
+      const monthlySuggestion = calculateMonthlySuggestion(goal);
+      return reply.send({ data: goal, meta: { monthlySuggestion } });
+    } catch (err) {
+      return handleGoalError(err, reply);
+    }
+  });
 
   // DELETE /goals/:id
-  fastify.delete(
-    '/goals/:id',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const { id } = request.params as { id: string };
+  fastify.delete('/goals/:id', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const { id } = request.params as { id: string };
 
-      try {
-        await deleteGoal(userId, id);
-        return reply.status(204).send();
-      } catch (err) {
-        return handleGoalError(err, reply);
-      }
-    },
-  );
+    try {
+      await deleteGoal(userId, id);
+      return reply.status(204).send();
+    } catch (err) {
+      return handleGoalError(err, reply);
+    }
+  });
 }

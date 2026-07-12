@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import pino from 'pino';
+import { pino } from 'pino';
 import { getUniqueSymbolsByType } from '../modules/holdings/holding.repository.js';
 import { updatePriceForSymbol } from '../modules/holdings/holding.service.js';
 import { PriceSnapshotModel } from '../modules/holdings/priceSnapshot.model.js';
@@ -10,7 +10,7 @@ const logger = pino({ name: 'job.priceUpdate' });
 
 // Throttle: max 40 Finnhub calls per run to stay within 60/min hard limit
 const FINNHUB_CALLS_PER_MINUTE = 40;
-const FINNHUB_INTERVAL_MS = Math.ceil((60_000 / FINNHUB_CALLS_PER_MINUTE));
+const FINNHUB_INTERVAL_MS = Math.ceil(60_000 / FINNHUB_CALLS_PER_MINUTE);
 
 /** Saves a price snapshot only if no snapshot exists for this symbol in the last hour. */
 async function maybeSaveSnapshot(

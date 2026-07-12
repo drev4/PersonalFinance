@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import pino from 'pino';
+import { pino } from 'pino';
 import { BudgetModel } from '../modules/budgets/budget.model.js';
 import { checkBudgetAlerts } from '../modules/budgets/budget.service.js';
 import { NotificationModel } from '../modules/notifications/notification.model.js';

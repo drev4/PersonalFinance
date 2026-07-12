@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import pino from 'pino';
+import { pino } from 'pino';
 import { BinanceClient, BinanceApiError } from './binance/binance.client.js';
 import {
   IntegrationCredentialsModel,
@@ -167,10 +167,7 @@ export async function getIntegrations(userId: string): Promise<IntegrationStatus
 // disconnectIntegration
 // ---------------------------------------------------------------------------
 
-export async function disconnectIntegration(
-  userId: string,
-  provider: string,
-): Promise<void> {
+export async function disconnectIntegration(userId: string, provider: string): Promise<void> {
   const credential = await IntegrationCredentialsModel.findOneAndUpdate(
     {
       userId: new mongoose.Types.ObjectId(userId),
@@ -195,9 +192,7 @@ export async function disconnectIntegration(
     const delayed = await syncQueue.getDelayed();
 
     const toCancel = [...waiting, ...delayed].filter(
-      (job) =>
-        job.data.userId === userId &&
-        job.data.provider === provider,
+      (job) => job.data.userId === userId && job.data.provider === provider,
     );
 
     await Promise.all(toCancel.map((job) => job.remove()));
@@ -284,8 +279,7 @@ export async function syncBinance(userId: string): Promise<void> {
   try {
     await runBinanceSync(userId, credentialDoc);
   } catch (err) {
-    const errorMessage =
-      err instanceof Error ? err.message : 'Unknown error during Binance sync';
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error during Binance sync';
 
     logger.error({ err, userId }, 'Binance sync failed');
 
@@ -368,7 +362,10 @@ async function runBinanceSync(
     } catch (err) {
       if (err instanceof BinanceApiError) {
         // Symbol may not trade against USDT — skip gracefully
-        logger.warn({ userId, symbol, err: err.message }, 'Could not fetch trades — skipping symbol');
+        logger.warn(
+          { userId, symbol, err: err.message },
+          'Could not fetch trades — skipping symbol',
+        );
         continue;
       }
       throw err;
@@ -427,5 +424,8 @@ async function runBinanceSync(
     $unset: { lastSyncError: '' },
   }).exec();
 
-  logger.info({ userId, assetsProcessed: activeAssets.length }, 'Binance sync completed successfully');
+  logger.info(
+    { userId, assetsProcessed: activeAssets.length },
+    'Binance sync completed successfully',
+  );
 }

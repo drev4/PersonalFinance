@@ -1,19 +1,10 @@
-import type React from 'react';
-import { Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Loader2, TrendingUp, Mail } from 'lucide-react';
-import { useForgotPassword } from '../../hooks/useAuth';
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from '../../components/ui/form';
-import { Input } from '../../components/ui/input';
+import type React from 'react';
+import { useForm } from 'react-hook-form';
+import { Link } from 'react-router-dom';
+import { z } from 'zod';
+import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import {
   Card,
@@ -23,7 +14,16 @@ import {
   CardContent,
   CardFooter,
 } from '../../components/ui/card';
-import { Alert, AlertDescription } from '../../components/ui/alert';
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from '../../components/ui/form';
+import { Input } from '../../components/ui/input';
+import { useForgotPassword } from '../../hooks/useAuth';
 
 const forgotPasswordSchema = z.object({
   email: z
@@ -70,8 +70,8 @@ export default function ForgotPasswordPage(): React.ReactElement {
           <CardHeader>
             <CardTitle className="text-xl">Recuperar contraseña</CardTitle>
             <CardDescription>
-              Ingresa tu correo electrónico y te enviaremos instrucciones para
-              restablecer tu contraseña.
+              Ingresa tu correo electrónico y te enviaremos instrucciones para restablecer tu
+              contraseña.
             </CardDescription>
           </CardHeader>
 
@@ -82,12 +82,10 @@ export default function ForgotPasswordPage(): React.ReactElement {
                   <Mail className="h-7 w-7 text-green-600" aria-hidden="true" />
                 </div>
                 <p className="text-gray-700">
-                  Si existe una cuenta asociada a ese correo, recibirás un enlace
-                  para restablecer tu contraseña en los próximos minutos.
+                  Si existe una cuenta asociada a ese correo, recibirás un enlace para restablecer
+                  tu contraseña en los próximos minutos.
                 </p>
-                <p className="mt-2 text-sm text-gray-500">
-                  Revisa también tu carpeta de spam.
-                </p>
+                <p className="mt-2 text-sm text-gray-500">Revisa también tu carpeta de spam.</p>
               </div>
             ) : (
               <>
@@ -98,11 +96,7 @@ export default function ForgotPasswordPage(): React.ReactElement {
                 )}
 
                 <Form {...form}>
-                  <form
-                    onSubmit={form.handleSubmit(onSubmit)}
-                    noValidate
-                    className="space-y-4"
-                  >
+                  <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-4">
                     <FormField
                       control={form.control}
                       name="email"
@@ -130,10 +124,7 @@ export default function ForgotPasswordPage(): React.ReactElement {
                     >
                       {forgotPasswordMutation.isPending ? (
                         <>
-                          <Loader2
-                            className="h-4 w-4 animate-spin"
-                            aria-hidden="true"
-                          />
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                           Enviando...
                         </>
                       ) : (

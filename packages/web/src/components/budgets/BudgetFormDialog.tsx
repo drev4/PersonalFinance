@@ -1,36 +1,23 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Plus, Trash2 } from 'lucide-react';
 import { useEffect } from 'react';
 import type React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '../ui/dialog';
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from '../ui/form';
-import { Input } from '../ui/input';
-import { Select } from '../ui/select';
-import { Button } from '../ui/button';
 import { useCreateBudget, useUpdateBudget } from '../../hooks/useBudgets';
 import { useCategories } from '../../hooks/useCategories';
-import type { Budget } from '../../types/api';
 import { formatCurrency } from '../../lib/formatters';
+import type { Budget } from '../../types/api';
+import { Button } from '../ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '../ui/form';
+import { Input } from '../ui/input';
+import { Select } from '../ui/select';
 
 const budgetItemSchema = z.object({
   categoryId: z.string().min(1, 'Selecciona una categoria'),
   amount: z
-    .number({ invalid_type_error: 'Introduce un importe valido' })
+    .number({ error: 'Introduce un importe valido' })
     .positive('El importe debe ser mayor que 0'),
 });
 
@@ -39,9 +26,7 @@ const budgetFormSchema = z.object({
   period: z.enum(['monthly', 'yearly']),
   startDate: z.string().min(1, 'La fecha de inicio es obligatoria'),
   rollover: z.boolean(),
-  items: z
-    .array(budgetItemSchema)
-    .min(1, 'Añade al menos una categoria al presupuesto'),
+  items: z.array(budgetItemSchema).min(1, 'Añade al menos una categoria al presupuesto'),
 });
 
 type BudgetFormValues = z.infer<typeof budgetFormSchema>;
@@ -73,9 +58,7 @@ export function BudgetFormDialog({
     defaultValues: {
       name: budget?.name ?? '',
       period: budget?.period ?? 'monthly',
-      startDate: budget?.startDate
-        ? budget.startDate.slice(0, 10)
-        : todayISO(),
+      startDate: budget?.startDate ? budget.startDate.slice(0, 10) : todayISO(),
       rollover: budget?.rollover ?? false,
       items: budget?.items.map((item) => ({
         categoryId: item.categoryId,
@@ -95,9 +78,7 @@ export function BudgetFormDialog({
       form.reset({
         name: budget?.name ?? '',
         period: budget?.period ?? 'monthly',
-        startDate: budget?.startDate
-          ? budget.startDate.slice(0, 10)
-          : todayISO(),
+        startDate: budget?.startDate ? budget.startDate.slice(0, 10) : todayISO(),
         rollover: budget?.rollover ?? false,
         items: budget?.items.map((item) => ({
           categoryId: item.categoryId,
@@ -136,9 +117,7 @@ export function BudgetFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>
-            {isEditing ? 'Editar presupuesto' : 'Nuevo presupuesto'}
-          </DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar presupuesto' : 'Nuevo presupuesto'}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -282,9 +261,7 @@ export function BudgetFormDialog({
                               placeholder="0.00"
                               {...f}
                               onChange={(e) =>
-                                f.onChange(
-                                  e.target.value === '' ? 0 : parseFloat(e.target.value),
-                                )
+                                f.onChange(e.target.value === '' ? 0 : parseFloat(e.target.value))
                               }
                             />
                           </FormControl>

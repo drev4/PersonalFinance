@@ -117,7 +117,7 @@ describe('getUserDebts()', () => {
 
     const debts = await getUserDebts(FAKE_USER_ID);
     expect(debts).toHaveLength(1);
-    expect(debts[0].isPaidOff).toBe(true);
+    expect(debts[0]!.isPaidOff).toBe(true);
   });
 
   it('excludes soft-deleted debts', async () => {

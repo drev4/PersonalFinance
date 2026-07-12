@@ -9,10 +9,10 @@
   "scripts": {
     "dev": "lsof -ti:3001,5173 | xargs kill -9 2>/dev/null; pnpm --filter=api --filter=web --parallel run dev",
     "dev:win": "powershell -Command \"@(3001,5173) | ForEach-Object { $p = (Get-NetTCPConnection -LocalPort $_ -ErrorAction SilentlyContinue).OwningProcess; if($p) { Stop-Process -Id $p -Force } }; pnpm --filter=api --filter=web --parallel run dev\"",
-    "build": "pnpm --filter=./packages run build",
+    "build": "pnpm --filter=./packages/** run build",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "pnpm --filter=@finanzas/shared --filter=@finanzas/api --filter=@finanzas/web run typecheck",
     "test": "vitest",
     "prepare": "husky install",
     "android": "expo run:android",
@@ -23,6 +23,7 @@
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.0.0",
+    "eslint-import-resolver-typescript": "^4.4.5",
     "eslint-plugin-import": "^2.29.0",
     "eslint-plugin-react": "^7.35.0",
     "eslint-plugin-react-hooks": "^4.6.0",
@@ -42,7 +43,10 @@
     ]
   },
   "pnpm": {
-    "overrides": {},
+    "overrides": {
+      "@types/react": "18.2.79",
+      "@types/react-dom": "18.2.25"
+    },
     "nohoist": [
       "**/react-native",
       "**/expo*"

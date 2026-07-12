@@ -1,4 +1,4 @@
-import pino from 'pino';
+import { pino } from 'pino';
 import { HoldingModel } from './holding.model.js';
 import { findAllActive, markTriggered } from './priceAlert.repository.js';
 import { createNotification } from '../notifications/notification.service.js';

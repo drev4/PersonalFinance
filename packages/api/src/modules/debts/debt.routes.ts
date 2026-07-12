@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { requireAuth } from '../../middlewares/authenticate.js';
 import {
@@ -75,10 +75,7 @@ const PaymentSchema = z.object({
 
 // ---- Error handler -----------------------------------------------------------
 
-function handleDebtError(
-  error: unknown,
-  reply: Parameters<Parameters<FastifyInstance['get']>[2]>[1],
-): ReturnType<Parameters<FastifyInstance['get']>[2]> {
+function handleDebtError(error: unknown, reply: FastifyReply): FastifyReply {
   if (error instanceof DebtError) {
     return reply.status(error.statusCode).send({
       error: { code: error.code, message: error.message },

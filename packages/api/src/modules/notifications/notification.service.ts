@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import pino from 'pino';
+import { pino } from 'pino';
 import {
   NotificationModel,
   type INotification,

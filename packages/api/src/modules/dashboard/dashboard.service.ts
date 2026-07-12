@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import pino from 'pino';
+import { pino } from 'pino';
 import { AccountModel } from '../accounts/account.model.js';
 import { TransactionModel, type ITransaction } from '../transactions/transaction.model.js';
 import { getRates, convertWithRates, type ExchangeRates } from '../../services/currency.service.js';
@@ -544,23 +544,23 @@ export async function getHealthScore(userId: string): Promise<HealthScore> {
     total >= 80
       ? 'Excelente'
       : total >= 60
-      ? 'Buena'
-      : total >= 40
-      ? 'Regular'
-      : total >= 20
-      ? 'Mejorable'
-      : 'Crítica';
+        ? 'Buena'
+        : total >= 40
+          ? 'Regular'
+          : total >= 20
+            ? 'Mejorable'
+            : 'Crítica';
 
   const color =
     total >= 80
       ? '#22c55e'
       : total >= 60
-      ? '#84cc16'
-      : total >= 40
-      ? '#f59e0b'
-      : total >= 20
-      ? '#f97316'
-      : '#ef4444';
+        ? '#84cc16'
+        : total >= 40
+          ? '#f59e0b'
+          : total >= 20
+            ? '#f97316'
+            : '#ef4444';
 
   return { score: total, label, color, areas };
 }

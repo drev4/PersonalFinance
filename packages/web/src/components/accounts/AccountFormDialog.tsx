@@ -1,10 +1,14 @@
+import { CURRENCIES } from '@finanzas/shared';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
 import type React from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CURRENCIES } from '@finanzas/shared';
+import { useCreateAccount, useUpdateAccount } from '../../hooks/useAccounts';
 import { useCurrencyConverter } from '../../hooks/useCurrency';
+import { getAccountTypeLabel } from '../../lib/formatters';
+import type { Account } from '../../types/api';
+import { Button } from '../ui/button';
 import {
   Dialog,
   DialogContent,
@@ -13,20 +17,9 @@ import {
   DialogFooter,
   DialogClose,
 } from '../ui/dialog';
-import { Button } from '../ui/button';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '../ui/form';
 import { Input } from '../ui/input';
 import { Select } from '../ui/select';
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from '../ui/form';
-import { useCreateAccount, useUpdateAccount } from '../../hooks/useAccounts';
-import type { Account } from '../../types/api';
-import { getAccountTypeLabel } from '../../lib/formatters';
 
 const ACCOUNT_TYPES = [
   'checking',
@@ -69,7 +62,9 @@ const accountFormSchema = z.object({
     'other',
   ]),
   currency: z.string().length(3, 'Selecciona una divisa valida'),
-  initialBalance: z.number({ invalid_type_error: 'Ingresa un numero valido' }).min(0, 'El saldo no puede ser negativo'),
+  initialBalance: z
+    .number({ error: 'Ingresa un numero valido' })
+    .min(0, 'El saldo no puede ser negativo'),
   institution: z.string().optional(),
   notes: z.string().optional(),
   color: z.string().optional(),
@@ -343,9 +338,7 @@ export function AccountFormDialog({
                         className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                       />
                     </FormControl>
-                    <FormLabel className="cursor-pointer">
-                      Incluir en patrimonio neto
-                    </FormLabel>
+                    <FormLabel className="cursor-pointer">Incluir en patrimonio neto</FormLabel>
                   </div>
                   <FormMessage />
                 </FormItem>

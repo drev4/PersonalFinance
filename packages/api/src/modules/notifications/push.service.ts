@@ -1,5 +1,5 @@
 import axios from 'axios';
-import pino from 'pino';
+import { pino } from 'pino';
 import { getUserPushTokens } from '../users/user.repository.js';
 
 const logger = pino({ name: 'push.service' });

@@ -59,12 +59,14 @@ beforeEach(async () => {
 
 // ---- Helpers -----------------------------------------------------------------
 
-async function makeAccount(overrides: {
-  type?: string;
-  currentBalance?: number;
-  includedInNetWorth?: boolean;
-  isActive?: boolean;
-} = {}) {
+async function makeAccount(
+  overrides: {
+    type?: string;
+    currentBalance?: number;
+    includedInNetWorth?: boolean;
+    isActive?: boolean;
+  } = {},
+) {
   return AccountModel.create({
     userId: new mongoose.Types.ObjectId(FAKE_USER_ID),
     name: 'Test Account',
@@ -77,11 +79,13 @@ async function makeAccount(overrides: {
   });
 }
 
-async function makeCategory(overrides: {
-  name?: string;
-  color?: string;
-  icon?: string;
-} = {}) {
+async function makeCategory(
+  overrides: {
+    name?: string;
+    color?: string;
+    icon?: string;
+  } = {},
+) {
   return CategoryModel.create({
     userId: new mongoose.Types.ObjectId(FAKE_USER_ID),
     name: overrides.name ?? 'Food',
@@ -100,9 +104,7 @@ async function makeTransaction(overrides: {
   categoryId?: mongoose.Types.ObjectId;
   accountId?: mongoose.Types.ObjectId;
 }) {
-  const accountId =
-    overrides.accountId ??
-    (await makeAccount()).id as mongoose.Types.ObjectId;
+  const accountId = overrides.accountId ?? ((await makeAccount()).id as mongoose.Types.ObjectId);
 
   return TransactionModel.create({
     userId: new mongoose.Types.ObjectId(FAKE_USER_ID),
@@ -232,9 +234,9 @@ describe('getNetWorthHistory()', () => {
     const result = await getNetWorthHistory(FAKE_USER_ID, 'all');
 
     expect(result).toHaveLength(3);
-    expect(result[0].total).toBe(10_000);
-    expect(result[1].total).toBe(20_000);
-    expect(result[2].total).toBe(30_000);
+    expect(result[0]!.total).toBe(10_000);
+    expect(result[1]!.total).toBe(20_000);
+    expect(result[2]!.total).toBe(30_000);
   });
 
   it('filters snapshots to the given period', async () => {
@@ -258,7 +260,7 @@ describe('getNetWorthHistory()', () => {
     const result = await getNetWorthHistory(FAKE_USER_ID, '1m');
 
     expect(result).toHaveLength(1);
-    expect(result[0].total).toBe(15_000);
+    expect(result[0]!.total).toBe(15_000);
   });
 
   it('returns all snapshots for period "all" without date filtering', async () => {
@@ -318,12 +320,12 @@ describe('getSpendingByCategory()', () => {
     const result = await getSpendingByCategory(FAKE_USER_ID, from, to);
 
     expect(result).toHaveLength(1);
-    expect(result[0].categoryId).toBe(cat._id.toHexString());
-    expect(result[0].name).toBe('Food');
-    expect(result[0].color).toBe('#FF5733');
-    expect(result[0].icon).toBe('fork');
-    expect(result[0].total).toBe(8_000);
-    expect(result[0].percentage).toBe(100);
+    expect(result[0]!.categoryId).toBe(cat._id.toHexString());
+    expect(result[0]!.name).toBe('Food');
+    expect(result[0]!.color).toBe('#FF5733');
+    expect(result[0]!.icon).toBe('fork');
+    expect(result[0]!.total).toBe(8_000);
+    expect(result[0]!.percentage).toBe(100);
   });
 
   it('returns results sorted by total descending', async () => {
@@ -332,15 +334,27 @@ describe('getSpendingByCategory()', () => {
     const account = await makeAccount({ type: 'checking', currentBalance: 100_000 });
     const txDate = new Date('2026-04-15T00:00:00Z');
 
-    await makeTransaction({ type: 'expense', amount: 2_000, date: txDate, categoryId: catA._id, accountId: account._id });
-    await makeTransaction({ type: 'expense', amount: 9_000, date: txDate, categoryId: catB._id, accountId: account._id });
+    await makeTransaction({
+      type: 'expense',
+      amount: 2_000,
+      date: txDate,
+      categoryId: catA._id,
+      accountId: account._id,
+    });
+    await makeTransaction({
+      type: 'expense',
+      amount: 9_000,
+      date: txDate,
+      categoryId: catB._id,
+      accountId: account._id,
+    });
 
     const from = new Date('2026-04-01T00:00:00Z');
     const to = new Date('2026-04-30T23:59:59Z');
     const result = await getSpendingByCategory(FAKE_USER_ID, from, to);
 
-    expect(result[0].name).toBe('Entertainment');
-    expect(result[1].name).toBe('Transport');
+    expect(result[0]!.name).toBe('Entertainment');
+    expect(result[1]!.name).toBe('Transport');
   });
 
   it('calculates percentage correctly across multiple categories', async () => {
@@ -350,8 +364,20 @@ describe('getSpendingByCategory()', () => {
     const txDate = new Date('2026-04-10T00:00:00Z');
 
     // 25% and 75%
-    await makeTransaction({ type: 'expense', amount: 25_000, date: txDate, categoryId: catA._id, accountId: account._id });
-    await makeTransaction({ type: 'expense', amount: 75_000, date: txDate, categoryId: catB._id, accountId: account._id });
+    await makeTransaction({
+      type: 'expense',
+      amount: 25_000,
+      date: txDate,
+      categoryId: catA._id,
+      accountId: account._id,
+    });
+    await makeTransaction({
+      type: 'expense',
+      amount: 75_000,
+      date: txDate,
+      categoryId: catB._id,
+      accountId: account._id,
+    });
 
     const from = new Date('2026-04-01T00:00:00Z');
     const to = new Date('2026-04-30T23:59:59Z');
@@ -378,12 +404,14 @@ describe('takeNetWorthSnapshot()', () => {
 
     const snapshots = await NetWorthSnapshotModel.find({
       userId: new mongoose.Types.ObjectId(FAKE_USER_ID),
-    }).lean().exec();
+    })
+      .lean()
+      .exec();
 
     expect(snapshots).toHaveLength(1);
-    expect(snapshots[0].totalInBaseCurrency).toBe(60_000); // 100k - 40k
-    expect(snapshots[0].breakdown.cash).toBe(100_000);
-    expect(snapshots[0].breakdown.debts).toBe(40_000);
+    expect(snapshots[0]!.totalInBaseCurrency).toBe(60_000); // 100k - 40k
+    expect(snapshots[0]!.breakdown.cash).toBe(100_000);
+    expect(snapshots[0]!.breakdown.debts).toBe(40_000);
   });
 
   it('normalizes the snapshot date to midnight UTC', async () => {
@@ -393,7 +421,9 @@ describe('takeNetWorthSnapshot()', () => {
 
     const snapshot = await NetWorthSnapshotModel.findOne({
       userId: new mongoose.Types.ObjectId(FAKE_USER_ID),
-    }).lean().exec();
+    })
+      .lean()
+      .exec();
 
     const date = snapshot?.date as Date;
     expect(date.getUTCHours()).toBe(0);
@@ -429,10 +459,12 @@ describe('takeNetWorthSnapshot()', () => {
 
     const snapshots = await NetWorthSnapshotModel.find({
       userId: new mongoose.Types.ObjectId(FAKE_USER_ID),
-    }).lean().exec();
+    })
+      .lean()
+      .exec();
 
     expect(snapshots).toHaveLength(1);
-    expect(snapshots[0].totalInBaseCurrency).toBe(80_000);
+    expect(snapshots[0]!.totalInBaseCurrency).toBe(80_000);
   });
 });
 
@@ -477,8 +509,8 @@ describe('getCashflow()', () => {
     const result = await getCashflow(FAKE_USER_ID, 1);
 
     expect(result).toHaveLength(1);
-    expect(result[0].income).toBe(100_000);
-    expect(result[0].expenses).toBe(30_000);
-    expect(result[0].net).toBe(70_000);
+    expect(result[0]!.income).toBe(100_000);
+    expect(result[0]!.expenses).toBe(30_000);
+    expect(result[0]!.net).toBe(70_000);
   });
 });

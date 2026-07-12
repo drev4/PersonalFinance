@@ -1,21 +1,16 @@
 import { useState } from 'react';
 import type React from 'react';
 import { RadialBarChart, RadialBar, PolarAngleAxis, ResponsiveContainer } from 'recharts';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
-import { Badge } from '../ui/badge';
-import { Progress } from '../ui/progress';
-import { Skeleton } from '../ui/skeleton';
-import { Button } from '../ui/button';
-import { BudgetFormDialog } from './BudgetFormDialog';
 import { useBudgetProgress } from '../../hooks/useBudgets';
-import type { Budget, BudgetItemProgress } from '../../types/api';
 import { formatCurrency, formatDate } from '../../lib/formatters';
 import { cn } from '../../lib/utils';
+import type { Budget, BudgetItemProgress } from '../../types/api';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Progress } from '../ui/progress';
+import { Skeleton } from '../ui/skeleton';
+import { BudgetFormDialog } from './BudgetFormDialog';
 
 interface BudgetDetailDialogProps {
   budget: Budget;
@@ -48,9 +43,7 @@ export function BudgetDetailDialog({
   const [editOpen, setEditOpen] = useState(false);
   const { data: progress, isLoading } = useBudgetProgress(budget._id);
 
-  const radialData = progress
-    ? [{ value: Math.min(100, progress.percentageUsed) }]
-    : [];
+  const radialData = progress ? [{ value: Math.min(100, progress.percentageUsed) }] : [];
 
   return (
     <>
@@ -64,11 +57,7 @@ export function BudgetDetailDialog({
                   {budget.period === 'monthly' ? 'Mensual' : 'Anual'}
                 </Badge>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setEditOpen(true)}
-              >
+              <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
                 Editar
               </Button>
             </div>
@@ -150,9 +139,7 @@ export function BudgetDetailDialog({
 
               {/* Items */}
               <div>
-                <h4 className="mb-3 text-sm font-semibold text-gray-700">
-                  Desglose por categoria
-                </h4>
+                <h4 className="mb-3 text-sm font-semibold text-gray-700">Desglose por categoria</h4>
                 <div className="space-y-4">
                   {progress.items.map((item) => (
                     <div key={item.categoryId}>
@@ -198,11 +185,7 @@ export function BudgetDetailDialog({
         </DialogContent>
       </Dialog>
 
-      <BudgetFormDialog
-        budget={budget}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-      />
+      <BudgetFormDialog budget={budget} open={editOpen} onOpenChange={setEditOpen} />
     </>
   );
 }

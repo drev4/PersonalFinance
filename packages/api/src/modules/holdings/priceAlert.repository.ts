@@ -27,7 +27,7 @@ export async function createAlert(dto: CreateAlertDTO): Promise<IPriceAlert> {
 export async function findByUser(userId: string): Promise<IPriceAlert[]> {
   return PriceAlertModel.find({ userId: new mongoose.Types.ObjectId(userId) })
     .sort({ createdAt: -1 })
-    .lean()
+    .lean<IPriceAlert[]>()
     .exec();
 }
 
@@ -37,12 +37,12 @@ export async function findByHolding(userId: string, holdingId: string): Promise<
     holdingId: new mongoose.Types.ObjectId(holdingId),
   })
     .sort({ createdAt: -1 })
-    .lean()
+    .lean<IPriceAlert[]>()
     .exec();
 }
 
 export async function findAllActive(): Promise<IPriceAlert[]> {
-  return PriceAlertModel.find({ isActive: true }).lean().exec();
+  return PriceAlertModel.find({ isActive: true }).lean<IPriceAlert[]>().exec();
 }
 
 export async function findById(id: string, userId: string): Promise<IPriceAlert | null> {

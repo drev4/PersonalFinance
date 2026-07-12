@@ -57,6 +57,9 @@ module.exports = {
     ],
     'react/react-in-jsx-scope': 'off',
     'react/prop-types': 'off',
+    // Type-checking already catches missing default exports; the TS resolver
+    // false-positives on React's UMD-style `export =` default export.
+    'import/default': 'off',
     'no-console': [
       'warn',
       {
@@ -67,6 +70,11 @@ module.exports = {
   settings: {
     react: {
       version: 'detect',
+    },
+    'import/resolver': {
+      typescript: {
+        project: ['packages/web/tsconfig.json', 'tsconfig.base.json'],
+      },
     },
   },
 };

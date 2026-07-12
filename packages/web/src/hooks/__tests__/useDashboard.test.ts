@@ -24,9 +24,9 @@ describe('useNetWorthSummary', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.data?.netWorth).toBe(15000);
-    expect(result.current.data?.totalAssets).toBe(20000);
-    expect(result.current.data?.totalLiabilities).toBe(5000);
+    expect(result.current.data?.total).toBe(15000);
+    expect(result.current.data?.assets).toBe(20000);
+    expect(result.current.data?.liabilities).toBe(5000);
   });
 
   it('computes net worth as assets minus liabilities', async () => {
@@ -35,8 +35,8 @@ describe('useNetWorthSummary', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    const { totalAssets, totalLiabilities, netWorth } = result.current.data!;
-    expect(netWorth).toBe(totalAssets - totalLiabilities);
+    const { assets, liabilities, total } = result.current.data!;
+    expect(total).toBe(assets - liabilities);
   });
 });
 
@@ -48,8 +48,8 @@ describe('useDashboardCashflow', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toHaveLength(2);
-    expect(result.current.data?.[0].income).toBe(3000);
-    expect(result.current.data?.[1].income).toBe(3200);
+    expect(result.current.data?.[0]?.income).toBe(3000);
+    expect(result.current.data?.[1]?.income).toBe(3200);
   });
 });
 

@@ -1,20 +1,11 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Eye, EyeOff, Loader2, TrendingUp, CheckCircle, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 import type React from 'react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
-import { Eye, EyeOff, Loader2, TrendingUp, CheckCircle, AlertCircle } from 'lucide-react';
-import { useResetPassword } from '../../hooks/useAuth';
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from '../../components/ui/form';
-import { Input } from '../../components/ui/input';
+import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import {
   Card,
@@ -24,7 +15,16 @@ import {
   CardContent,
   CardFooter,
 } from '../../components/ui/card';
-import { Alert, AlertDescription } from '../../components/ui/alert';
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from '../../components/ui/form';
+import { Input } from '../../components/ui/input';
+import { useResetPassword } from '../../hooks/useAuth';
 
 const resetPasswordSchema = z
   .object({
@@ -81,13 +81,8 @@ export default function ResetPasswordPage(): React.ReactElement {
         <div className="w-full max-w-md">
           <Card>
             <CardContent className="pt-6 text-center">
-              <AlertCircle
-                className="mx-auto mb-4 h-16 w-16 text-red-500"
-                aria-hidden="true"
-              />
-              <h2 className="mb-2 text-xl font-semibold text-gray-900">
-                Enlace invalido
-              </h2>
+              <AlertCircle className="mx-auto mb-4 h-16 w-16 text-red-500" aria-hidden="true" />
+              <h2 className="mb-2 text-xl font-semibold text-gray-900">Enlace invalido</h2>
               <p className="mb-6 text-gray-600">
                 El enlace de restablecimiento es invalido o ha expirado.
               </p>
@@ -130,13 +125,9 @@ export default function ResetPasswordPage(): React.ReactElement {
           <CardContent>
             {resetPasswordMutation.isSuccess ? (
               <div className="text-center">
-                <CheckCircle
-                  className="mx-auto mb-4 h-16 w-16 text-green-500"
-                  aria-hidden="true"
-                />
+                <CheckCircle className="mx-auto mb-4 h-16 w-16 text-green-500" aria-hidden="true" />
                 <p className="text-gray-700">
-                  Contrasena restablecida exitosamente. Seras redirigido al inicio de
-                  sesion.
+                  Contrasena restablecida exitosamente. Seras redirigido al inicio de sesion.
                 </p>
               </div>
             ) : (
@@ -158,11 +149,7 @@ export default function ResetPasswordPage(): React.ReactElement {
                 )}
 
                 <Form {...form}>
-                  <form
-                    onSubmit={form.handleSubmit(onSubmit)}
-                    noValidate
-                    className="space-y-4"
-                  >
+                  <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-4">
                     <FormField
                       control={form.control}
                       name="newPassword"
@@ -183,9 +170,7 @@ export default function ResetPasswordPage(): React.ReactElement {
                             <button
                               type="button"
                               aria-label={
-                                showPassword
-                                  ? 'Ocultar contrasena'
-                                  : 'Mostrar contrasena'
+                                showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'
                               }
                               onClick={() => setShowPassword((prev) => !prev)}
                               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
@@ -248,10 +233,7 @@ export default function ResetPasswordPage(): React.ReactElement {
                     >
                       {resetPasswordMutation.isPending ? (
                         <>
-                          <Loader2
-                            className="h-4 w-4 animate-spin"
-                            aria-hidden="true"
-                          />
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                           Restableciendo...
                         </>
                       ) : (

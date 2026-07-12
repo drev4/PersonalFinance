@@ -27,7 +27,7 @@ describe('useTransactions', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data?.data).toHaveLength(1);
-    expect(result.current.data?.data[0].description).toBe('Supermercado');
+    expect(result.current.data?.data[0]?.description).toBe('Supermercado');
   });
 
   it('returns paginated metadata', async () => {
@@ -38,8 +38,8 @@ describe('useTransactions', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.data?.total).toBe(1);
-    expect(result.current.data?.totalPages).toBe(1);
+    expect(result.current.data?.meta.total).toBe(1);
+    expect(result.current.data?.meta.totalPages).toBe(1);
   });
 });
 
@@ -58,7 +58,7 @@ describe('useCreateTransaction', () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data?.id).toBe('tx-new');
+    expect(result.current.data?._id).toBe('tx-new');
     expect(result.current.data?.amount).toBe(100);
   });
 });

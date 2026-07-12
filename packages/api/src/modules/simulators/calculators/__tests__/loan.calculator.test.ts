@@ -33,7 +33,7 @@ describe('calculateLoan() — reference case', () => {
 
   it('final balance is 0', () => {
     const result = calculateLoan({ principal: PRINCIPAL, annualRate: RATE, months: MONTHS });
-    expect(result.schedule[result.schedule.length - 1].balance).toBe(0);
+    expect(result.schedule[result.schedule.length - 1]!.balance).toBe(0);
   });
 
   it('sum of principal ≈ original principal (±100 cents)', () => {
@@ -129,7 +129,7 @@ describe('calculateLoan() — edge cases', () => {
   it('balance decreases monotonically', () => {
     const result = calculateLoan({ principal: 1_000_000, annualRate: 8, months: 36 });
     for (let i = 1; i < result.schedule.length; i++) {
-      expect(result.schedule[i].balance).toBeLessThanOrEqual(result.schedule[i - 1].balance);
+      expect(result.schedule[i]!.balance).toBeLessThanOrEqual(result.schedule[i - 1]!.balance);
     }
   });
 

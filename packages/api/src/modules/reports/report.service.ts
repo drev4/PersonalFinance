@@ -43,8 +43,18 @@ function formatDate(date: Date): string {
 }
 
 const MONTH_NAMES_ES = [
-  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+  'enero',
+  'febrero',
+  'marzo',
+  'abril',
+  'mayo',
+  'junio',
+  'julio',
+  'agosto',
+  'septiembre',
+  'octubre',
+  'noviembre',
+  'diciembre',
 ];
 
 function monthLabel(year: number, month: number): string {
@@ -53,9 +63,7 @@ function monthLabel(year: number, month: number): string {
 
 /** Draws the coloured page header bar. */
 function addPageHeader(doc: PDFKit.PDFDocument, title: string): void {
-  doc
-    .rect(0, 0, PAGE_WIDTH, 58)
-    .fill(DARK_BLUE);
+  doc.rect(0, 0, PAGE_WIDTH, 58).fill(DARK_BLUE);
 
   doc
     .fillColor(WHITE)
@@ -105,12 +113,7 @@ function sectionTitle(doc: PDFKit.PDFDocument, text: string): void {
 }
 
 /** Labelled key-value pair. */
-function kv(
-  doc: PDFKit.PDFDocument,
-  label: string,
-  value: string,
-  valueColor?: string,
-): void {
+function kv(doc: PDFKit.PDFDocument, label: string, value: string, valueColor?: string): void {
   doc
     .font('Helvetica-Bold')
     .fontSize(BODY_FONT_SIZE)
@@ -154,12 +157,10 @@ function drawTable(
     }
 
     for (let i = 0; i < cells.length; i++) {
-      doc.text(
-        cells[i],
-        colX[i] + 3,
-        y,
-        { width: colWidths[i] - 6, align: i === 0 ? 'left' : 'right' },
-      );
+      doc.text(cells[i]!, colX[i]! + 3, y, {
+        width: colWidths[i]! - 6,
+        align: i === 0 ? 'left' : 'right',
+      });
     }
     if (!isHeader) doc.fillColor('#000000');
   }
@@ -184,7 +185,7 @@ function drawTable(
     if (idx % 2 === 1) {
       doc.rect(MARGIN, y - 3, CONTENT_WIDTH, ROW_HEIGHT).fill(LIGHT_GRAY);
     }
-    drawRow(rows[idx], y, false);
+    drawRow(rows[idx]!, y, false);
     y += ROW_HEIGHT;
   }
 
@@ -229,9 +230,9 @@ function buildWeekBuckets(
     const dayOfMonth = tx.date.getDate();
     const weekIdx = Math.min(Math.floor((dayOfMonth - 1) / 7), 3);
     if (tx.type === 'income') {
-      buckets[weekIdx].income += tx.amount;
+      buckets[weekIdx]!.income += tx.amount;
     } else if (tx.type === 'expense') {
-      buckets[weekIdx].expenses += tx.amount;
+      buckets[weekIdx]!.expenses += tx.amount;
     }
   }
 
@@ -243,10 +244,7 @@ function buildWeekBuckets(
 /**
  * Builds a complete PDF document from the provided data and resolves with its Buffer.
  */
-function buildPdf(
-  render: (doc: PDFKit.PDFDocument) => void,
-  title: string,
-): Promise<Buffer> {
+function buildPdf(render: (doc: PDFKit.PDFDocument) => void, title: string): Promise<Buffer> {
   return new Promise<Buffer>((resolve, reject) => {
     const doc = new PDFDocument({
       size: 'A4',
@@ -288,21 +286,20 @@ export async function generateMonthlyReport(
   const { start: prevStart, end: prevEnd } = prevMonthRange(year, month);
 
   // ---- Fetch all required data in parallel ----------------------------------
-  const [user, transactions, netWorthNow, portfolioSummary, budgets] =
-    await Promise.all([
-      UserModel.findById(userId).select('name').lean().exec(),
-      TransactionModel.find({
-        userId: new mongoose.Types.ObjectId(userId),
-        date: { $gte: start, $lte: end },
-        type: { $in: ['income', 'expense'] },
-      })
-        .sort({ amount: -1 })
-        .lean()
-        .exec(),
-      getNetWorth(userId),
-      getPortfolioSummary(userId).catch(() => null),
-      findBudgetsByUser(userId),
-    ]);
+  const [user, transactions, netWorthNow, portfolioSummary, budgets] = await Promise.all([
+    UserModel.findById(userId).select('name').lean().exec(),
+    TransactionModel.find({
+      userId: new mongoose.Types.ObjectId(userId),
+      date: { $gte: start, $lte: end },
+      type: { $in: ['income', 'expense'] },
+    })
+      .sort({ amount: -1 })
+      .lean()
+      .exec(),
+    getNetWorth(userId),
+    getPortfolioSummary(userId).catch(() => null),
+    findBudgetsByUser(userId),
+  ]);
 
   // Previous month net worth (from snapshot, best-effort)
   const prevMonthTransactions = await TransactionModel.find({
@@ -344,9 +341,7 @@ export async function generateMonthlyReport(
     }
   }
 
-  const categoryIds = [...catSpendMap.keys()].map(
-    (id) => new mongoose.Types.ObjectId(id),
-  );
+  const categoryIds = [...catSpendMap.keys()].map((id) => new mongoose.Types.ObjectId(id));
   const categories = await CategoryModel.find({ _id: { $in: categoryIds } })
     .select('_id name')
     .lean()
@@ -403,24 +398,39 @@ export async function generateMonthlyReport(
     // ── Executive summary ────────────────────────────────────────────────────
     sectionTitle(doc, '1. Resumen ejecutivo');
 
-    kv(doc, 'Patrimonio neto actual', eurosCents(netWorthNow.total),
-      netWorthNow.total >= 0 ? GREEN : RED);
+    kv(
+      doc,
+      'Patrimonio neto actual',
+      eurosCents(netWorthNow.total),
+      netWorthNow.total >= 0 ? GREEN : RED,
+    );
 
     const varSign = netWorthVariation >= 0 ? '+' : '';
-    kv(doc, 'Variación vs mes anterior', `${varSign}${eurosCents(netWorthVariation)}`,
-      netWorthVariation >= 0 ? GREEN : RED);
+    kv(
+      doc,
+      'Variación vs mes anterior',
+      `${varSign}${eurosCents(netWorthVariation)}`,
+      netWorthVariation >= 0 ? GREEN : RED,
+    );
 
     kv(doc, 'Ingresos del mes', eurosCents(totalIncome), GREEN);
     kv(doc, 'Gastos del mes', eurosCents(totalExpenses), RED);
     kv(doc, 'Balance (ingresos − gastos)', eurosCents(balance), balance >= 0 ? GREEN : RED);
-    kv(doc, 'Tasa de ahorro', `${savingsRate.toFixed(1)}%`,
-      savingsRate >= 20 ? GREEN : savingsRate >= 0 ? DARK_BLUE : RED);
+    kv(
+      doc,
+      'Tasa de ahorro',
+      `${savingsRate.toFixed(1)}%`,
+      savingsRate >= 20 ? GREEN : savingsRate >= 0 ? DARK_BLUE : RED,
+    );
 
     // ── Spending by category ─────────────────────────────────────────────────
     sectionTitle(doc, '2. Gastos por categoría');
 
     if (catRows.length === 0) {
-      doc.fontSize(BODY_FONT_SIZE).font('Helvetica').text('Sin gastos registrados en este período.');
+      doc
+        .fontSize(BODY_FONT_SIZE)
+        .font('Helvetica')
+        .text('Sin gastos registrados en este período.');
     } else {
       drawTable(
         doc,
@@ -446,11 +456,7 @@ export async function generateMonthlyReport(
       for (const bp of validBudgets) {
         for (const item of bp.items) {
           const statusLabel =
-            item.status === 'exceeded'
-              ? 'Excedido'
-              : item.status === 'warning'
-                ? 'Aviso'
-                : 'OK';
+            item.status === 'exceeded' ? 'Excedido' : item.status === 'warning' ? 'Aviso' : 'OK';
           budgetTableRows.push([
             `${bp.name} / ${item.categoryName}`,
             eurosCents(item.budgeted),
@@ -497,14 +503,27 @@ export async function generateMonthlyReport(
       doc.fontSize(BODY_FONT_SIZE).font('Helvetica').text('Sin inversiones registradas.');
     } else {
       kv(doc, 'Valor portfolio', eurosCents(portfolioSummary.totalValue));
-      kv(doc, 'P&L total', eurosCents(portfolioSummary.totalPnl),
-        portfolioSummary.totalPnl >= 0 ? GREEN : RED);
-      kv(doc, 'P&L %', `${portfolioSummary.totalPnlPercentage.toFixed(2)}%`,
-        portfolioSummary.totalPnlPercentage >= 0 ? GREEN : RED);
+      kv(
+        doc,
+        'P&L total',
+        eurosCents(portfolioSummary.totalPnl),
+        portfolioSummary.totalPnl >= 0 ? GREEN : RED,
+      );
+      kv(
+        doc,
+        'P&L %',
+        `${portfolioSummary.totalPnlPercentage.toFixed(2)}%`,
+        portfolioSummary.totalPnlPercentage >= 0 ? GREEN : RED,
+      );
 
       if (portfolioSummary.byAssetType.length > 0) {
-        doc.moveDown(0.4).font('Helvetica-Bold').fontSize(BODY_FONT_SIZE)
-          .text('Distribución por tipo de activo:').font('Helvetica').moveDown(0.2);
+        doc
+          .moveDown(0.4)
+          .font('Helvetica-Bold')
+          .fontSize(BODY_FONT_SIZE)
+          .text('Distribución por tipo de activo:')
+          .font('Helvetica')
+          .moveDown(0.2);
 
         drawTable(
           doc,
@@ -544,8 +563,8 @@ export async function generateMonthlyReport(
       .font('Helvetica')
       .text(
         'Nota: Este informe es meramente informativo y no constituye asesoramiento financiero. ' +
-        'Los datos aquí reflejados provienen de la información registrada en la aplicación y ' +
-        'pueden no reflejar la totalidad de la situación financiera del usuario.',
+          'Los datos aquí reflejados provienen de la información registrada en la aplicación y ' +
+          'pueden no reflejar la totalidad de la situación financiera del usuario.',
         MARGIN,
         doc.y,
         { width: CONTENT_WIDTH },
@@ -557,10 +576,7 @@ export async function generateMonthlyReport(
 /**
  * Generates a yearly PDF report for the given user and year.
  */
-export async function generateYearlyReport(
-  userId: string,
-  year: number,
-): Promise<Buffer> {
+export async function generateYearlyReport(userId: string, year: number): Promise<Buffer> {
   const yearStart = new Date(year, 0, 1, 0, 0, 0, 0);
   const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999);
 
@@ -587,16 +603,19 @@ export async function generateYearlyReport(
 
   for (let m = 1; m <= 12; m++) {
     const { start, end } = monthRange(year, m);
-    const monthTxs = allTransactions.filter(
-      (tx) => tx.date >= start && tx.date <= end,
-    );
+    const monthTxs = allTransactions.filter((tx) => tx.date >= start && tx.date <= end);
     let income = 0;
     let expenses = 0;
     for (const tx of monthTxs) {
       if (tx.type === 'income') income += tx.amount;
       else if (tx.type === 'expense') expenses += tx.amount;
     }
-    monthlyData.push({ label: MONTH_NAMES_ES[m - 1], income, expenses, balance: income - expenses });
+    monthlyData.push({
+      label: MONTH_NAMES_ES[m - 1]!,
+      income,
+      expenses,
+      balance: income - expenses,
+    });
   }
 
   const yearlyIncome = monthlyData.reduce((s, r) => s + r.income, 0);
@@ -632,13 +651,21 @@ export async function generateYearlyReport(
     // ── Annual summary ────────────────────────────────────────────────────────
     sectionTitle(doc, '1. Resumen anual');
 
-    kv(doc, 'Patrimonio neto actual', eurosCents(netWorthNow.total),
-      netWorthNow.total >= 0 ? GREEN : RED);
+    kv(
+      doc,
+      'Patrimonio neto actual',
+      eurosCents(netWorthNow.total),
+      netWorthNow.total >= 0 ? GREEN : RED,
+    );
     kv(doc, 'Total ingresos', eurosCents(yearlyIncome), GREEN);
     kv(doc, 'Total gastos', eurosCents(yearlyExpenses), RED);
     kv(doc, 'Balance anual', eurosCents(yearlyBalance), yearlyBalance >= 0 ? GREEN : RED);
-    kv(doc, 'Tasa de ahorro anual', `${yearlySavingsRate.toFixed(1)}%`,
-      yearlySavingsRate >= 20 ? GREEN : DARK_BLUE);
+    kv(
+      doc,
+      'Tasa de ahorro anual',
+      `${yearlySavingsRate.toFixed(1)}%`,
+      yearlySavingsRate >= 20 ? GREEN : DARK_BLUE,
+    );
 
     // ── Month-by-month breakdown ──────────────────────────────────────────────
     sectionTitle(doc, '2. Resumen mensual');
@@ -663,17 +690,27 @@ export async function generateYearlyReport(
       doc.fontSize(BODY_FONT_SIZE).font('Helvetica').text('Sin inversiones registradas.');
     } else {
       kv(doc, 'Valor portfolio', eurosCents(portfolioSummary.totalValue));
-      kv(doc, 'P&L total', eurosCents(portfolioSummary.totalPnl),
-        portfolioSummary.totalPnl >= 0 ? GREEN : RED);
-      kv(doc, 'P&L %', `${portfolioSummary.totalPnlPercentage.toFixed(2)}%`,
-        portfolioSummary.totalPnlPercentage >= 0 ? GREEN : RED);
+      kv(
+        doc,
+        'P&L total',
+        eurosCents(portfolioSummary.totalPnl),
+        portfolioSummary.totalPnl >= 0 ? GREEN : RED,
+      );
+      kv(
+        doc,
+        'P&L %',
+        `${portfolioSummary.totalPnlPercentage.toFixed(2)}%`,
+        portfolioSummary.totalPnlPercentage >= 0 ? GREEN : RED,
+      );
 
       drawTable(
         doc,
         ['Tipo de activo', 'Valor (EUR)', '% Portfolio'],
         [200, 145, 150],
         portfolioSummary.byAssetType.map((a) => [
-          a.type, eurosCents(a.value), `${a.percentage.toFixed(1)}%`,
+          a.type,
+          eurosCents(a.value),
+          `${a.percentage.toFixed(1)}%`,
         ]),
         reportTitle,
       );
@@ -703,7 +740,13 @@ export async function exportTransactionsCsv(
   userId: string,
   filters: TransactionFilters,
 ): Promise<string> {
-  const query: mongoose.FilterQuery<{ userId: unknown; date?: unknown; categoryId?: unknown; accountId?: unknown; type?: unknown }> = {
+  const query: mongoose.FilterQuery<{
+    userId: unknown;
+    date?: unknown;
+    categoryId?: unknown;
+    accountId?: unknown;
+    type?: unknown;
+  }> = {
     userId: new mongoose.Types.ObjectId(userId),
   };
 

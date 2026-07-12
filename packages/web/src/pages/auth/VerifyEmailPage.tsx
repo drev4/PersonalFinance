@@ -1,15 +1,11 @@
+import { useMutation } from '@tanstack/react-query';
+import { CheckCircle, AlertCircle, Loader2, TrendingUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type React from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
-import { CheckCircle, AlertCircle, Loader2, TrendingUp } from 'lucide-react';
 import { verifyEmail } from '../../api/auth.api';
 import { Button } from '../../components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-} from '../../components/ui/card';
+import { Card, CardContent, CardFooter } from '../../components/ui/card';
 
 export default function VerifyEmailPage(): React.ReactElement {
   const [searchParams] = useSearchParams();
@@ -25,8 +21,8 @@ export default function VerifyEmailPage(): React.ReactElement {
       setHasAttempted(true);
       verifyMutation.mutate(token);
     }
-  // Run only once on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Run only once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -45,10 +41,7 @@ export default function VerifyEmailPage(): React.ReactElement {
             {/* Estado: sin token */}
             {!token && (
               <>
-                <AlertCircle
-                  className="mx-auto mb-4 h-16 w-16 text-red-500"
-                  aria-hidden="true"
-                />
+                <AlertCircle className="mx-auto mb-4 h-16 w-16 text-red-500" aria-hidden="true" />
                 <h2 className="mb-2 text-xl font-semibold text-gray-900">
                   Enlace de verificación inválido
                 </h2>
@@ -75,16 +68,10 @@ export default function VerifyEmailPage(): React.ReactElement {
             {/* Estado: éxito */}
             {token && verifyMutation.isSuccess && (
               <>
-                <CheckCircle
-                  className="mx-auto mb-4 h-16 w-16 text-green-500"
-                  aria-hidden="true"
-                />
-                <h2 className="mb-2 text-xl font-semibold text-gray-900">
-                  Correo verificado
-                </h2>
+                <CheckCircle className="mx-auto mb-4 h-16 w-16 text-green-500" aria-hidden="true" />
+                <h2 className="mb-2 text-xl font-semibold text-gray-900">Correo verificado</h2>
                 <p className="text-gray-600">
-                  Tu correo electrónico ha sido verificado exitosamente. Ya puedes
-                  iniciar sesión.
+                  Tu correo electrónico ha sido verificado exitosamente. Ya puedes iniciar sesión.
                 </p>
               </>
             )}
@@ -92,13 +79,8 @@ export default function VerifyEmailPage(): React.ReactElement {
             {/* Estado: error */}
             {token && verifyMutation.isError && (
               <>
-                <AlertCircle
-                  className="mx-auto mb-4 h-16 w-16 text-red-500"
-                  aria-hidden="true"
-                />
-                <h2 className="mb-2 text-xl font-semibold text-gray-900">
-                  Error de verificación
-                </h2>
+                <AlertCircle className="mx-auto mb-4 h-16 w-16 text-red-500" aria-hidden="true" />
+                <h2 className="mb-2 text-xl font-semibold text-gray-900">Error de verificación</h2>
                 <p className="text-gray-600">
                   {verifyMutation.error instanceof Error
                     ? verifyMutation.error.message
@@ -110,11 +92,7 @@ export default function VerifyEmailPage(): React.ReactElement {
 
           <CardFooter className="justify-center">
             <Link to="/login">
-              <Button
-                variant={
-                  verifyMutation.isSuccess ? 'default' : 'outline'
-                }
-              >
+              <Button variant={verifyMutation.isSuccess ? 'default' : 'outline'}>
                 Ir al inicio de sesión
               </Button>
             </Link>

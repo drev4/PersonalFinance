@@ -71,7 +71,7 @@ export const handlers = [
       data: {
         data: [
           {
-            id: 'tx-1',
+            _id: 'tx-1',
             type: 'expense',
             amount: 50,
             currency: 'EUR',
@@ -84,10 +84,11 @@ export const handlers = [
             updatedAt: '2026-05-01T10:00:00Z',
           },
         ],
-        total: 1,
-        page: 1,
-        limit: 20,
-        totalPages: 1,
+        meta: {
+          page: 1,
+          total: 1,
+          totalPages: 1,
+        },
       },
     }),
   ),
@@ -95,7 +96,7 @@ export const handlers = [
   http.post(`${BASE}/transactions`, () =>
     HttpResponse.json({
       data: {
-        id: 'tx-new',
+        _id: 'tx-new',
         type: 'expense',
         amount: 100,
         currency: 'EUR',
@@ -120,12 +121,11 @@ export const handlers = [
   http.get(`${BASE}/dashboard/net-worth`, () =>
     HttpResponse.json({
       data: {
-        netWorth: 15000,
-        totalAssets: 20000,
-        totalLiabilities: 5000,
-        accounts: [],
-        changeAmount: 500,
-        changePercent: 3.45,
+        total: 15000,
+        assets: 20000,
+        liabilities: 5000,
+        breakdown: { cash: 20000, investments: 0, realEstate: 0, vehicles: 0, debts: 5000 },
+        currency: 'EUR',
       },
     }),
   ),

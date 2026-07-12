@@ -1,13 +1,13 @@
+import { Bell } from 'lucide-react';
 import { useState } from 'react';
 import type React from 'react';
 import { Link } from 'react-router-dom';
-import { Bell } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
-import { Skeleton } from '../ui/skeleton';
-import { EmptyState } from '../ui/empty-state';
-import { Button } from '../ui/button';
-import { NotificationItem } from './NotificationItem';
 import { useNotifications, useMarkAsRead, useMarkAllAsRead } from '../../hooks/useNotifications';
+import { Button } from '../ui/button';
+import { EmptyState } from '../ui/empty-state';
+import { Skeleton } from '../ui/skeleton';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
+import { NotificationItem } from './NotificationItem';
 
 interface NotificationPanelProps {
   onClose: () => void;
@@ -84,11 +84,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps): React.Re
   return (
     <>
       {/* Invisible backdrop */}
-      <div
-        className="fixed inset-0 z-30"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <div className="fixed inset-0 z-30" onClick={onClose} aria-hidden="true" />
 
       {/* Panel */}
       <div

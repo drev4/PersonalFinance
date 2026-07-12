@@ -1,6 +1,11 @@
+import { Upload, FileText, CheckCircle, AlertCircle, X } from 'lucide-react';
 import * as React from 'react';
 import { useState, useCallback } from 'react';
-import { Upload, FileText, CheckCircle, AlertCircle, X } from 'lucide-react';
+import { useAccounts } from '../../hooks/useAccounts';
+import { useImportCsv } from '../../hooks/useHoldings';
+import { cn } from '../../lib/utils';
+import type { ImportResult } from '../../types/api';
+import { Button } from '../ui/button';
 import {
   Dialog,
   DialogContent,
@@ -9,21 +14,13 @@ import {
   DialogFooter,
   DialogDescription,
 } from '../ui/dialog';
-import { Button } from '../ui/button';
-import { Select } from '../ui/select';
 import { Label } from '../ui/label';
+import { Select } from '../ui/select';
 import { Skeleton } from '../ui/skeleton';
-import { useAccounts } from '../../hooks/useAccounts';
-import { useImportCsv } from '../../hooks/useHoldings';
-import type { ImportResult } from '../../types/api';
-import { cn } from '../../lib/utils';
 
 // ─── CSV preview parser ───────────────────────────────────────────────────────
 
-function parseFirstRows(
-  content: string,
-  maxRows: number,
-): { headers: string[]; rows: string[][] } {
+function parseFirstRows(content: string, maxRows: number): { headers: string[]; rows: string[][] } {
   const lines = content
     .split('\n')
     .map((l) => l.trim())
@@ -31,10 +28,8 @@ function parseFirstRows(
 
   if (lines.length === 0) return { headers: [], rows: [] };
 
-  const headers = lines[0].split(',').map((h) => h.trim());
-  const rows = lines
-    .slice(1, maxRows + 1)
-    .map((line) => line.split(',').map((c) => c.trim()));
+  const headers = lines[0]!.split(',').map((h) => h.trim());
+  const rows = lines.slice(1, maxRows + 1).map((line) => line.split(',').map((c) => c.trim()));
 
   return { headers, rows };
 }
@@ -116,7 +111,10 @@ function Dropzone({ onFileSelected, fileName, onClear }: DropzoneProps): React.R
           <span className="text-sm font-medium text-green-700">{fileName}</span>
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); onClear(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClear();
+            }}
             className="ml-1 rounded p-0.5 text-green-600 hover:bg-green-100"
             aria-label="Eliminar archivo seleccionado"
           >
@@ -190,8 +188,8 @@ function ImportResultView({ result }: ImportResultViewProps): React.ReactElement
       <div className="flex items-center gap-2 rounded-lg bg-green-50 px-4 py-3">
         <CheckCircle className="h-5 w-5 text-green-600" aria-hidden="true" />
         <div className="text-sm text-green-700">
-          <strong>{result.created}</strong> posiciones creadas,{' '}
-          <strong>{result.updated}</strong> actualizadas.
+          <strong>{result.created}</strong> posiciones creadas, <strong>{result.updated}</strong>{' '}
+          actualizadas.
         </div>
       </div>
 
@@ -366,11 +364,7 @@ export default function ImportCsvDialog({
             {importResult ? 'Cerrar' : 'Cancelar'}
           </Button>
           {!importResult && (
-            <Button
-              type="button"
-              onClick={handleImport}
-              disabled={!canImport}
-            >
+            <Button type="button" onClick={handleImport} disabled={!canImport}>
               {importMutation.isPending ? 'Importando...' : 'Importar'}
             </Button>
           )}

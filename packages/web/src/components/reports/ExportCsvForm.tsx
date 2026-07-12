@@ -1,25 +1,18 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { format } from 'date-fns';
+import { Download, Loader2, Info } from 'lucide-react';
 import { useState } from 'react';
 import type React from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Download, Loader2, Info } from 'lucide-react';
-import { format } from 'date-fns';
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from '../ui/form';
-import { Input } from '../ui/input';
-import { Select } from '../ui/select';
-import { Button } from '../ui/button';
-import { Alert, AlertDescription } from '../ui/alert';
-import { useExportCsv } from '../../hooks/useReports';
 import { useAccounts } from '../../hooks/useAccounts';
 import { useCategories } from '../../hooks/useCategories';
+import { useExportCsv } from '../../hooks/useReports';
+import { Alert, AlertDescription } from '../ui/alert';
+import { Button } from '../ui/button';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '../ui/form';
+import { Input } from '../ui/input';
+import { Select } from '../ui/select';
 
 const exportSchema = z.object({
   from: z.string().min(1, 'La fecha de inicio es requerida'),
@@ -182,9 +175,7 @@ export function ExportCsvForm(): React.ReactElement {
         {/* Compatibility note */}
         <div className="mt-4 flex items-start gap-2 rounded-lg bg-blue-50 px-3 py-2.5 text-xs text-blue-700">
           <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
-          <span>
-            Compatible con Excel, Google Sheets y aplicaciones de contabilidad.
-          </span>
+          <span>Compatible con Excel, Google Sheets y aplicaciones de contabilidad.</span>
         </div>
 
         {/* Download status message */}
@@ -199,11 +190,7 @@ export function ExportCsvForm(): React.ReactElement {
 
         {/* Submit */}
         <div className="mt-4">
-          <Button
-            type="submit"
-            disabled={exportCsv.isPending}
-            className="gap-2"
-          >
+          <Button type="submit" disabled={exportCsv.isPending} className="gap-2">
             {exportCsv.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

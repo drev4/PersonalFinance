@@ -1,10 +1,10 @@
+import { FileDown, Check, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type React from 'react';
-import { FileDown, Check, Loader2 } from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { Card, CardContent } from '../ui/card';
-import { Button } from '../ui/button';
 import { useDownloadReport } from '../../hooks/useReports';
+import { cn } from '../../lib/utils';
+import { Button } from '../ui/button';
+import { Card, CardContent } from '../ui/card';
 
 const MONTH_NAMES = [
   'Enero',
@@ -33,8 +33,7 @@ export function MonthCard({ month, year }: MonthCardProps): React.ReactElement {
   const now = new Date();
   const isCurrentMonth = now.getFullYear() === year && now.getMonth() + 1 === month;
   const isFuture =
-    year > now.getFullYear() ||
-    (year === now.getFullYear() && month > now.getMonth() + 1);
+    year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth() + 1);
 
   useEffect(() => {
     if (downloadDone) {

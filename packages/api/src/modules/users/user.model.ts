@@ -109,8 +109,9 @@ UserSchema.methods['comparePassword'] = async function (
 // Prevent passwordHash from appearing in JSON serialization by default
 UserSchema.set('toJSON', {
   transform(_doc, ret) {
-    delete ret['passwordHash'];
-    delete ret['twoFactorSecret'];
+    const obj = ret as unknown as Record<string, unknown>;
+    delete obj['passwordHash'];
+    delete obj['twoFactorSecret'];
     return ret;
   },
 });

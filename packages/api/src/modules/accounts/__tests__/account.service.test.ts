@@ -49,12 +49,14 @@ beforeEach(async () => {
 
 // ---- Helpers -----------------------------------------------------------------
 
-async function makeAccount(overrides: {
-  name?: string;
-  type?: 'checking' | 'savings' | 'cash';
-  initialBalance?: number;
-  currency?: string;
-} = {}) {
+async function makeAccount(
+  overrides: {
+    name?: string;
+    type?: 'checking' | 'savings' | 'cash';
+    initialBalance?: number;
+    currency?: string;
+  } = {},
+) {
   return createAccount(FAKE_USER_ID, {
     userId: FAKE_USER_ID,
     name: overrides.name ?? 'Test Account',
@@ -142,15 +144,13 @@ describe('updateAccount()', () => {
 
   it('throws ACCOUNT_NOT_FOUND for a non-existent account', async () => {
     const fakeId = new mongoose.Types.ObjectId().toHexString();
-    const error = await updateAccount(FAKE_USER_ID, fakeId, { name: 'X' }).catch(
-      (e: unknown) => e,
-    );
+    const error = await updateAccount(FAKE_USER_ID, fakeId, { name: 'X' }).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(AccountError);
     expect((error as AccountError).code).toBe('ACCOUNT_NOT_FOUND');
     expect((error as AccountError).statusCode).toBe(404);
   });
 
-  it('throws ACCOUNT_NOT_FOUND when updating another user\'s account', async () => {
+  it("throws ACCOUNT_NOT_FOUND when updating another user's account", async () => {
     const otherUserId = new mongoose.Types.ObjectId().toHexString();
     const account = await createAccount(otherUserId, {
       userId: otherUserId,
@@ -160,11 +160,9 @@ describe('updateAccount()', () => {
       initialBalance: 0,
     });
 
-    const error = await updateAccount(
-      FAKE_USER_ID,
-      account._id.toHexString(),
-      { name: 'Hacked' },
-    ).catch((e: unknown) => e);
+    const error = await updateAccount(FAKE_USER_ID, account._id.toHexString(), {
+      name: 'Hacked',
+    }).catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(AccountError);
     expect((error as AccountError).code).toBe('ACCOUNT_NOT_FOUND');
@@ -189,11 +187,7 @@ describe('adjustBalance()', () => {
 
   it('creates an adjustment transaction with the diff amount', async () => {
     const account = await makeAccount({ initialBalance: 10000 });
-    const { transaction } = await adjustBalance(
-      FAKE_USER_ID,
-      account._id.toHexString(),
-      13000,
-    );
+    const { transaction } = await adjustBalance(FAKE_USER_ID, account._id.toHexString(), 13000);
 
     expect(transaction).toBeDefined();
     expect(transaction.type).toBe('adjustment');
@@ -226,9 +220,7 @@ describe('adjustBalance()', () => {
 
   it('throws ACCOUNT_NOT_FOUND for a non-existent account', async () => {
     const fakeId = new mongoose.Types.ObjectId().toHexString();
-    const error = await adjustBalance(FAKE_USER_ID, fakeId, 1000).catch(
-      (e: unknown) => e,
-    );
+    const error = await adjustBalance(FAKE_USER_ID, fakeId, 1000).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(AccountError);
     expect((error as AccountError).code).toBe('ACCOUNT_NOT_FOUND');
   });
@@ -255,19 +247,17 @@ describe('archiveAccount()', () => {
 
     const accounts = await getUserAccounts(FAKE_USER_ID);
     expect(accounts).toHaveLength(1);
-    expect(accounts[0].name).toBe('To Keep');
+    expect(accounts[0]!.name).toBe('To Keep');
   });
 
   it('throws ACCOUNT_NOT_FOUND for an unknown account', async () => {
     const fakeId = new mongoose.Types.ObjectId().toHexString();
-    const error = await archiveAccount(FAKE_USER_ID, fakeId).catch(
-      (e: unknown) => e,
-    );
+    const error = await archiveAccount(FAKE_USER_ID, fakeId).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(AccountError);
     expect((error as AccountError).code).toBe('ACCOUNT_NOT_FOUND');
   });
 
-  it('cannot archive another user\'s account', async () => {
+  it("cannot archive another user's account", async () => {
     const otherUserId = new mongoose.Types.ObjectId().toHexString();
     const account = await createAccount(otherUserId, {
       userId: otherUserId,
@@ -277,10 +267,9 @@ describe('archiveAccount()', () => {
       initialBalance: 5000,
     });
 
-    const error = await archiveAccount(
-      FAKE_USER_ID,
-      account._id.toHexString(),
-    ).catch((e: unknown) => e);
+    const error = await archiveAccount(FAKE_USER_ID, account._id.toHexString()).catch(
+      (e: unknown) => e,
+    );
 
     expect(error).toBeInstanceOf(AccountError);
   });
