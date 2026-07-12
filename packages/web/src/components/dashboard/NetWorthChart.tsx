@@ -1,4 +1,5 @@
-import { format, parseISO, es } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 import { TrendingUp } from 'lucide-react';
 import { useState } from 'react';

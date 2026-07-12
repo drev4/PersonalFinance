@@ -1,4 +1,5 @@
-import { format, parseISO, es } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 import { BookMarked, Download, ExternalLink, Trash2 } from 'lucide-react';
 import { useState } from 'react';

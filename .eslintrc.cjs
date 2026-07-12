@@ -60,6 +60,10 @@ module.exports = {
     // Type-checking already catches missing default exports; the TS resolver
     // false-positives on React's UMD-style `export =` default export.
     'import/default': 'off',
+    // The TS resolver resolves subpaths like `date-fns/locale` to the same
+    // file as `date-fns`, so --fix unsafely merges them into one import
+    // statement, pulling in bindings that don't exist on the base module.
+    'import/no-duplicates': 'off',
     'no-console': [
       'warn',
       {

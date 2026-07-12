@@ -1,4 +1,5 @@
-import { formatDistanceToNow, parseISO, format, isToday, isTomorrow, es } from 'date-fns';
+import { formatDistanceToNow, parseISO, format, isToday, isTomorrow } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 import { CalendarClock, ArrowRight } from 'lucide-react';
 import type React from 'react';
