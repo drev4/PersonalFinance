@@ -27,6 +27,7 @@ import {
   getSpendingByCategory,
   takeNetWorthSnapshot,
   getCashflow,
+  invalidateNetWorthCache,
   type NetWorthPeriod,
 } from '../dashboard.service.js';
 import { getRedisClient } from '../../../config/redis.js';
@@ -449,11 +450,14 @@ describe('takeNetWorthSnapshot()', () => {
     await makeAccount({ type: 'checking', currentBalance: 50_000 });
     await takeNetWorthSnapshot(FAKE_USER_ID);
 
-    // Simulate balance change
+    // Simulate balance change (a real balance update goes through
+    // account.service, which also invalidates the net-worth cache — this
+    // direct model write bypasses that, so invalidate it explicitly).
     await AccountModel.updateOne(
       { userId: new mongoose.Types.ObjectId(FAKE_USER_ID) },
       { $set: { currentBalance: 80_000 } },
     ).exec();
+    await invalidateNetWorthCache(FAKE_USER_ID);
 
     await takeNetWorthSnapshot(FAKE_USER_ID);
 

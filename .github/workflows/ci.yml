@@ -78,7 +78,7 @@ jobs:
       REDIS_URL: redis://localhost:6379
       JWT_SECRET: test_jwt_secret_at_least_64_characters_long_for_security_purposes
       JWT_REFRESH_SECRET: test_refresh_secret_at_least_64_characters_long_for_security
-      ENCRYPTION_KEY: test_encryption_key_32bytes_hex_0
+      ENCRYPTION_KEY: f041ee2eee4bb268e290bd829f10a7e79bcfbef16054926185003f42dc27be2d
       NODE_ENV: test
 
     steps:
@@ -95,6 +95,27 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Cache MongoDB binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            mongodb-binaries-${{ runner.os }}-
+
+      - name: Warm up MongoDB binary cache
+        # Every test file spins up its own mongodb-memory-server instance.
+        # Vitest runs them in parallel, so on a cold cache they all race to
+        # download the same binary and corrupt each other's lock/temp files.
+        # Downloading it once, serially, before the test run avoids the race.
+        working-directory: packages/api
+        run: |
+          node --input-type=module -e "
+            import { MongoMemoryServer } from 'mongodb-memory-server';
+            const mongod = await MongoMemoryServer.create();
+            await mongod.stop();
+          "
 
       - name: Run API tests
         run: pnpm --filter=api test

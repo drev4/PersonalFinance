@@ -128,10 +128,12 @@ describe('getUserGoals()', () => {
     const oldDate = new Date();
     oldDate.setDate(oldDate.getDate() - 31);
 
-    await GoalModel.findByIdAndUpdate(goal._id, {
-      isCompleted: true,
-      updatedAt: oldDate,
-    }).exec();
+    // Mongoose's `timestamps: true` always overwrites `updatedAt` on
+    // findByIdAndUpdate, so the native driver is used to force an old date.
+    await GoalModel.collection.updateOne(
+      { _id: goal._id },
+      { $set: { isCompleted: true, updatedAt: oldDate } },
+    );
 
     const goals = await getUserGoals(FAKE_USER_ID);
     // The goal was completed > 30 days ago so should not appear

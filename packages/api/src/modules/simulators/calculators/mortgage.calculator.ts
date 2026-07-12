@@ -44,16 +44,24 @@ function frenchPayment(principalCents: number, annualRate: number, months: numbe
 }
 
 /**
- * Builds a full amortization schedule for the French system.
- * The last payment absorbs any rounding residual so the final balance is 0.
+ * Builds an amortization schedule for the French system.
+ *
+ * `termMonths` (defaults to `months`) is the amortization term used to
+ * compute the constant payment. Pass a `termMonths` larger than `months`
+ * to generate only the first N rows of a longer schedule — e.g. the fixed
+ * tranche of a mixed-rate mortgage, where the payment must be sized for
+ * the full term even though this call only returns the first few years.
+ * The final-row residual (so the balance lands exactly at 0) is only
+ * absorbed when this call actually reaches the end of the full term.
  */
 function buildSchedule(
   principalCents: number,
   annualRate: number,
   months: number,
   monthOffset: number = 0,
+  termMonths: number = months,
 ): AmortizationRow[] {
-  const payment = frenchPayment(principalCents, annualRate, months);
+  const payment = frenchPayment(principalCents, annualRate, termMonths);
   const i = annualRate === 0 ? 0 : annualRate / 12 / 100;
   const rows: AmortizationRow[] = [];
   let balance = principalCents;
@@ -63,8 +71,8 @@ function buildSchedule(
     let principalPart = payment - interestCents;
     let actualPayment = payment;
 
-    // Last row: absorb residual so balance lands exactly at 0
-    if (m === months) {
+    // Last row of the full term: absorb residual so balance lands exactly at 0
+    if (m === months && months === termMonths) {
       principalPart = balance;
       actualPayment = balance + interestCents;
     }
@@ -131,9 +139,11 @@ export function calculateMixedMortgage(
   const fixedMonths = fixedYears * 12;
   const variableMonths = totalMonths - fixedMonths;
 
-  // Fixed phase
+  // Fixed phase — payment is sized for the full totalMonths term, since only
+  // the first fixedMonths rows are generated here (the loan isn't paid off
+  // at the end of the fixed tranche).
   const fixedPhasePayment = frenchPayment(principal, annualRate, totalMonths);
-  const fixedSchedule = buildSchedule(principal, annualRate, fixedMonths, 0);
+  const fixedSchedule = buildSchedule(principal, annualRate, fixedMonths, 0, totalMonths);
 
   // Remaining principal after fixed phase
   const remainingPrincipal = fixedSchedule[fixedSchedule.length - 1]!.balance;

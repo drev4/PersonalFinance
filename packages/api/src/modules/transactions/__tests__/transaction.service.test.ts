@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 
 // ---- Mock Redis --------------------------------------------------------------
 vi.mock('../../../config/redis.js', async () => {
@@ -30,11 +30,14 @@ import {
 
 // ---- Test setup --------------------------------------------------------------
 
-let mongod: MongoMemoryServer;
+let mongod: MongoMemoryReplSet;
 const FAKE_USER_ID = new mongoose.Types.ObjectId().toHexString();
 
 beforeAll(async () => {
-  mongod = await MongoMemoryServer.create();
+  // transaction.service uses multi-document transactions (transfer, bulk
+  // create), which require a replica set — a standalone instance rejects
+  // session.withTransaction.
+  mongod = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   await mongoose.connect(mongod.getUri());
 });
 

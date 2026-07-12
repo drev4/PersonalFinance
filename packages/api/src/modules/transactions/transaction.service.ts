@@ -65,7 +65,7 @@ async function applyBalanceDelta(
   amount: number,
   session?: mongoose.ClientSession,
 ): Promise<void> {
-  const account = await findAccountById(accountId, userId);
+  const account = await findAccountById(accountId, userId, session);
   if (account === null) {
     throw new TransactionError('ACCOUNT_NOT_FOUND', 'Account not found', 404);
   }
@@ -100,7 +100,7 @@ async function revertBalanceDelta(
   amount: number,
   session?: mongoose.ClientSession,
 ): Promise<void> {
-  const account = await findAccountById(accountId, userId);
+  const account = await findAccountById(accountId, userId, session);
   if (account === null) {
     throw new TransactionError('ACCOUNT_NOT_FOUND', 'Account not found', 404);
   }

@@ -115,8 +115,11 @@ describe('exportTransactionsCsv()', () => {
   it('contains the correct CSV header row', async () => {
     const csv = await exportTransactionsCsv(FAKE_USER_ID, {});
     const lines = csv.split('\r\n');
-    // First line after BOM is the header
-    expect(lines[1]).toBe('Fecha,Descripción,Categoría,Cuenta,Tipo,Importe (EUR),Divisa,Tags');
+    // The BOM (U+FEFF) is prepended directly to the header, not on its own line
+    const BOM = String.fromCharCode(0xfeff);
+    expect(lines[0]!.replace(BOM, '')).toBe(
+      'Fecha,Descripción,Categoría,Cuenta,Tipo,Importe (EUR),Divisa,Tags',
+    );
   });
 
   it('formats dates in DD/MM/YYYY format', async () => {
@@ -127,7 +130,7 @@ describe('exportTransactionsCsv()', () => {
     });
 
     const csv = await exportTransactionsCsv(FAKE_USER_ID, {});
-    const dataLines = csv.split('\r\n').slice(2); // skip BOM line and header
+    const dataLines = csv.split('\r\n').slice(1); // skip the BOM+header line
     expect(dataLines[0]).toMatch(/^05\/03\/2026,/);
   });
 
@@ -139,7 +142,7 @@ describe('exportTransactionsCsv()', () => {
     });
 
     const csv = await exportTransactionsCsv(FAKE_USER_ID, {});
-    const dataLine = csv.split('\r\n').slice(2)[0]!;
+    const dataLine = csv.split('\r\n').slice(1)[0]!;
     // Amount is in column index 5 (0-based)
     const fields = dataLine.split(',');
     expect(fields[5]).toBe('45.67');
@@ -153,7 +156,7 @@ describe('exportTransactionsCsv()', () => {
     const csv = await exportTransactionsCsv(FAKE_USER_ID, {});
     const dataLines = csv
       .split('\r\n')
-      .slice(2)
+      .slice(1)
       .filter((l) => l.trim() !== '');
 
     const types = dataLines.map((line) => line.split(',')[4]);
@@ -169,7 +172,7 @@ describe('exportTransactionsCsv()', () => {
     });
 
     const csv = await exportTransactionsCsv(FAKE_USER_ID, {});
-    const dataLine = csv.split('\r\n').slice(2)[0]!;
+    const dataLine = csv.split('\r\n').slice(1)[0]!;
     expect(dataLine).toContain('comida; familia');
   });
 
@@ -237,7 +240,7 @@ describe('exportTransactionsCsv()', () => {
     await createTransaction({ amount: 0, accountId: account._id });
 
     const csv = await exportTransactionsCsv(FAKE_USER_ID, {});
-    const dataLine = csv.split('\r\n').slice(2)[0]!;
+    const dataLine = csv.split('\r\n').slice(1)[0]!;
     const fields = dataLine.split(',');
     expect(fields[5]).toBe('0.00');
   });
