@@ -2,10 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Design tokens ──────────────────────────────────────────────────────────
+   Dark mode is class-based: ThemeSync adds/removes class="dark" on <html>.
+   :root = light mode defaults. html.dark = dark mode overrides.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* light mode defaults */
+  --bg: #F5F5F5;
+  --surface: #FFFFFF;
+  --surface-2: #F0F0F0;
+  --surface-3: #E5E5E7;
+  --hairline: rgba(0, 0, 0, 0.07);
+  --hairline-strong: rgba(0, 0, 0, 0.12);
+  --text: #0A0A0A;
+  --text-2: #3A3A3C;
+  --text-3: #8E8E93;
+  --text-4: #AEAEB2;
+  --accent: #6DB33F;
+  --accent-dim: #4A8A28;
+  --negative: #D93025;
+  --warn: #C07010;
+  --r-card: 24px;
+  --tw-ring-offset-color: #F0F0F0;
+}
+
+html.dark {
+  color-scheme: dark;
+  --bg: #0A0A0A;
+  --surface: #141414;
+  --surface-2: #1C1C1E;
+  --surface-3: #232325;
+  --hairline: rgba(255, 255, 255, 0.06);
+  --hairline-strong: rgba(255, 255, 255, 0.10);
+  --text: #F5F5F5;
+  --text-2: #B8B8BD;
+  --text-3: #6E6E73;
+  --text-4: #48484A;
+  --accent: #C4FF3D;
+  --accent-dim: #94C42A;
+  --negative: #FF6B6B;
+  --warn: #FFB547;
+  --tw-ring-offset-color: #1C1C1E;
+}
+
 * {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
 }
 
 html {
@@ -13,40 +57,54 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
-    'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: 'Geist', -apple-system, system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+.font-mono {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.02em;
 }
 
-/* ── Dark mode ──────────────────────────────────────────────────────────────
-   Strategy: class-based dark mode via .dark on <html>.
-   These overrides remap common Tailwind gray/white utilities to slate-900
-   palette so all 76+ existing components get dark mode without per-file edits.
+/* ── Animations ─────────────────────────────────────────────────────────── */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in { animation: fadeIn 320ms cubic-bezier(.2,.8,.2,1) both; }
+.animate-slide-in-right { animation: slideInRight 320ms cubic-bezier(.2,.8,.2,1) both; }
+
+/* ── Legacy dark-mode compatibility ───────────────────────────────────────
+   Components not yet migrated to the token system (Button, Badge, and
+   every page/dialog outside E11's scope) still use the old gray/primary
+   Tailwind palette. Remap them here so dark mode keeps working for them.
    Specificity: .dark .bg-white (2 classes) > .bg-white (1 class) → always wins.
    ─────────────────────────────────────────────────────────────────────────── */
 
-html.dark {
-  color-scheme: dark;
-  /* Fix focus ring offset color for dark surfaces */
-  --tw-ring-offset-color: #1e293b;
-}
-
-/* Backgrounds — slate-900 palette */
 .dark .bg-white { background-color: #1e293b; }
 .dark .bg-gray-50 { background-color: #0f172a; }
 .dark .bg-gray-100 { background-color: #1e293b; }
 .dark .bg-gray-200 { background-color: #334155; }
 
-/* Primary active state — darken so it reads well on slate sidebar */
 .dark .bg-primary-50 { background-color: rgba(14, 165, 233, 0.12); }
 .dark .bg-primary-100 { background-color: rgba(14, 165, 233, 0.2); }
 
-/* Text */
 .dark .text-gray-950 { color: #f1f5f9; }
 .dark .text-gray-900 { color: #f1f5f9; }
 .dark .text-gray-800 { color: #e2e8f0; }
@@ -56,13 +114,11 @@ html.dark {
 .dark .text-gray-400 { color: #64748b; }
 .dark .text-gray-300 { color: #475569; }
 
-/* Borders */
 .dark .border-gray-50  { border-color: #1e293b; }
 .dark .border-gray-100 { border-color: #1e293b; }
 .dark .border-gray-200 { border-color: #334155; }
 .dark .border-gray-300 { border-color: #475569; }
 
-/* Hover states */
 .dark .hover\:bg-gray-50:hover  { background-color: #1e293b; }
 .dark .hover\:bg-gray-100:hover { background-color: #334155; }
 .dark .hover\:bg-gray-200:hover { background-color: #475569; }
@@ -70,5 +126,28 @@ html.dark {
 .dark .hover\:text-gray-800:hover { color: #e2e8f0; }
 .dark .hover\:text-gray-700:hover { color: #cbd5e1; }
 
-/* Placeholder text */
 .dark .placeholder\:text-gray-400::placeholder { color: #475569; }
+
+/* ── Web responsive grids ───────────────────────────────────────────────── */
+
+.web-grid-21 { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; }
+.web-grid-12 { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 24px; }
+.web-grid-2  { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 20px; }
+.web-grid-3  { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
+.web-grid-4  { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
+.web-tx-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; min-height: 0; flex: 1; }
+
+@media (max-width: 1180px) {
+  .web-grid-21, .web-grid-12 { grid-template-columns: minmax(0, 1fr); }
+  .web-grid-4 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .web-tx-grid { grid-template-columns: minmax(0, 1fr) 320px; }
+}
+@media (max-width: 980px) {
+  .web-grid-2 { grid-template-columns: minmax(0, 1fr); }
+  .web-grid-3 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .web-tx-grid { grid-template-columns: minmax(0, 1fr); }
+  .web-search-pill { display: none; }
+}
+@media (max-width: 720px) {
+  .web-grid-4 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
