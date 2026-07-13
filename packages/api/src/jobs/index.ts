@@ -18,9 +18,9 @@ export function scheduleAllJobs(): void {
   // Start the BullMQ worker that processes integration sync jobs
   startSyncWorker();
 
-  // Schedule periodic Binance sync — every 15 minutes
+  // Schedule periodic Binance sync — every 30 minutes
   cron.schedule(
-    '*/15 * * * *',
+    '*/30 * * * *',
     () => {
       void schedulePeriodicBinanceSync();
     },

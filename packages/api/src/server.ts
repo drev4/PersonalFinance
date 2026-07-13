@@ -113,11 +113,11 @@ await fastify.register(sanitizePlugin);
 await fastify.register(securityHeadersPlugin);
 
 // Global rate limit (auth routes will apply a stricter limit on top).
-// Backed by Redis so the budget is shared across API replicas.
-await fastify.register(rateLimit, {
+// In production, backed by Redis so the budget is shared across API replicas.
+// In development, uses local memory to avoid unnecessary Redis calls.
+const rateLimitConfig: Parameters<typeof rateLimit>[1] = {
   max: apiRateLimit.max,
   timeWindow: apiRateLimit.timeWindow,
-  redis: getRedisClient(),
   allowList: rateLimitAllowList,
   errorResponseBuilder: rateLimitErrorBuilder,
   addHeaders: {
@@ -126,7 +126,13 @@ await fastify.register(rateLimit, {
     'x-ratelimit-reset': true,
     'retry-after': true,
   },
-});
+};
+
+if (env.NODE_ENV === 'production') {
+  rateLimitConfig.redis = getRedisClient();
+}
+
+await fastify.register(rateLimit, rateLimitConfig);
 
 await fastify.register(cookie);
 
@@ -268,8 +274,8 @@ const start = async (): Promise<void> => {
     await fastify.listen({ port: env.PORT, host: '0.0.0.0' });
     fastify.log.info(`Server running at http://localhost:${env.PORT}`);
 
-    // Schedule background jobs (skip in test environment)
-    if (env.NODE_ENV !== 'test') {
+    // Schedule background jobs (skip in test environment and when jobs are disabled)
+    if (env.NODE_ENV !== 'test' && env.ENABLE_JOBS) {
       scheduleAllJobs();
     }
   } catch (err) {

@@ -128,13 +128,13 @@ async function runStockPriceUpdate(): Promise<void> {
 
 /**
  * Schedules both price update jobs:
- * - Crypto: every 10 minutes (CMC API)
+ * - Crypto: every 30 minutes (CMC API)
  * - Stocks/ETFs/Bonds: every 15 minutes, Mon-Fri 07:00-22:00 CET (Finnhub API)
  */
 export function schedulePriceUpdateJobs(): void {
-  // Crypto — every 10 minutes, all day
+  // Crypto — every 30 minutes, all day
   cron.schedule(
-    '*/10 * * * *',
+    '*/30 * * * *',
     async () => {
       await runCryptoPriceUpdate();
     },
@@ -152,5 +152,5 @@ export function schedulePriceUpdateJobs(): void {
     { timezone: 'Europe/Madrid' },
   );
 
-  logger.info('Price update jobs scheduled (crypto: */10 * * * *, stocks: */15 7-22 * * 1-5 CET)');
+  logger.info('Price update jobs scheduled (crypto: */30 * * * *, stocks: */15 7-22 * * 1-5 CET)');
 }
