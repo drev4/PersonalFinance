@@ -1,5 +1,5 @@
 import axios from 'axios';
-import pino from 'pino';
+import { pino } from 'pino';
 import { getRedisClient } from '../config/redis.js';
 
 const logger = pino({ name: 'currency.service' });
@@ -91,11 +91,7 @@ export function convertWithRates(
  * One-shot conversion of an amount in cents between two currencies.
  * Use `getRates` + `convertWithRates` when converting many amounts for efficiency.
  */
-export async function convertCents(
-  amountCents: number,
-  from: string,
-  to: string,
-): Promise<number> {
+export async function convertCents(amountCents: number, from: string, to: string): Promise<number> {
   if (from.toUpperCase() === to.toUpperCase()) return amountCents;
   const rates = await getRates(from.toUpperCase());
   return convertWithRates(amountCents, from, to, rates);

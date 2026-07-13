@@ -2,11 +2,9 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
+    branches: ['**']
   pull_request:
-    branches:
-      - main
+    branches: [develop, main]
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -58,28 +56,29 @@ jobs:
         run: pnpm typecheck
 
   # ---------------------------------------------------------------------------
-  # Test (requires MongoDB + Redis)
+  # Test — API (needs MongoDB + Redis)
   # ---------------------------------------------------------------------------
-  test:
-    name: Test
+  test-api:
+    name: Test (API)
     runs-on: ubuntu-latest
+    needs: [lint, typecheck]
 
     services:
       mongo:
         image: mongo:7
         ports:
-          - "27017:27017"
+          - '27017:27017'
       redis:
         image: redis:7-alpine
         ports:
-          - "6379:6379"
+          - '6379:6379'
 
     env:
       MONGO_URI: mongodb://localhost:27017/finanzas_test
       REDIS_URL: redis://localhost:6379
       JWT_SECRET: test_jwt_secret_at_least_64_characters_long_for_security_purposes
       JWT_REFRESH_SECRET: test_refresh_secret_at_least_64_characters_long_for_security
-      ENCRYPTION_KEY: test_encryption_key_32bytes_hex_0
+      ENCRYPTION_KEY: f041ee2eee4bb268e290bd829f10a7e79bcfbef16054926185003f42dc27be2d
       NODE_ENV: test
 
     steps:
@@ -97,15 +96,64 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run tests
-        run: pnpm test
+      - name: Cache MongoDB binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            mongodb-binaries-${{ runner.os }}-
+
+      - name: Warm up MongoDB binary cache
+        # Every test file spins up its own mongodb-memory-server instance.
+        # Vitest runs them in parallel, so on a cold cache they all race to
+        # download the same binary and corrupt each other's lock/temp files.
+        # Downloading it once, serially, before the test run avoids the race.
+        working-directory: packages/api
+        run: |
+          node --input-type=module -e "
+            import { MongoMemoryServer } from 'mongodb-memory-server';
+            const mongod = await MongoMemoryServer.create();
+            await mongod.stop();
+          "
+
+      - name: Run API tests
+        run: pnpm --filter=api test
 
   # ---------------------------------------------------------------------------
-  # Build
+  # Test — Web (jsdom, no external services)
+  # ---------------------------------------------------------------------------
+  test-web:
+    name: Test (Web)
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Web tests
+        run: pnpm --filter=web test
+
+  # ---------------------------------------------------------------------------
+  # Build (only after tests pass)
   # ---------------------------------------------------------------------------
   build:
     name: Build
     runs-on: ubuntu-latest
+    needs: [test-api, test-web]
+
     steps:
       - uses: actions/checkout@v4
 

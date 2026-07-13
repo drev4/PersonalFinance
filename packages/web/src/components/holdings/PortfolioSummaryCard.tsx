@@ -1,10 +1,10 @@
+import { TrendingUp, TrendingDown, Coins } from 'lucide-react';
 import type React from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
-import { Skeleton } from '../ui/skeleton';
 import { formatCurrency, formatPercentage } from '../../lib/formatters';
 import type { PortfolioSummary, AssetType } from '../../types/api';
+import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
+import { Skeleton } from '../ui/skeleton';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -63,7 +63,7 @@ interface CustomTooltipProps {
 
 function CustomTooltip({ active, payload }: CustomTooltipProps): React.ReactElement | null {
   if (!active || !payload || payload.length === 0) return null;
-  const entry = payload[0];
+  const entry = payload[0]!;
   return (
     <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-md text-sm">
       <div className="flex items-center gap-2">
@@ -169,9 +169,7 @@ export default function PortfolioSummaryCard({
           {/* ─── Left: numbers ─────────────────────────────────────────────── */}
           <div className="flex-1 min-w-0">
             {/* Total value */}
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-              Valor total
-            </p>
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Valor total</p>
             <p className="mt-1 text-4xl font-bold text-gray-900 tabular-nums">
               {formatCurrency(data.totalValue, currency)}
             </p>
@@ -188,6 +186,16 @@ export default function PortfolioSummaryCard({
                 {formatPercentage(data.totalPnlPercentage, 2)})
               </span>
             </div>
+
+            {/* Dividends YTD */}
+            {(data.totalDividendsYtd ?? 0) > 0 && (
+              <div className="mt-2 flex items-center gap-1.5 text-amber-600">
+                <Coins className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="text-sm font-medium">
+                  +{formatCurrency(data.totalDividendsYtd, currency)} dividendos este año
+                </span>
+              </div>
+            )}
 
             {/* Total cost */}
             <p className="mt-1 text-sm text-gray-400">

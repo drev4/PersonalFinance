@@ -9,7 +9,6 @@ import {
   archiveAccount,
   getNetWorth,
 } from '../api/accounts.api';
-import { dashboardKeys } from './useDashboard';
 import type {
   Account,
   CreateAccountDTO,
@@ -17,6 +16,7 @@ import type {
   NetWorthData,
   Transaction,
 } from '../types/api';
+import { dashboardKeys } from './useDashboard';
 
 const STALE_TIME = 1000 * 60 * 5;
 

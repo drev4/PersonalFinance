@@ -18,6 +18,7 @@ export interface IUser extends Document {
   twoFactorEnabled: boolean;
   twoFactorSecret?: string;
   preferences: IUserPreferences;
+  pushTokens: string[];
   createdAt: Date;
   updatedAt: Date;
   lastLoginAt?: Date;
@@ -84,6 +85,10 @@ const UserSchema = new Schema<IUser>(
         dashboardWidgets: [],
       }),
     },
+    pushTokens: {
+      type: [String],
+      default: [],
+    },
     lastLoginAt: {
       type: Date,
     },
@@ -104,8 +109,9 @@ UserSchema.methods['comparePassword'] = async function (
 // Prevent passwordHash from appearing in JSON serialization by default
 UserSchema.set('toJSON', {
   transform(_doc, ret) {
-    delete ret['passwordHash'];
-    delete ret['twoFactorSecret'];
+    const obj = ret as unknown as Record<string, unknown>;
+    delete obj['passwordHash'];
+    delete obj['twoFactorSecret'];
     return ret;
   },
 });

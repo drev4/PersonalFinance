@@ -1,9 +1,8 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { ChevronDown, ChevronUp, Download, Save } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { ChevronDown, ChevronUp, Download, Save } from 'lucide-react';
 import {
   Area,
   XAxis,
@@ -15,6 +14,11 @@ import {
   ComposedChart,
   ResponsiveContainer,
 } from 'recharts';
+import { z } from 'zod';
+import { downloadSimulationPdf } from '../../api/simulators.api';
+import ResultsCard from '../../components/simulators/ResultsCard';
+import SaveSimulationDialog from '../../components/simulators/SaveSimulationDialog';
+import SimulatorLayout from '../../components/simulators/SimulatorLayout';
 import { Button } from '../../components/ui/button';
 import {
   Form,
@@ -26,11 +30,7 @@ import {
   FormDescription,
 } from '../../components/ui/form';
 import { Input } from '../../components/ui/input';
-import SimulatorLayout from '../../components/simulators/SimulatorLayout';
-import ResultsCard from '../../components/simulators/ResultsCard';
-import SaveSimulationDialog from '../../components/simulators/SaveSimulationDialog';
 import { useCalculateInvestment } from '../../hooks/useSimulators';
-import { downloadSimulationPdf } from '../../api/simulators.api';
 import type { InvestmentResult, InvestmentScenario, YearlyProjection } from '../../types/api';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
@@ -49,9 +49,7 @@ type FormValues = z.infer<typeof schema>;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatEur(cents: number): string {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(
-    cents / 100,
-  );
+  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(cents / 100);
 }
 
 function formatEurAxis(value: number): string {
@@ -232,12 +230,8 @@ function AnnualProjectionTable({
             {rows.map((row) => (
               <tr key={row.year} className="border-b border-gray-50 hover:bg-gray-50">
                 <td className="px-4 py-2 text-gray-600">{row.year}</td>
-                <td className="px-4 py-2 text-right text-blue-600">
-                  {formatEur(row.contributed)}
-                </td>
-                <td className="px-4 py-2 text-right text-green-600">
-                  {formatEur(row.returns)}
-                </td>
+                <td className="px-4 py-2 text-right text-blue-600">{formatEur(row.contributed)}</td>
+                <td className="px-4 py-2 text-right text-green-600">{formatEur(row.returns)}</td>
                 <td className="px-4 py-2 text-right font-semibold text-gray-900">
                   {formatEur(row.total)}
                 </td>
@@ -261,7 +255,7 @@ function EmptyResults(): React.ReactElement {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white py-16 text-center shadow-sm">
       <p className="text-sm text-gray-400">
-        Rellena el formulario y pulsa "Calcular" para ver la proyeccion.
+        Rellena el formulario y pulsa &quot;Calcular&quot; para ver la proyeccion.
       </p>
     </div>
   );
@@ -287,9 +281,7 @@ function Results({ result, inputs }: ResultsProps): React.ReactElement {
     },
     {
       label: showRealValue ? 'Valor real (inflacion)' : 'Total rendimientos',
-      value: showRealValue
-        ? formatEur(result.realFinalValue!)
-        : formatEur(result.totalReturns),
+      value: showRealValue ? formatEur(result.realFinalValue!) : formatEur(result.totalReturns),
       color: showRealValue ? 'text-orange-600' : 'text-green-600',
     },
     { label: 'Total aportado', value: formatEur(result.totalContributed) },
@@ -316,9 +308,7 @@ function Results({ result, inputs }: ResultsProps): React.ReactElement {
 
       {/* Stacked area chart */}
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-        <h3 className="mb-3 text-sm font-semibold text-gray-900">
-          Evolucion del patrimonio
-        </h3>
+        <h3 className="mb-3 text-sm font-semibold text-gray-900">Evolucion del patrimonio</h3>
         <ResponsiveContainer width="100%" height={240}>
           <ComposedChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
             <defs>
@@ -336,7 +326,13 @@ function Results({ result, inputs }: ResultsProps): React.ReactElement {
               dataKey="ano"
               tick={{ fontSize: 11, fill: '#9ca3af' }}
               tickLine={false}
-              label={{ value: 'Ano', position: 'insideBottom', offset: -2, fontSize: 11, fill: '#9ca3af' }}
+              label={{
+                value: 'Ano',
+                position: 'insideBottom',
+                offset: -2,
+                fontSize: 11,
+                fill: '#9ca3af',
+              }}
             />
             <YAxis
               tickFormatter={formatEurAxis}
@@ -346,10 +342,7 @@ function Results({ result, inputs }: ResultsProps): React.ReactElement {
               width={60}
             />
             <Tooltip
-              formatter={(value: number, name: string) => [
-                formatEur(value * 100),
-                name,
-              ]}
+              formatter={(value: number, name: string) => [formatEur(value * 100), name]}
               labelFormatter={(label: number) => `Ano ${label}`}
               contentStyle={{ fontSize: 12, borderRadius: 8 }}
             />
@@ -390,9 +383,7 @@ function Results({ result, inputs }: ResultsProps): React.ReactElement {
       {/* Scenarios */}
       {result.scenarios && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold text-gray-900">
-            Comparativa de escenarios
-          </h3>
+          <h3 className="mb-3 text-sm font-semibold text-gray-900">Comparativa de escenarios</h3>
           <ScenariosTable
             scenarios={result.scenarios}
             annualReturn={inputs.annualReturn}
@@ -401,10 +392,7 @@ function Results({ result, inputs }: ResultsProps): React.ReactElement {
         </div>
       )}
 
-      <AnnualProjectionTable
-        projection={result.annualProjection}
-        showRealValue={showRealValue}
-      />
+      <AnnualProjectionTable projection={result.annualProjection} showRealValue={showRealValue} />
 
       <div className="flex gap-3">
         <Button onClick={() => setSaveOpen(true)} variant="outline" className="gap-2">

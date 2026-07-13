@@ -30,6 +30,8 @@ import { registerSimulatorRoutes } from './modules/simulators/simulator.routes.j
 import { registerNotificationRoutes } from './modules/notifications/notification.routes.js';
 import { registerReportRoutes } from './modules/reports/report.routes.js';
 import { registerCurrencyRoutes } from './modules/currency/currency.routes.js';
+import { registerPriceAlertRoutes } from './modules/holdings/priceAlert.routes.js';
+import { registerDebtRoutes } from './modules/debts/debt.routes.js';
 import { scheduleAllJobs } from './jobs/index.js';
 
 const fastify = Fastify({
@@ -178,7 +180,7 @@ fastify.setErrorHandler((error: FastifyError | ZodError | Error, _request, reply
       message:
         env.NODE_ENV === 'production'
           ? 'An unexpected error occurred'
-          : (error.message ?? 'An unexpected error occurred'),
+          : error.message ?? 'An unexpected error occurred',
     },
   });
 });
@@ -251,6 +253,10 @@ await fastify.register(registerReportRoutes);
 
 // Currency rates route: /currency/rates
 await fastify.register(registerCurrencyRoutes);
+await fastify.register(registerPriceAlertRoutes);
+
+// Debt management routes: /debts
+await fastify.register(registerDebtRoutes);
 
 // ---- Server startup --------------------------------------------------------
 

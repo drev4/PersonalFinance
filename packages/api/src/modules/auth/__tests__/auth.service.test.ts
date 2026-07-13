@@ -33,6 +33,7 @@ import {
   resetPassword,
   verifyEmail,
   AuthError,
+  type AuthResult,
 } from '../auth.service.js';
 import { getRedisClient } from '../../../config/redis.js';
 import { sendPasswordResetEmail, sendEmailVerification } from '../../../utils/email.js';
@@ -147,7 +148,10 @@ describe('login()', () => {
   });
 
   it('returns tokens and safe user with valid credentials', async () => {
-    const result = await login({ email: 'test@example.com', password: 'Password1' });
+    const result = (await login({
+      email: 'test@example.com',
+      password: 'Password1',
+    })) as AuthResult;
     expect(result.user.email).toBe('test@example.com');
     expect(result.accessToken).toBeTruthy();
     expect(result.refreshToken).toBeTruthy();
@@ -176,13 +180,16 @@ describe('login()', () => {
   });
 
   it('does not expose passwordHash in the returned user', async () => {
-    const result = await login({ email: 'test@example.com', password: 'Password1' });
+    const result = (await login({
+      email: 'test@example.com',
+      password: 'Password1',
+    })) as AuthResult;
     expect(Object.keys(result.user)).not.toContain('passwordHash');
   });
 
   it('stores a new refresh token in Redis on each login', async () => {
-    const r1 = await login({ email: 'test@example.com', password: 'Password1' });
-    const r2 = await login({ email: 'test@example.com', password: 'Password1' });
+    const r1 = (await login({ email: 'test@example.com', password: 'Password1' })) as AuthResult;
+    const r2 = (await login({ email: 'test@example.com', password: 'Password1' })) as AuthResult;
 
     const p1 = verifyRefreshToken(r1.refreshToken);
     const p2 = verifyRefreshToken(r2.refreshToken);
@@ -215,22 +222,16 @@ describe('refreshTokens()', () => {
     const redis = getRedisClient();
 
     // Old token should be blacklisted
-    const blacklisted = await redis.exists(
-      `blacklist:${oldPayload.userId}:${oldPayload.tokenId}`,
-    );
+    const blacklisted = await redis.exists(`blacklist:${oldPayload.userId}:${oldPayload.tokenId}`);
     expect(blacklisted).toBe(1);
 
     // Old key should be gone from whitelist
-    const whitelisted = await redis.exists(
-      `refresh:${oldPayload.userId}:${oldPayload.tokenId}`,
-    );
+    const whitelisted = await redis.exists(`refresh:${oldPayload.userId}:${oldPayload.tokenId}`);
     expect(whitelisted).toBe(0);
 
     // New token should be in whitelist
     const newPayload = verifyRefreshToken(result.refreshToken);
-    const newWhitelisted = await redis.exists(
-      `refresh:${newPayload.userId}:${newPayload.tokenId}`,
-    );
+    const newWhitelisted = await redis.exists(`refresh:${newPayload.userId}:${newPayload.tokenId}`);
     expect(newWhitelisted).toBe(1);
   });
 
@@ -279,14 +280,10 @@ describe('logout()', () => {
     await logout(refreshToken);
 
     const redis = getRedisClient();
-    const blacklisted = await redis.exists(
-      `blacklist:${payload.userId}:${payload.tokenId}`,
-    );
+    const blacklisted = await redis.exists(`blacklist:${payload.userId}:${payload.tokenId}`);
     expect(blacklisted).toBe(1);
 
-    const whitelisted = await redis.exists(
-      `refresh:${payload.userId}:${payload.tokenId}`,
-    );
+    const whitelisted = await redis.exists(`refresh:${payload.userId}:${payload.tokenId}`);
     expect(whitelisted).toBe(0);
   });
 
@@ -344,11 +341,9 @@ describe('resetPassword()', () => {
     await registerUser();
 
     let capturedToken = '';
-    vi.mocked(sendPasswordResetEmail).mockImplementationOnce(
-      async (_to: string, token: string) => {
-        capturedToken = token;
-      },
-    );
+    vi.mocked(sendPasswordResetEmail).mockImplementationOnce(async (_to: string, token: string) => {
+      capturedToken = token;
+    });
 
     await forgotPassword('test@example.com');
     expect(capturedToken).not.toBe('');
@@ -364,7 +359,10 @@ describe('resetPassword()', () => {
     expect((loginOld as AuthError).code).toBe('INVALID_CREDENTIALS');
 
     // New password works
-    const loginNew = await login({ email: 'test@example.com', password: 'NewPassword2' });
+    const loginNew = (await login({
+      email: 'test@example.com',
+      password: 'NewPassword2',
+    })) as AuthResult;
     expect(loginNew.user.email).toBe('test@example.com');
   });
 
@@ -372,19 +370,15 @@ describe('resetPassword()', () => {
     await registerUser();
 
     let capturedToken = '';
-    vi.mocked(sendPasswordResetEmail).mockImplementationOnce(
-      async (_to: string, token: string) => {
-        capturedToken = token;
-      },
-    );
+    vi.mocked(sendPasswordResetEmail).mockImplementationOnce(async (_to: string, token: string) => {
+      capturedToken = token;
+    });
 
     await forgotPassword('test@example.com');
     await resetPassword(capturedToken, 'NewPassword2');
 
     // Trying to use the same token again should fail
-    const error = await resetPassword(capturedToken, 'AnotherPassword3').catch(
-      (e: unknown) => e,
-    );
+    const error = await resetPassword(capturedToken, 'AnotherPassword3').catch((e: unknown) => e);
     expect(error).toBeInstanceOf(AuthError);
     expect((error as AuthError).code).toBe('INVALID_RESET_TOKEN');
   });
@@ -400,11 +394,9 @@ describe('resetPassword()', () => {
     const payload = verifyRefreshToken(refreshToken);
 
     let capturedToken = '';
-    vi.mocked(sendPasswordResetEmail).mockImplementationOnce(
-      async (_to: string, token: string) => {
-        capturedToken = token;
-      },
-    );
+    vi.mocked(sendPasswordResetEmail).mockImplementationOnce(async (_to: string, token: string) => {
+      capturedToken = token;
+    });
 
     await forgotPassword('test@example.com');
     await resetPassword(capturedToken, 'NewPassword2');
@@ -423,11 +415,9 @@ describe('resetPassword()', () => {
 describe('verifyEmail()', () => {
   it('marks emailVerified = true when given a valid token', async () => {
     let capturedToken = '';
-    vi.mocked(sendEmailVerification).mockImplementationOnce(
-      async (_to: string, token: string) => {
-        capturedToken = token;
-      },
-    );
+    vi.mocked(sendEmailVerification).mockImplementationOnce(async (_to: string, token: string) => {
+      capturedToken = token;
+    });
 
     await registerUser();
     // Give async email send time to execute
@@ -449,11 +439,9 @@ describe('verifyEmail()', () => {
 
   it('throws INVALID_VERIFICATION_TOKEN when token is already used', async () => {
     let capturedToken = '';
-    vi.mocked(sendEmailVerification).mockImplementationOnce(
-      async (_to: string, token: string) => {
-        capturedToken = token;
-      },
-    );
+    vi.mocked(sendEmailVerification).mockImplementationOnce(async (_to: string, token: string) => {
+      capturedToken = token;
+    });
 
     await registerUser();
     await new Promise((r) => setTimeout(r, 50));

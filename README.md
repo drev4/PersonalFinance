@@ -1,156 +1,96 @@
-# Finanzas App - Monorepo
+# Personal Finance App
 
-Aplicación de gestión de finanzas personales basada en un monorepo pnpm con TypeScript, Fastify y React.
+[![CI](https://github.com/drev4/PersonalFinance/actions/workflows/ci.yml/badge.svg)](https://github.com/drev4/PersonalFinance/actions/workflows/ci.yml)
 
-## Estructura
+A full-stack personal finance manager: accounts, transactions, budgets, savings goals, investment holdings, debt payoff planning, financial simulators, and reporting — shared across a web app and a native mobile app.
+
+pnpm monorepo with 4 packages sharing types through `@finanzas/shared`.
+
+## Stack
+
+| Package           | Role                           | Tech                                                      |
+| ----------------- | ------------------------------ | --------------------------------------------------------- |
+| `packages/api`    | Backend, port `3001`           | Fastify 4 · MongoDB (Mongoose) · Redis · BullMQ · Zod     |
+| `packages/web`    | SPA, port `5173`               | React 18 · Vite · TanStack Query · Zustand · Tailwind CSS |
+| `packages/mobile` | iOS/Android app                | React Native · Expo Router · TanStack Query · Zustand     |
+| `packages/shared` | Types & validation, no runtime | Zod schemas, inferred TypeScript types                    |
+
+### Why this stack
+
+- **pnpm workspaces monorepo** — one source of truth for domain types (`@finanzas/shared`) consumed by API, web and mobile. No client/server type drift, no duplicated validation logic.
+- **Fastify over Express** — schema-based validation and serialization built into the request lifecycle, lower overhead, first-class async/await support. A good fit for a JSON API with no templating needs.
+- **MongoDB + Mongoose** — the domain is naturally document-shaped (a transaction, a holding, a budget each stand alone with occasional embedded sub-documents) rather than heavily relational, and the schema evolves often during early product iteration. Mongoose adds schema validation and middleware on top of the flexibility.
+- **Redis + BullMQ** — rate limiting, refresh-token rotation and cached net-worth reads need a fast key-value store; the same Redis instance backs BullMQ for scheduled jobs (price updates, recurring transactions, notification alerts) without adding another moving part.
+- **Zod end-to-end** — one schema definition in `@finanzas/shared` drives runtime validation on the API, static types on every package, and form validation on the web client (`@hookform/resolvers`). Invalid data is rejected at the boundary instead of trusted implicitly.
+- **JWT + httpOnly refresh cookie (web) / body (mobile)** — stateless access tokens keep API requests cheap to verify; the refresh token is stored where each client can protect it best (httpOnly cookie in the browser, secure storage on mobile).
+- **React + Vite for web** — fast HMR and a minimal build config compared to a metaframework the SPA doesn't need (no SSR requirement here).
+- **TanStack Query over a hand-rolled data layer** — server state (caching, retries, invalidation) is a solved problem; keeping it out of Zustand keeps the store limited to genuine client state (auth session, UI preferences).
+- **Zustand over Redux** — the client state surface is small (auth, theme, a few UI toggles); Zustand gives that without boilerplate.
+- **Tailwind CSS** — utility classes plus a token-based theme (`tailwind.config.ts`) keep light/dark theming consistent without a separate CSS-in-JS runtime.
+- **Expo + Expo Router for mobile** — managed native builds and file-based routing let the mobile app reuse the same API clients and query hooks pattern as the web app, without maintaining native Xcode/Android Studio project files by hand.
+- **TypeScript strict mode everywhere** (`strict`, `noUncheckedIndexedAccess`, `noImplicitAny`) — the domain involves money and dates; the type checker catches an entire class of `undefined`/off-by-one bugs before they reach a test.
+
+## Architecture
 
 ```
-finanzas-app/
-├── packages/
-│   ├── shared/          # Tipos Zod y TypeScript compartidos
-│   ├── api/             # Backend Fastify (puerto 3001)
-│   └── web/             # Frontend Vite + React (puerto 5173)
-├── pnpm-workspace.yaml
-├── package.json
-├── tsconfig.base.json
-└── .husky/             # Git hooks con lint-staged
+UI / screens
+    ↓
+hooks (TanStack Query) / stores (Zustand)
+    ↓
+API clients (Axios)
+    ↓
+@finanzas/shared (Zod schemas, types)
 ```
 
-## Requisitos
+Dependencies point inward only. `web` and `mobile` never import from each other; `api` never imports from `web` or `mobile`.
 
-- Node.js >= 20
-- pnpm >= 9
+Inside the API, each domain module follows `routes → service → repository → model`: routes validate input and translate domain errors to HTTP, services hold business logic, repositories are Mongoose queries with no branching, models define schema and indexes.
 
-## Instalación
+## Features
+
+- Accounts (checking, savings, credit card, mortgage, loan, crypto, investment) with net-worth tracking
+- Transactions with recurring templates, transfers, CSV bulk import, and rule-based auto-categorization
+- Budgets with progress and threshold alerts
+- Savings goals with deposit tracking
+- Investment holdings (stocks, ETFs, crypto, bonds) with live pricing via Finnhub / CoinMarketCap
+- Debt payoff planning (avalanche vs. snowball strategies)
+- Financial simulators: mortgage, loan, investment growth, early repayment, retirement
+- Monthly/yearly reports (PDF/CSV export) and a financial health score
+- Push/email notifications, 2FA (TOTP), multi-currency with live FX rates
+
+## Getting started
+
+Requirements: Node.js ≥ 20, pnpm ≥ 9, MongoDB, Redis.
 
 ```bash
-# Instalar dependencias (en el root del monorepo)
 pnpm install
-
-# Configurar variables de entorno
 cp packages/api/.env.example packages/api/.env
-# Editar packages/api/.env con tus valores
+# fill in MONGO_URI, REDIS_URL, JWT_SECRET, JWT_REFRESH_SECRET, ENCRYPTION_KEY
+
+pnpm dev          # runs api (3001) + web (5173) in parallel
 ```
 
-## Desarrollo
+See `packages/api/.env.example` for the full list of environment variables (external API keys for Binance, CoinMarketCap, Finnhub, Plaid are optional).
+
+## Scripts
 
 ```bash
-# Ejecutar API y frontend en paralelo
-pnpm dev
-
-# O ejecutar de forma individual:
-pnpm --filter @finanzas/api dev
-pnpm --filter @finanzas/web dev
+pnpm dev          # api + web in parallel
+pnpm build        # build all packages
+pnpm lint         # eslint
+pnpm typecheck    # TypeScript across all packages
+pnpm test         # vitest across all packages
+pnpm ios          # Expo iOS
+pnpm android      # Expo Android
 ```
 
-## Scripts disponibles
+Pre-commit hooks (Husky + lint-staged) run ESLint, Prettier and a TypeScript check on staged files.
 
-```bash
-# Linting
-pnpm lint          # Ejecutar eslint
-pnpm lint:fix      # Ejecutar eslint con --fix
+## Testing
 
-# Type checking
-pnpm typecheck     # Verificar tipos de TypeScript
+- API: unit tests for services with mocked repositories, integration tests against `mongodb-memory-server` and `ioredis-mock` (no mocked database in integration tests — a mock would hide broken migrations).
+- Web: component/hook tests with Testing Library, API mocked via MSW.
 
-# Testing
-pnpm test          # Ejecutar tests con vitest
+## Security
 
-# Build
-pnpm build         # Compilar todos los packages
-```
-
-## Configuración
-
-### Lint-staged + Husky
-
-Los pre-commit hooks ejecutan automáticamente:
-- ESLint con --fix
-- Prettier --write
-- TypeScript --noEmit
-
-### ESLint
-
-Está configurado para:
-- Prohibir `any` completamente
-- Validar orden de imports
-- Validar hooks de React
-- Integración con Prettier
-
-### TypeScript
-
-Configuración estricta en `tsconfig.base.json`:
-- `strict: true`
-- `noUncheckedIndexedAccess: true`
-- `exactOptionalPropertyTypes: true`
-- `noImplicitAny: true`
-
-## Packages
-
-### @finanzas/shared
-
-Contiene todos los schemas Zod y tipos TypeScript compartidos.
-
-Schemas incluidos:
-- UserSchema
-- AccountSchema (checking, savings, crypto, investment, etc.)
-- TransactionSchema (con soporte para transacciones recurrentes)
-- CategorySchema
-- CategoryRuleSchema (reglas de auto-categorización)
-- BudgetSchema
-- HoldingSchema (inversiones y activos)
-- IntegrationCredentialsSchema
-- SimulationSchema (ahorros, inversiones, créditos, interés compuesto)
-- PriceSnapshotSchema
-- NetWorthSnapshotSchema
-
-Constantes:
-- CURRENCIES (monedas soportadas)
-- SUPPORTED_EXCHANGES (bolsas de valores)
-- DEFAULT_CATEGORIES (categorías predeterminadas)
-
-### @finanzas/api
-
-Backend Fastify con:
-- Rate limiting
-- CORS
-- Helmet (seguridad)
-- Cookie handling
-- Logger pino
-
-### @finanzas/web
-
-Frontend React + Vite con:
-- React Router
-- TanStack React Query
-- Zustand (state management)
-- React Hook Form
-- Tailwind CSS
-- i18n
-- Recharts
-- Lucide React
-
-## Variables de Entorno (packages/api/.env)
-
-Requeridas:
-- PORT=3001
-- NODE_ENV=development
-- MONGO_URI=mongodb://...
-- REDIS_URL=redis://...
-- JWT_SECRET (mínimo 32 caracteres)
-- JWT_REFRESH_SECRET (mínimo 32 caracteres)
-- ENCRYPTION_KEY (mínimo 64 caracteres hex)
-
-Opcionales (APIs externas):
-- BINANCE_API_KEY / BINANCE_API_SECRET
-- CMC_API_KEY
-- FINNHUB_API_KEY
-- PLAID_CLIENT_ID / PLAID_SECRET / PLAID_ENVIRONMENT
-
-## Notas de Desarrollo
-
-- TypeScript estricto: no se permite `any`
-- ESLint fuerza el tipo de retorno en funciones
-- Pre-commit hooks automáticos con lint-staged
-- Los packages comparten tipos vía @finanzas/shared
-- Proxy de desarrollo en web para API (http://localhost:3001)
+`packages/api/SECURITY.md` documents the API's threat model, OWASP Top 10 control mapping, secret rotation procedure and incident response runbook.

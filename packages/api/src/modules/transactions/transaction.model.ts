@@ -24,6 +24,7 @@ export interface ITransaction extends Document {
   categoryId?: mongoose.Types.ObjectId;
   tags: string[];
   transferToAccountId?: mongoose.Types.ObjectId;
+  exchangeRate?: number;
   attachments?: string[];
   recurring?: IRecurring;
   source: TransactionSource;
@@ -108,6 +109,11 @@ const TransactionSchema = new Schema<ITransaction>(
     transferToAccountId: {
       type: Schema.Types.ObjectId,
       ref: 'Account',
+      default: undefined,
+    },
+    exchangeRate: {
+      type: Number,
+      min: 0,
       default: undefined,
     },
     attachments: {

@@ -1,9 +1,8 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Download, PartyPopper, Save } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Download, PartyPopper, Save } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -14,6 +13,11 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { z } from 'zod';
+import { downloadSimulationPdf } from '../../api/simulators.api';
+import ResultsCard from '../../components/simulators/ResultsCard';
+import SaveSimulationDialog from '../../components/simulators/SaveSimulationDialog';
+import SimulatorLayout from '../../components/simulators/SimulatorLayout';
 import { Button } from '../../components/ui/button';
 import {
   Form,
@@ -25,11 +29,7 @@ import {
   FormDescription,
 } from '../../components/ui/form';
 import { Input } from '../../components/ui/input';
-import SimulatorLayout from '../../components/simulators/SimulatorLayout';
-import ResultsCard from '../../components/simulators/ResultsCard';
-import SaveSimulationDialog from '../../components/simulators/SaveSimulationDialog';
 import { useCalculateRetirement } from '../../hooks/useSimulators';
-import { downloadSimulationPdf } from '../../api/simulators.api';
 import type { RetirementResult, YearlyProjection } from '../../types/api';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
@@ -54,9 +54,7 @@ type FormValues = z.infer<typeof schema>;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatEur(cents: number): string {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(
-    cents / 100,
-  );
+  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(cents / 100);
 }
 
 function formatEurAxis(value: number): string {
@@ -71,10 +69,7 @@ interface ChartPoint {
   capitalNecesario: number;
 }
 
-function buildChartData(
-  projection: YearlyProjection[],
-  requiredNestEgg: number,
-): ChartPoint[] {
+function buildChartData(projection: YearlyProjection[], requiredNestEgg: number): ChartPoint[] {
   return projection.map((p) => ({
     ano: p.year,
     capitalAcumulado: Math.round(p.total / 100),
@@ -88,7 +83,7 @@ function EmptyResults(): React.ReactElement {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white py-16 text-center shadow-sm">
       <p className="text-sm text-gray-400">
-        Rellena el formulario y pulsa "Calcular" para ver tu planificacion.
+        Rellena el formulario y pulsa &quot;Calcular&quot; para ver tu planificacion.
       </p>
     </div>
   );
@@ -150,14 +145,17 @@ function Results({ result, inputs }: ResultsProps): React.ReactElement {
       {isSufficient ? (
         <div className="rounded-xl border border-green-200 bg-green-50 p-5">
           <div className="flex items-start gap-3">
-            <PartyPopper className="mt-0.5 h-6 w-6 flex-shrink-0 text-green-600" aria-hidden="true" />
+            <PartyPopper
+              className="mt-0.5 h-6 w-6 flex-shrink-0 text-green-600"
+              aria-hidden="true"
+            />
             <div>
               <p className="text-base font-semibold text-green-800">
                 Ya tienes suficiente para jubilarte
               </p>
               <p className="mt-1 text-sm text-green-700">
-                Con tus ahorros actuales y la rentabilidad esperada, alcanzaras el capital
-                necesario para cubrir tu renta mensual deseada.
+                Con tus ahorros actuales y la rentabilidad esperada, alcanzaras el capital necesario
+                para cubrir tu renta mensual deseada.
               </p>
             </div>
           </div>
@@ -183,26 +181,20 @@ function Results({ result, inputs }: ResultsProps): React.ReactElement {
         <h3 className="mb-3 text-sm font-semibold text-gray-900">Desglose</h3>
         <div className="space-y-2 text-sm text-gray-600">
           <p>
-            Con tus ahorros actuales ({formatEur(inputs.currentSavings * 100)}) y la
-            rentabilidad del {inputs.expectedReturn}% llegaras a{' '}
-            <span className="font-medium text-gray-900">
-              {formatEur(result.projectedNestEgg)}
-            </span>
-            .
+            Con tus ahorros actuales ({formatEur(inputs.currentSavings * 100)}) y la rentabilidad
+            del {inputs.expectedReturn}% llegaras a{' '}
+            <span className="font-medium text-gray-900">{formatEur(result.projectedNestEgg)}</span>.
           </p>
           {result.shortfall > 0 ? (
             <p>
               Te faltan{' '}
-              <span className="font-semibold text-red-600">{formatEur(result.shortfall)}</span>{' '}
-              para alcanzar el capital objetivo de {formatEur(result.requiredNestEgg)}.
+              <span className="font-semibold text-red-600">{formatEur(result.shortfall)}</span> para
+              alcanzar el capital objetivo de {formatEur(result.requiredNestEgg)}.
             </p>
           ) : (
             <p className="text-green-700">
               Superas el capital objetivo en{' '}
-              <span className="font-semibold">
-                {formatEur(Math.abs(result.shortfall))}
-              </span>
-              .
+              <span className="font-semibold">{formatEur(Math.abs(result.shortfall))}</span>.
             </p>
           )}
         </div>
@@ -221,7 +213,13 @@ function Results({ result, inputs }: ResultsProps): React.ReactElement {
                 dataKey="ano"
                 tick={{ fontSize: 11, fill: '#9ca3af' }}
                 tickLine={false}
-                label={{ value: 'Ano', position: 'insideBottom', offset: -2, fontSize: 11, fill: '#9ca3af' }}
+                label={{
+                  value: 'Ano',
+                  position: 'insideBottom',
+                  offset: -2,
+                  fontSize: 11,
+                  fill: '#9ca3af',
+                }}
               />
               <YAxis
                 tickFormatter={formatEurAxis}
@@ -231,10 +229,7 @@ function Results({ result, inputs }: ResultsProps): React.ReactElement {
                 width={64}
               />
               <Tooltip
-                formatter={(value: number, name: string) => [
-                  formatEur(value * 100),
-                  name,
-                ]}
+                formatter={(value: number, name: string) => [formatEur(value * 100), name]}
                 labelFormatter={(label: number) => `Ano ${label}`}
                 contentStyle={{ fontSize: 12, borderRadius: 8 }}
               />

@@ -1,12 +1,12 @@
+import { ArrowRight, Wallet } from 'lucide-react';
 import type React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Wallet } from 'lucide-react';
+import { useAccounts } from '../../hooks/useAccounts';
+import { formatCurrency, getAccountTypeLabel } from '../../lib/formatters';
+import { cn } from '../../lib/utils';
+import type { Account } from '../../types/api';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
-import { formatCurrency, getAccountTypeLabel } from '../../lib/formatters';
-import { useAccounts } from '../../hooks/useAccounts';
-import type { Account } from '../../types/api';
-import { cn } from '../../lib/utils';
 
 // ─── Skeleton row ─────────────────────────────────────────────────────────────
 
@@ -42,9 +42,7 @@ export default function TopAccountsWidget(): React.ReactElement {
     <Card className="flex h-full flex-col">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold text-gray-600">
-            Top cuentas
-          </CardTitle>
+          <CardTitle className="text-base font-semibold text-gray-600">Top cuentas</CardTitle>
           <Wallet className="h-4 w-4 text-gray-400" aria-hidden="true" />
         </div>
       </CardHeader>
@@ -80,9 +78,7 @@ export default function TopAccountsWidget(): React.ReactElement {
                     <div
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
                       style={{
-                        backgroundColor: account.color
-                          ? `${account.color}22`
-                          : '#f1f5f9',
+                        backgroundColor: account.color ? `${account.color}22` : '#f1f5f9',
                       }}
                       aria-hidden="true"
                     >
@@ -94,12 +90,8 @@ export default function TopAccountsWidget(): React.ReactElement {
 
                     {/* Name + type */}
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-gray-800">
-                        {account.name}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {getAccountTypeLabel(account.type)}
-                      </p>
+                      <p className="truncate text-sm font-medium text-gray-800">{account.name}</p>
+                      <p className="text-xs text-gray-400">{getAccountTypeLabel(account.type)}</p>
                     </div>
 
                     {/* Balance */}

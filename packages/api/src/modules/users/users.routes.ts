@@ -2,7 +2,14 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { requireAuth } from '../../middlewares/authenticate.js';
-import { findById, updateUser, updatePasswordHash } from './user.repository.js';
+import {
+  findById,
+  updateUser,
+  updatePasswordHash,
+  addPushToken,
+  removePushToken,
+} from './user.repository.js';
+import { setup2FA, verify2FA, disable2FA, AuthError } from '../auth/auth.service.js';
 import { AuditLogModel } from '../audit/auditLog.model.js';
 import type { SafeUser } from '../auth/auth.service.js';
 import type { IUser } from './user.model.js';
@@ -15,7 +22,11 @@ const UpdateProfileBodySchema = z.object({
   name: z.string().min(1).max(100).trim().optional(),
   firstName: z.string().min(1).max(50).trim().optional(),
   lastName: z.string().min(1).max(50).trim().optional(),
-  baseCurrency: z.string().length(3, 'Currency code must be exactly 3 characters').toUpperCase().optional(),
+  baseCurrency: z
+    .string()
+    .length(3, 'Currency code must be exactly 3 characters')
+    .toUpperCase()
+    .optional(),
   preferences: z
     .object({
       locale: z.string().optional(),
@@ -25,6 +36,11 @@ const UpdateProfileBodySchema = z.object({
     .optional(),
 });
 
+const PushTokenBodySchema = z.object({
+  token: z.string().min(1, 'Token is required'),
+  platform: z.enum(['ios', 'android']).optional(),
+});
+
 const ChangePasswordBodySchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
   newPassword: z
@@ -32,6 +48,14 @@ const ChangePasswordBodySchema = z.object({
     .min(8, 'New password must be at least 8 characters')
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
     .regex(/[0-9]/, 'Password must contain at least one number'),
+});
+
+const Verify2FABodySchema = z.object({
+  totpCode: z.string().length(6, 'Code must be 6 digits'),
+});
+
+const Disable2FABodySchema = z.object({
+  password: z.string().min(1, 'Password is required'),
 });
 
 // ---- Helpers ---------------------------------------------------------------
@@ -58,10 +82,7 @@ function toSafeUser(user: IUser): SafeUser {
 
 // ---- Handlers --------------------------------------------------------------
 
-async function getMeHandler(
-  request: FastifyRequest,
-  reply: FastifyReply,
-): Promise<FastifyReply> {
+async function getMeHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
   const user = await findById(request.user.userId);
 
   if (user === null) {
@@ -166,6 +187,111 @@ async function changePasswordHandler(
   });
 }
 
+async function registerPushTokenHandler(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const parsed = PushTokenBodySchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid request body',
+        details: parsed.error.flatten(),
+      },
+    });
+  }
+
+  await addPushToken(request.user.userId, parsed.data.token);
+  return reply.status(204).send();
+}
+
+async function removePushTokenHandler(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const parsed = PushTokenBodySchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid request body',
+        details: parsed.error.flatten(),
+      },
+    });
+  }
+
+  await removePushToken(request.user.userId, parsed.data.token);
+  return reply.status(204).send();
+}
+
+async function setup2FAHandler(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  try {
+    const result = await setup2FA(request.user.userId);
+    return reply.status(200).send({ data: result });
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return reply.status(err.statusCode).send({ error: { code: err.code, message: err.message } });
+    }
+    throw err;
+  }
+}
+
+async function verify2FAHandler(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const parsed = Verify2FABodySchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid request body',
+        details: parsed.error.flatten(),
+      },
+    });
+  }
+
+  try {
+    await verify2FA(request.user.userId, parsed.data.totpCode);
+    return reply.status(200).send({ data: { message: '2FA enabled successfully' } });
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return reply.status(err.statusCode).send({ error: { code: err.code, message: err.message } });
+    }
+    throw err;
+  }
+}
+
+async function disable2FAHandler(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const parsed = Disable2FABodySchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid request body',
+        details: parsed.error.flatten(),
+      },
+    });
+  }
+
+  try {
+    await disable2FA(request.user.userId, parsed.data.password);
+    return reply.status(200).send({ data: { message: '2FA disabled successfully' } });
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return reply.status(err.statusCode).send({ error: { code: err.code, message: err.message } });
+    }
+    throw err;
+  }
+}
+
 // ---- Route registration ----------------------------------------------------
 
 export async function registerUsersRoutes(fastify: FastifyInstance): Promise<void> {
@@ -176,5 +302,10 @@ export async function registerUsersRoutes(fastify: FastifyInstance): Promise<voi
     usersScope.get('/users/me', getMeHandler);
     usersScope.patch('/users/me', updateMeHandler);
     usersScope.patch('/users/me/password', changePasswordHandler);
+    usersScope.post('/users/push-token', registerPushTokenHandler);
+    usersScope.delete('/users/push-token', removePushTokenHandler);
+    usersScope.post('/users/me/2fa/setup', setup2FAHandler);
+    usersScope.post('/users/me/2fa/verify', verify2FAHandler);
+    usersScope.post('/users/me/2fa/disable', disable2FAHandler);
   });
 }

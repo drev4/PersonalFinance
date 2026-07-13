@@ -1,39 +1,17 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { PiggyBank, Home, Car, Plane, GraduationCap, Heart, Star, ShoppingBag } from 'lucide-react';
 import { useEffect } from 'react';
 import type React from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-  PiggyBank,
-  Home,
-  Car,
-  Plane,
-  GraduationCap,
-  Heart,
-  Star,
-  ShoppingBag,
-} from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '../ui/dialog';
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from '../ui/form';
-import { Input } from '../ui/input';
-import { Button } from '../ui/button';
 import { useCreateGoal, useUpdateGoal } from '../../hooks/useGoals';
-import type { Goal } from '../../types/api';
 import { formatCurrency } from '../../lib/formatters';
 import { cn } from '../../lib/utils';
+import type { Goal } from '../../types/api';
+import { Button } from '../ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '../ui/form';
+import { Input } from '../ui/input';
 
 const PRESET_COLORS = [
   { value: '#6366f1', label: 'Indigo' },
@@ -61,10 +39,10 @@ const goalFormSchema = z
   .object({
     name: z.string().min(1, 'El nombre es obligatorio').max(100),
     targetAmount: z
-      .number({ invalid_type_error: 'Introduce un importe valido' })
+      .number({ error: 'Introduce un importe valido' })
       .positive('El objetivo debe ser mayor que 0'),
     currentAmount: z
-      .number({ invalid_type_error: 'Introduce un importe valido' })
+      .number({ error: 'Introduce un importe valido' })
       .min(0, 'El importe ahorrado no puede ser negativo'),
     deadline: z.string().optional(),
     color: z.string().optional(),
@@ -99,7 +77,7 @@ export function GoalFormDialog({
       targetAmount: goal ? goal.targetAmount / 100 : 0,
       currentAmount: goal ? goal.currentAmount / 100 : 0,
       deadline: goal?.deadline ? goal.deadline.slice(0, 10) : '',
-      color: goal?.color ?? PRESET_COLORS[0].value,
+      color: goal?.color ?? PRESET_COLORS[0]!.value,
       icon: goal?.icon ?? 'PiggyBank',
     },
   });
@@ -111,7 +89,7 @@ export function GoalFormDialog({
         targetAmount: goal ? goal.targetAmount / 100 : 0,
         currentAmount: goal ? goal.currentAmount / 100 : 0,
         deadline: goal?.deadline ? goal.deadline.slice(0, 10) : '',
-        color: goal?.color ?? PRESET_COLORS[0].value,
+        color: goal?.color ?? PRESET_COLORS[0]!.value,
         icon: goal?.icon ?? 'PiggyBank',
       });
     }
@@ -119,9 +97,8 @@ export function GoalFormDialog({
 
   const watchedTarget = form.watch('targetAmount') || 0;
   const watchedCurrent = form.watch('currentAmount') || 0;
-  const watchedColor = form.watch('color') ?? PRESET_COLORS[0].value;
-  const progressPct =
-    watchedTarget > 0 ? Math.min(100, (watchedCurrent / watchedTarget) * 100) : 0;
+  const watchedColor = form.watch('color') ?? PRESET_COLORS[0]!.value;
+  const progressPct = watchedTarget > 0 ? Math.min(100, (watchedCurrent / watchedTarget) * 100) : 0;
 
   async function onSubmit(values: GoalFormValues): Promise<void> {
     const payload = {
@@ -147,9 +124,7 @@ export function GoalFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>
-            {isEditing ? 'Editar meta' : 'Nueva meta de ahorro'}
-          </DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar meta' : 'Nueva meta de ahorro'}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -162,7 +137,10 @@ export function GoalFormDialog({
                 <FormItem>
                   <FormLabel>Nombre de la meta</FormLabel>
                   <FormControl>
-                    <Input placeholder="Vacaciones, Coche nuevo, Fondo de emergencia..." {...field} />
+                    <Input
+                      placeholder="Vacaciones, Coche nuevo, Fondo de emergencia..."
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -185,9 +163,7 @@ export function GoalFormDialog({
                         placeholder="0.00"
                         {...field}
                         onChange={(e) =>
-                          field.onChange(
-                            e.target.value === '' ? 0 : parseFloat(e.target.value),
-                          )
+                          field.onChange(e.target.value === '' ? 0 : parseFloat(e.target.value))
                         }
                       />
                     </FormControl>
@@ -211,9 +187,7 @@ export function GoalFormDialog({
                         placeholder="0.00"
                         {...field}
                         onChange={(e) =>
-                          field.onChange(
-                            e.target.value === '' ? 0 : parseFloat(e.target.value),
-                          )
+                          field.onChange(e.target.value === '' ? 0 : parseFloat(e.target.value))
                         }
                       />
                     </FormControl>

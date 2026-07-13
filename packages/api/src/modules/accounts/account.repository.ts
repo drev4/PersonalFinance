@@ -43,11 +43,14 @@ export async function findByUser(userId: string): Promise<IAccount[]> {
 export async function findById(
   id: string,
   userId: string,
+  session?: mongoose.ClientSession,
 ): Promise<IAccount | null> {
   return AccountModel.findOne({
     _id: new mongoose.Types.ObjectId(id),
     userId: new mongoose.Types.ObjectId(userId),
-  }).exec();
+  })
+    .session(session ?? null)
+    .exec();
 }
 
 export async function create(data: CreateAccountDTO): Promise<IAccount> {
@@ -100,11 +103,7 @@ export async function update(
   ).exec();
 }
 
-export async function updateBalance(
-  id: string,
-  userId: string,
-  newBalance: number,
-): Promise<void> {
+export async function updateBalance(id: string, userId: string, newBalance: number): Promise<void> {
   await AccountModel.findOneAndUpdate(
     {
       _id: new mongoose.Types.ObjectId(id),
@@ -114,10 +113,7 @@ export async function updateBalance(
   ).exec();
 }
 
-export async function archive(
-  id: string,
-  userId: string,
-): Promise<boolean> {
+export async function archive(id: string, userId: string): Promise<boolean> {
   const result = await AccountModel.findOneAndUpdate(
     {
       _id: new mongoose.Types.ObjectId(id),
@@ -129,9 +125,7 @@ export async function archive(
   return result !== null;
 }
 
-export async function getNetWorth(
-  userId: string,
-): Promise<NetWorthSummary> {
+export async function getNetWorth(userId: string): Promise<NetWorthSummary> {
   const pipeline = [
     {
       $match: {
@@ -148,9 +142,7 @@ export async function getNetWorth(
     },
   ];
 
-  const results = await AccountModel.aggregate<{ _id: string; total: number }>(
-    pipeline,
-  ).exec();
+  const results = await AccountModel.aggregate<{ _id: string; total: number }>(pipeline).exec();
 
   const byType: Record<string, number> = {};
   let totalBalance = 0;

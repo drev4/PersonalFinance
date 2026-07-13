@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { requireAuth } from '../../middlewares/authenticate.js';
 import {
@@ -24,10 +24,7 @@ const ConnectBinanceSchema = z.object({
 // Error handler helper
 // ---------------------------------------------------------------------------
 
-function handleIntegrationError(
-  error: unknown,
-  reply: Parameters<Parameters<FastifyInstance['get']>[2]>[1],
-): ReturnType<Parameters<FastifyInstance['get']>[2]> {
+function handleIntegrationError(error: unknown, reply: FastifyReply): FastifyReply {
   if (error instanceof IntegrationError) {
     return reply.status(error.statusCode).send({
       error: { code: error.code, message: error.message },
@@ -40,38 +37,28 @@ function handleIntegrationError(
 // Route registration
 // ---------------------------------------------------------------------------
 
-export async function registerIntegrationRoutes(
-  fastify: FastifyInstance,
-): Promise<void> {
+export async function registerIntegrationRoutes(fastify: FastifyInstance): Promise<void> {
   // GET /integrations — list integration statuses for the authenticated user
-  fastify.get(
-    '/integrations',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const integrations = await getIntegrations(userId);
-      return reply.send({ data: integrations });
-    },
-  );
+  fastify.get('/integrations', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const integrations = await getIntegrations(userId);
+    return reply.send({ data: integrations });
+  });
 
   // POST /integrations/binance — connect a Binance account
-  fastify.post(
-    '/integrations/binance',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const body = ConnectBinanceSchema.parse(request.body);
+  fastify.post('/integrations/binance', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const body = ConnectBinanceSchema.parse(request.body);
 
-      try {
-        await connectBinance(userId, body.apiKey, body.apiSecret);
-        return reply.status(201).send({
-          data: { message: 'Binance integration connected. Initial sync has been scheduled.' },
-        });
-      } catch (err) {
-        return handleIntegrationError(err, reply);
-      }
-    },
-  );
+    try {
+      await connectBinance(userId, body.apiKey, body.apiSecret);
+      return reply.status(201).send({
+        data: { message: 'Binance integration connected. Initial sync has been scheduled.' },
+      });
+    } catch (err) {
+      return handleIntegrationError(err, reply);
+    }
+  });
 
   // POST /integrations/:provider/sync — enqueue a manual high-priority sync
   fastify.post(
@@ -93,21 +80,17 @@ export async function registerIntegrationRoutes(
   );
 
   // DELETE /integrations/:provider — disconnect an integration
-  fastify.delete(
-    '/integrations/:provider',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const { provider } = request.params as { provider: string };
+  fastify.delete('/integrations/:provider', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const { provider } = request.params as { provider: string };
 
-      try {
-        await disconnectIntegration(userId, provider);
-        return reply.status(204).send();
-      } catch (err) {
-        return handleIntegrationError(err, reply);
-      }
-    },
-  );
+    try {
+      await disconnectIntegration(userId, provider);
+      return reply.status(204).send();
+    } catch (err) {
+      return handleIntegrationError(err, reply);
+    }
+  });
 
   // GET /integrations/:provider/status — detailed status for a single integration
   fastify.get(

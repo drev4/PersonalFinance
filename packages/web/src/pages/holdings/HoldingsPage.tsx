@@ -1,22 +1,25 @@
+import { Coins, Plus, TrendingUp, Upload } from 'lucide-react';
 import { useState } from 'react';
 import type React from 'react';
-import { Plus, Upload, TrendingUp } from 'lucide-react';
-import { Button } from '../../components/ui/button';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
-import { EmptyState } from '../../components/ui/empty-state';
-import { Skeleton } from '../../components/ui/skeleton';
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-} from '../../components/ui/table';
-import PortfolioSummaryCard from '../../components/holdings/PortfolioSummaryCard';
-import HoldingRow from '../../components/holdings/HoldingRow';
 import HoldingFormDialog from '../../components/holdings/HoldingFormDialog';
+import HoldingRow from '../../components/holdings/HoldingRow';
 import ImportCsvDialog from '../../components/holdings/ImportCsvDialog';
-import { useHoldings, usePortfolioSummary, useDeleteHolding } from '../../hooks/useHoldings';
+import PortfolioSummaryCard from '../../components/holdings/PortfolioSummaryCard';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { EmptyState } from '../../components/ui/empty-state';
+import { Input } from '../../components/ui/input';
+import { Skeleton } from '../../components/ui/skeleton';
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '../../components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import {
+  useAddDividend,
+  useDeleteHolding,
+  useHoldings,
+  usePortfolioSummary,
+} from '../../hooks/useHoldings';
+import { formatCurrency } from '../../lib/formatters';
 import type { HoldingWithValue, AssetType } from '../../types/api';
 
 // ─── Tab configuration ────────────────────────────────────────────────────────
@@ -75,18 +78,30 @@ function TableSkeletonRows(): React.ReactElement {
               </div>
             </div>
           </td>
-          <td className="px-4 py-3"><Skeleton className="h-5 w-14 rounded-full" /></td>
-          <td className="px-4 py-3"><Skeleton className="h-4 w-12" /></td>
-          <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
-          <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
+          <td className="px-4 py-3">
+            <Skeleton className="h-5 w-14 rounded-full" />
+          </td>
+          <td className="px-4 py-3">
+            <Skeleton className="h-4 w-12" />
+          </td>
+          <td className="px-4 py-3">
+            <Skeleton className="h-4 w-20" />
+          </td>
+          <td className="px-4 py-3">
+            <Skeleton className="h-4 w-20" />
+          </td>
           <td className="px-4 py-3">
             <div className="space-y-0.5">
               <Skeleton className="h-4 w-16" />
               <Skeleton className="h-3 w-12" />
             </div>
           </td>
-          <td className="px-4 py-3"><Skeleton className="h-4 w-10" /></td>
-          <td className="px-4 py-3"><Skeleton className="h-7 w-7 rounded" /></td>
+          <td className="px-4 py-3">
+            <Skeleton className="h-4 w-10" />
+          </td>
+          <td className="px-4 py-3">
+            <Skeleton className="h-7 w-7 rounded" />
+          </td>
         </TableRow>
       ))}
     </>
@@ -112,7 +127,7 @@ function HoldingsTable({
   onDelete,
   onAdd,
 }: HoldingsTableProps): React.ReactElement {
-  const emptyMsg = EMPTY_STATE_MESSAGES[activeTab] ?? EMPTY_STATE_MESSAGES.all;
+  const emptyMsg = EMPTY_STATE_MESSAGES[activeTab] ?? EMPTY_STATE_MESSAGES.all!;
 
   if (!isLoading && holdings.length === 0) {
     return (
@@ -148,12 +163,7 @@ function HoldingsTable({
             <TableSkeletonRows />
           ) : (
             holdings.map((holding) => (
-              <HoldingRow
-                key={holding._id}
-                holding={holding}
-                onEdit={onEdit}
-                onDelete={onDelete}
-              />
+              <HoldingRow key={holding._id} holding={holding} onEdit={onEdit} onDelete={onDelete} />
             ))
           )}
         </TableBody>
@@ -202,11 +212,171 @@ function DeleteConfirmBanner({
   );
 }
 
+// ─── Add income dialog ────────────────────────────────────────────────────────
+
+interface AddIncomeDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  holdings: HoldingWithValue[];
+}
+
+function AddIncomeDialog({
+  open,
+  onOpenChange,
+  holdings,
+}: AddIncomeDialogProps): React.ReactElement {
+  const addDividend = useAddDividend();
+  const [holdingId, setHoldingId] = useState('');
+  const [type, setType] = useState<'dividend' | 'staking'>('dividend');
+  const [amount, setAmount] = useState('');
+  const [currency, setCurrency] = useState('EUR');
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [notes, setNotes] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  function handleClose(): void {
+    onOpenChange(false);
+    setError(null);
+  }
+
+  async function handleSubmit(e: React.FormEvent): Promise<void> {
+    e.preventDefault();
+    setError(null);
+
+    const amountCents = Math.round(parseFloat(amount) * 100);
+    if (!holdingId || isNaN(amountCents) || amountCents <= 0 || !date) {
+      setError('Completa todos los campos obligatorios.');
+      return;
+    }
+
+    try {
+      await addDividend.mutateAsync({
+        holdingId,
+        data: {
+          type,
+          amount: amountCents,
+          currency: currency.toUpperCase(),
+          date,
+          notes: notes.trim() || undefined,
+        },
+      });
+      handleClose();
+      setAmount('');
+      setNotes('');
+    } catch {
+      setError('No se pudo guardar el ingreso. Intenta de nuevo.');
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Añadir ingreso</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 pt-1" noValidate>
+          {/* Holding */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">Posición *</label>
+            <select
+              value={holdingId}
+              onChange={(e) => setHoldingId(e.target.value)}
+              required
+              className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+            >
+              <option value="">Selecciona una posición</option>
+              {holdings.map((h) => (
+                <option key={h._id} value={h._id}>
+                  {h.symbol} — {h.currency}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Type */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">Tipo</label>
+            <div className="flex gap-3">
+              {(['dividend', 'staking'] as const).map((t) => (
+                <label key={t} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="incomeType"
+                    value={t}
+                    checked={type === t}
+                    onChange={() => setType(t)}
+                    className="accent-primary-600"
+                  />
+                  {t === 'dividend' ? 'Dividendo' : 'Staking'}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Amount + Currency */}
+          <div className="flex gap-3">
+            <div className="flex-1 space-y-1.5">
+              <label className="text-sm font-medium text-gray-700">Importe *</label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                required
+              />
+            </div>
+            <div className="w-24 space-y-1.5">
+              <label className="text-sm font-medium text-gray-700">Divisa</label>
+              <Input
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+                maxLength={3}
+                className="uppercase"
+              />
+            </div>
+          </div>
+
+          {/* Date */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">Fecha *</label>
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">Notas</label>
+            <Input
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Opcional"
+              maxLength={200}
+            />
+          </div>
+
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" onClick={handleClose}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={addDividend.isPending}>
+              {addDividend.isPending ? 'Guardando...' : 'Guardar'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function HoldingsPage(): React.ReactElement {
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [incomeDialogOpen, setIncomeDialogOpen] = useState(false);
   const [editingHolding, setEditingHolding] = useState<HoldingWithValue | null>(null);
   const [deletingHolding, setDeletingHolding] = useState<HoldingWithValue | null>(null);
   const [activeTab, setActiveTab] = useState('all');
@@ -234,12 +404,6 @@ export default function HoldingsPage(): React.ReactElement {
     await deleteMutation.mutateAsync(deletingHolding._id);
     setDeletingHolding(null);
   }
-
-  // Filter holdings by active tab
-  const filteredHoldings =
-    activeTab === 'all'
-      ? holdings
-      : holdings.filter((h) => h.assetType === activeTab);
 
   // Derive currency from first holding (fallback EUR)
   const currency = holdings[0]?.currency ?? 'EUR';
@@ -328,6 +492,42 @@ export default function HoldingsPage(): React.ReactElement {
             </TabsContent>
           ))}
         </Tabs>
+
+        {/* ─── Ingresos section ─────────────────────────────────────────── */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Coins className="h-5 w-5 text-amber-500" aria-hidden="true" />
+                <CardTitle className="text-base font-semibold text-gray-600">
+                  Ingresos este año
+                </CardTitle>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIncomeDialogOpen(true)}
+                disabled={holdings.length === 0}
+                className="gap-1.5"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Añadir ingreso
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {portfolioLoading ? (
+              <Skeleton className="h-8 w-48" />
+            ) : (
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-amber-600 tabular-nums">
+                  {formatCurrency(portfolioSummary?.totalDividendsYtd ?? 0, currency)}
+                </span>
+                <span className="text-sm text-gray-400">dividendos y staking acumulados</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* ─── Dialogs ──────────────────────────────────────────────────────── */}
@@ -337,9 +537,12 @@ export default function HoldingsPage(): React.ReactElement {
         editing={editingHolding}
       />
 
-      <ImportCsvDialog
-        open={importDialogOpen}
-        onOpenChange={setImportDialogOpen}
+      <ImportCsvDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} />
+
+      <AddIncomeDialog
+        open={incomeDialogOpen}
+        onOpenChange={setIncomeDialogOpen}
+        holdings={holdings}
       />
     </div>
   );

@@ -1,26 +1,35 @@
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
+
+import { BookMarked, Download, ExternalLink, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { BookMarked, Download, ExternalLink, Trash2 } from 'lucide-react';
-import { Button } from '../../components/ui/button';
+import { downloadSimulationPdf } from '../../api/simulators.api';
 import { Badge } from '../../components/ui/badge';
+import { Button } from '../../components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
 import { useSavedSimulations, useDeleteSimulation } from '../../hooks/useSimulators';
-import { downloadSimulationPdf } from '../../api/simulators.api';
 import type { SavedSimulation } from '../../types/api';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const TYPE_CONFIG: Record<
   string,
-  { label: string; variant: 'default' | 'success' | 'warning' | 'destructive' | 'outline'; route: string }
+  {
+    label: string;
+    variant: 'default' | 'success' | 'warning' | 'destructive' | 'outline';
+    route: string;
+  }
 > = {
   mortgage: { label: 'Hipoteca', variant: 'default', route: '/simulators/mortgage' },
   loan: { label: 'Prestamo', variant: 'warning', route: '/simulators/loan' },
   investment: { label: 'Inversion', variant: 'success', route: '/simulators/investment' },
-  'early-repayment': { label: 'Amortizacion', variant: 'outline', route: '/simulators/early-repayment' },
+  'early-repayment': {
+    label: 'Amortizacion',
+    variant: 'outline',
+    route: '/simulators/early-repayment',
+  },
   retirement: { label: 'Jubilacion', variant: 'destructive', route: '/simulators/retirement' },
 };
 

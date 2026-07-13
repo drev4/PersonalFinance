@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   register,
   login,
+  completeTwoFactorLogin,
   refreshTokens,
   logout,
   forgotPassword,
@@ -27,6 +28,12 @@ const RegisterBodySchema = z.object({
 const LoginBodySchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
+  totpCode: z.string().optional(),
+});
+
+const TwoFactorLoginBodySchema = z.object({
+  tempToken: z.string().min(1, 'Temp token is required'),
+  totpCode: z.string().length(6, 'Code must be 6 digits'),
 });
 
 const ForgotPasswordBodySchema = z.object({
@@ -68,10 +75,7 @@ function clearRefreshCookie(reply: FastifyReply): void {
 
 // ---- Error handling --------------------------------------------------------
 
-function handleAuthError(
-  err: unknown,
-  reply: FastifyReply,
-): FastifyReply {
+function handleAuthError(err: unknown, reply: FastifyReply): FastifyReply {
   if (err instanceof AuthError) {
     return reply.status(err.statusCode).send({
       error: { code: err.code, message: err.message },
@@ -128,6 +132,37 @@ export async function loginHandler(
 
   try {
     const result = await login(parsed.data);
+    if ('requiresTwoFactor' in result) {
+      return reply.status(200).send({
+        data: { requiresTwoFactor: true, tempToken: result.tempToken },
+      });
+    }
+    setRefreshCookie(reply, result.refreshToken);
+    return reply.status(200).send({
+      data: { user: result.user, accessToken: result.accessToken },
+    });
+  } catch (err) {
+    return handleAuthError(err, reply);
+  }
+}
+
+export async function twoFactorLoginHandler(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const parsed = TwoFactorLoginBodySchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid request body',
+        details: parsed.error.flatten(),
+      },
+    });
+  }
+
+  try {
+    const result = await completeTwoFactorLogin(parsed.data.tempToken, parsed.data.totpCode);
     setRefreshCookie(reply, result.refreshToken);
     return reply.status(200).send({
       data: { user: result.user, accessToken: result.accessToken },

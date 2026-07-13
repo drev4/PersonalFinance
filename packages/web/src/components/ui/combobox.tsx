@@ -1,5 +1,5 @@
-import * as React from 'react';
 import { Search, ChevronDown } from 'lucide-react';
+import * as React from 'react';
 import { cn } from '../../lib/utils';
 import { Skeleton } from './skeleton';
 
@@ -112,9 +112,7 @@ export function Combobox({
           !selectedOption && 'text-gray-400',
         )}
       >
-        <span className="truncate">
-          {selectedOption ? selectedOption.label : placeholder}
-        </span>
+        <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
         <ChevronDown
           className={cn(
             'ml-2 h-4 w-4 shrink-0 text-gray-400 transition-transform',
@@ -148,11 +146,7 @@ export function Combobox({
           </div>
 
           {/* Results */}
-          <ul
-            role="listbox"
-            className="overflow-y-auto"
-            aria-label="Opciones disponibles"
-          >
+          <ul role="listbox" className="overflow-y-auto" aria-label="Opciones disponibles">
             {/* Loading skeletons */}
             {isLoading && (
               <li className="space-y-2 p-3" aria-label="Cargando resultados">
@@ -171,9 +165,7 @@ export function Combobox({
 
             {/* No results */}
             {showEmpty && (
-              <li className="px-3 py-4 text-center text-xs text-gray-400">
-                {emptyMessage}
-              </li>
+              <li className="px-3 py-4 text-center text-xs text-gray-400">{emptyMessage}</li>
             )}
 
             {/* Options */}

@@ -1,9 +1,15 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertTriangle, Download, Save } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { AlertTriangle, Download, Save } from 'lucide-react';
+import { downloadSimulationPdf } from '../../api/simulators.api';
+import AmortizationTable from '../../components/simulators/AmortizationTable';
+import ResultsCard from '../../components/simulators/ResultsCard';
+import SaveSimulationDialog from '../../components/simulators/SaveSimulationDialog';
+import SimulatorLayout from '../../components/simulators/SimulatorLayout';
+import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import {
   Form,
@@ -14,13 +20,7 @@ import {
   FormMessage,
 } from '../../components/ui/form';
 import { Input } from '../../components/ui/input';
-import { Alert, AlertDescription } from '../../components/ui/alert';
-import SimulatorLayout from '../../components/simulators/SimulatorLayout';
-import ResultsCard from '../../components/simulators/ResultsCard';
-import AmortizationTable from '../../components/simulators/AmortizationTable';
-import SaveSimulationDialog from '../../components/simulators/SaveSimulationDialog';
 import { useCalculateLoan } from '../../hooks/useSimulators';
-import { downloadSimulationPdf } from '../../api/simulators.api';
 import type { LoanResult } from '../../types/api';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ function EmptyResults(): React.ReactElement {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white py-16 text-center shadow-sm">
       <p className="text-sm text-gray-400">
-        Rellena el formulario y pulsa "Calcular" para ver los resultados.
+        Rellena el formulario y pulsa &quot;Calcular&quot; para ver los resultados.
       </p>
     </div>
   );
@@ -91,8 +91,8 @@ function Results({ result, inputs }: ResultsProps): React.ReactElement {
         <Alert variant="destructive" className="flex items-start gap-2">
           <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
           <AlertDescription>
-            La TAE incluye comisiones adicionales significativas. El coste real del prestamo
-            es notablemente superior al TIN.
+            La TAE incluye comisiones adicionales significativas. El coste real del prestamo es
+            notablemente superior al TIN.
           </AlertDescription>
         </Alert>
       )}
@@ -157,8 +157,7 @@ export default function LoanPage(): React.ReactElement {
       principal: values.principal,
       annualRate: values.annualRate,
       months: values.months,
-      openingFee:
-        values.includeOpeningFee && values.openingFee ? values.openingFee : undefined,
+      openingFee: values.includeOpeningFee && values.openingFee ? values.openingFee : undefined,
     });
   }
 

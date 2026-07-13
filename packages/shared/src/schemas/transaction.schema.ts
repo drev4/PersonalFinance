@@ -33,11 +33,12 @@ export const TransactionSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   amount: z.number().positive('Amount must be positive'),
   currency: z.string().length(3, 'Currency code must be 3 characters'),
-  date: z.date(),
+  date: z.string(),
   tags: z.array(z.string()).default([]),
   notes: z.string().optional(),
   recurring: RecurringSchema.optional(),
   relatedTransactionId: z.string().optional(),
+  exchangeRate: z.number().positive().optional(),
   attachments: z
     .array(
       z.object({

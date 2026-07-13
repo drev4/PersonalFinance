@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import pino from 'pino';
+import { pino } from 'pino';
 import { takeSnapshotsForAllUsers } from '../modules/dashboard/dashboard.service.js';
 
 const logger = pino({ name: 'job.netWorthSnapshot' });

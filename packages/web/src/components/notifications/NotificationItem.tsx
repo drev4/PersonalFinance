@@ -1,4 +1,3 @@
-import type React from 'react';
 import {
   AlertTriangle,
   AlertCircle,
@@ -8,8 +7,9 @@ import {
   FileText,
   TrendingUp,
 } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import type React from 'react';
 import { formatDate } from '../../lib/formatters';
+import { cn } from '../../lib/utils';
 import type { AppNotification, NotificationType } from '../../types/api';
 
 interface NotificationIconProps {
@@ -98,10 +98,7 @@ export function NotificationItem({
 
       <div className="flex flex-shrink-0 flex-col items-end gap-1">
         {!notification.isRead && (
-          <span
-            className="inline-block h-2 w-2 rounded-full bg-blue-500"
-            aria-label="No leida"
-          />
+          <span className="inline-block h-2 w-2 rounded-full bg-blue-500" aria-label="No leida" />
         )}
         {showMarkReadButton && !notification.isRead && (
           <button

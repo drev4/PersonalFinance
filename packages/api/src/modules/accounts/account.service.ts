@@ -14,6 +14,7 @@ import {
   type NetWorthSummary,
 } from './account.repository.js';
 import { TransactionModel } from '../transactions/transaction.model.js';
+import { invalidateNetWorthCache } from '../dashboard/dashboard.service.js';
 
 export class AccountError extends Error {
   constructor(
@@ -29,7 +30,7 @@ export class AccountError extends Error {
 export async function getUserAccounts(userId: string): Promise<IAccount[]> {
   const accounts = await findByUser(userId);
 
-  // For investment and crypto accounts, we want to include the current total 
+  // For investment and crypto accounts, we want to include the current total
   // value of holdings in the balance shown to the user.
   try {
     const { HoldingModel } = await import('../holdings/holding.model.js');
@@ -37,7 +38,9 @@ export async function getUserAccounts(userId: string): Promise<IAccount[]> {
     // Fetch all holdings for these accounts
     const holdings = await HoldingModel.find({
       userId: new mongoose.Types.ObjectId(userId),
-    }).lean().exec();
+    })
+      .lean()
+      .exec();
 
     // Map holdings to account totals
     const holdingTotals = new Map<string, number>();
@@ -51,14 +54,14 @@ export async function getUserAccounts(userId: string): Promise<IAccount[]> {
     }
 
     // Enrich account objects (as plain objects to avoid Mongoose doc issues)
-    return accounts.map(acc => {
+    return accounts.map((acc) => {
       const accId = acc._id.toHexString();
       if ((acc.type === 'investment' || acc.type === 'crypto') && holdingTotals.has(accId)) {
         // Return a shallow copy of the doc with the enriched balance
         const doc = acc.toObject ? acc.toObject() : acc;
         return {
           ...doc,
-          currentBalance: doc.currentBalance + (holdingTotals.get(accId) ?? 0)
+          currentBalance: doc.currentBalance + (holdingTotals.get(accId) ?? 0),
         } as unknown as IAccount;
       }
       return acc;
@@ -82,7 +85,9 @@ export async function getAccountById(userId: string, accountId: string): Promise
     const holdings = await HoldingModel.find({
       userId: new mongoose.Types.ObjectId(userId),
       accountId: new mongoose.Types.ObjectId(accountId),
-    }).lean().exec();
+    })
+      .lean()
+      .exec();
 
     const holdingsTotal = holdings.reduce((sum, h) => {
       const qty = parseFloat(h.quantity);
@@ -100,10 +105,7 @@ export async function getAccountById(userId: string, accountId: string): Promise
   }
 }
 
-export async function createAccount(
-  userId: string,
-  dto: CreateAccountDTO,
-): Promise<IAccount> {
+export async function createAccount(userId: string, dto: CreateAccountDTO): Promise<IAccount> {
   return create({ ...dto, userId });
 }
 
@@ -120,6 +122,9 @@ export async function updateAccount(
   const updated = await update(accountId, userId, dto);
   if (updated === null) {
     throw new AccountError('ACCOUNT_NOT_FOUND', 'Account not found', 404);
+  }
+  if (dto.currentBalance !== undefined || dto.includedInNetWorth !== undefined) {
+    void invalidateNetWorthCache(userId);
   }
   return updated;
 }
@@ -168,13 +173,11 @@ export async function adjustBalance(
     await session.endSession();
   }
 
+  void invalidateNetWorthCache(userId);
   return { account: updatedAccount!, transaction: adjustmentTx! };
 }
 
-export async function archiveAccount(
-  userId: string,
-  accountId: string,
-): Promise<void> {
+export async function archiveAccount(userId: string, accountId: string): Promise<void> {
   const existing = await findById(accountId, userId);
   if (existing === null) {
     throw new AccountError('ACCOUNT_NOT_FOUND', 'Account not found', 404);
@@ -184,6 +187,7 @@ export async function archiveAccount(
   if (!archived) {
     throw new AccountError('ACCOUNT_NOT_FOUND', 'Account not found or already archived', 404);
   }
+  void invalidateNetWorthCache(userId);
 }
 
 export async function getNetWorth(userId: string): Promise<NetWorthSummary> {

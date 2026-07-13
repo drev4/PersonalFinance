@@ -1,5 +1,5 @@
 import { Queue, Worker, type Job } from 'bullmq';
-import pino from 'pino';
+import { pino } from 'pino';
 import { getRedisClient } from '../config/redis.js';
 import { IntegrationCredentialsModel } from '../modules/integrations/integrationCredentials.model.js';
 
@@ -65,10 +65,7 @@ export function startSyncWorker(): Worker<SyncJobData> {
   });
 
   worker.on('failed', (job: Job<SyncJobData> | undefined, err: Error) => {
-    logger.error(
-      { jobId: job?.id, userId: job?.data.userId, err: err.message },
-      'Sync job failed',
-    );
+    logger.error({ jobId: job?.id, userId: job?.data.userId, err: err.message }, 'Sync job failed');
   });
 
   logger.info('Sync worker started');
@@ -101,7 +98,7 @@ export async function schedulePeriodicBinanceSync(): Promise<void> {
     }
 
     for (let i = 0; i < credentials.length; i++) {
-      const userId = credentials[i].userId.toHexString();
+      const userId = credentials[i]!.userId.toHexString();
       const delay = i * 200; // 200 ms stagger between users
 
       await syncQueue.add(
@@ -111,10 +108,7 @@ export async function schedulePeriodicBinanceSync(): Promise<void> {
       );
     }
 
-    logger.info(
-      { totalUsers: credentials.length },
-      'Periodic Binance sync jobs enqueued',
-    );
+    logger.info({ totalUsers: credentials.length }, 'Periodic Binance sync jobs enqueued');
   } catch (err) {
     logger.error({ err }, 'Failed to schedule periodic Binance sync');
   }

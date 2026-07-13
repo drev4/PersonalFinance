@@ -1,9 +1,8 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Download, Save, TrendingDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Download, Save, TrendingDown } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -14,6 +13,10 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { z } from 'zod';
+import { downloadSimulationPdf } from '../../api/simulators.api';
+import SaveSimulationDialog from '../../components/simulators/SaveSimulationDialog';
+import SimulatorLayout from '../../components/simulators/SimulatorLayout';
 import { Button } from '../../components/ui/button';
 import {
   Form,
@@ -24,10 +27,7 @@ import {
   FormMessage,
 } from '../../components/ui/form';
 import { Input } from '../../components/ui/input';
-import SimulatorLayout from '../../components/simulators/SimulatorLayout';
-import SaveSimulationDialog from '../../components/simulators/SaveSimulationDialog';
 import { useCalculateEarlyRepayment } from '../../hooks/useSimulators';
-import { downloadSimulationPdf } from '../../api/simulators.api';
 import type { EarlyRepaymentResult } from '../../types/api';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
@@ -45,9 +45,7 @@ type FormValues = z.infer<typeof schema>;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatEur(cents: number): string {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(
-    cents / 100,
-  );
+  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(cents / 100);
 }
 
 function formatEurAxis(value: number): string {
@@ -61,7 +59,7 @@ function EmptyResults(): React.ReactElement {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white py-16 text-center shadow-sm">
       <p className="text-sm text-gray-400">
-        Rellena el formulario y pulsa "Calcular" para ver el ahorro potencial.
+        Rellena el formulario y pulsa &quot;Calcular&quot; para ver el ahorro potencial.
       </p>
     </div>
   );
@@ -113,21 +111,20 @@ function Results({ result, inputs }: ResultsProps): React.ReactElement {
       {/* Savings highlight box */}
       <div className="rounded-xl border border-green-200 bg-green-50 p-5">
         <div className="flex items-start gap-3">
-          <TrendingDown className="mt-0.5 h-6 w-6 flex-shrink-0 text-green-600" aria-hidden="true" />
+          <TrendingDown
+            className="mt-0.5 h-6 w-6 flex-shrink-0 text-green-600"
+            aria-hidden="true"
+          />
           <div>
             <p className="text-sm font-medium text-green-800">Con este pago extra ahorras:</p>
             <div className="mt-2 flex flex-wrap gap-6">
               <div>
-                <p className="text-3xl font-bold text-green-700">
-                  {formatEur(savings.interest)}
-                </p>
+                <p className="text-3xl font-bold text-green-700">{formatEur(savings.interest)}</p>
                 <p className="text-xs text-green-600">en intereses</p>
               </div>
               {savings.months > 0 && (
                 <div>
-                  <p className="text-3xl font-bold text-green-700">
-                    {savings.months} meses
-                  </p>
+                  <p className="text-3xl font-bold text-green-700">{savings.months} meses</p>
                   <p className="text-xs text-green-600">menos de prestamo</p>
                 </div>
               )}
@@ -187,9 +184,7 @@ function Results({ result, inputs }: ResultsProps): React.ReactElement {
             </div>
             <div>
               <p className="text-xs text-green-700">Total a pagar</p>
-              <p className="text-lg font-bold text-green-800">
-                {formatEur(newSched.totalPayment)}
-              </p>
+              <p className="text-lg font-bold text-green-800">{formatEur(newSched.totalPayment)}</p>
             </div>
           </div>
         </div>
@@ -197,9 +192,7 @@ function Results({ result, inputs }: ResultsProps): React.ReactElement {
 
       {/* Bar chart comparison */}
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-        <h3 className="mb-3 text-sm font-semibold text-gray-900">
-          Comparativa visual
-        </h3>
+        <h3 className="mb-3 text-sm font-semibold text-gray-900">Comparativa visual</h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
@@ -212,10 +205,7 @@ function Results({ result, inputs }: ResultsProps): React.ReactElement {
               width={60}
             />
             <Tooltip
-              formatter={(value: number, name: string) => [
-                formatEur(value * 100),
-                name,
-              ]}
+              formatter={(value: number, name: string) => [formatEur(value * 100), name]}
               contentStyle={{ fontSize: 12, borderRadius: 8 }}
             />
             <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />

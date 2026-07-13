@@ -1,11 +1,11 @@
-import type React from 'react';
 import { RefreshCw, Unplug, Plug } from 'lucide-react';
-import { Card, CardContent } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
-import { Alert, AlertDescription } from '../ui/alert';
+import type React from 'react';
 import { formatDate } from '../../lib/formatters';
 import type { IntegrationStatus, SyncStatus } from '../../types/api';
+import { Alert, AlertDescription } from '../ui/alert';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Card, CardContent } from '../ui/card';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

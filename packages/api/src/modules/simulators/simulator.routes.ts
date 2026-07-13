@@ -14,10 +14,7 @@ import type { SimulationType } from './simulation.model.js';
 
 // ---- Error handler ----------------------------------------------------------
 
-function handleSimulatorError(
-  error: unknown,
-  reply: FastifyReply,
-): void | FastifyReply {
+function handleSimulatorError(error: unknown, reply: FastifyReply): void | FastifyReply {
   if (error instanceof SimulatorError) {
     return reply.status(error.statusCode).send({
       error: { code: error.code, message: error.message },
@@ -31,20 +28,16 @@ function handleSimulatorError(
 const SaveSimulationBodySchema = z.object({
   type: z.enum(['mortgage', 'loan', 'investment', 'early_repayment', 'retirement']),
   name: z.string().min(1, 'Name is required').max(150),
-  inputs: z.record(z.unknown()),
+  inputs: z.record(z.string(), z.unknown()),
 });
 
 const SimulationTypeQuerySchema = z.object({
-  type: z
-    .enum(['mortgage', 'loan', 'investment', 'early_repayment', 'retirement'])
-    .optional(),
+  type: z.enum(['mortgage', 'loan', 'investment', 'early_repayment', 'retirement']).optional(),
 });
 
 // ---- Route registration -----------------------------------------------------
 
-export async function registerSimulatorRoutes(
-  fastify: FastifyInstance,
-): Promise<void> {
+export async function registerSimulatorRoutes(fastify: FastifyInstance): Promise<void> {
   // --------------------------------------------------------------------------
   // Real-time calculators — no auth, rate limited per IP (20 req/min)
   // --------------------------------------------------------------------------
@@ -59,74 +52,54 @@ export async function registerSimulatorRoutes(
   };
 
   // POST /simulators/mortgage
-  fastify.post(
-    '/simulators/mortgage',
-    rateLimitConfig,
-    async (request, reply) => {
-      try {
-        const result = calculate('mortgage', request.body);
-        return reply.send({ data: result });
-      } catch (err) {
-        return handleSimulatorError(err, reply);
-      }
-    },
-  );
+  fastify.post('/simulators/mortgage', rateLimitConfig, async (request, reply) => {
+    try {
+      const result = calculate('mortgage', request.body);
+      return reply.send({ data: result });
+    } catch (err) {
+      return handleSimulatorError(err, reply);
+    }
+  });
 
   // POST /simulators/loan
-  fastify.post(
-    '/simulators/loan',
-    rateLimitConfig,
-    async (request, reply) => {
-      try {
-        const result = calculate('loan', request.body);
-        return reply.send({ data: result });
-      } catch (err) {
-        return handleSimulatorError(err, reply);
-      }
-    },
-  );
+  fastify.post('/simulators/loan', rateLimitConfig, async (request, reply) => {
+    try {
+      const result = calculate('loan', request.body);
+      return reply.send({ data: result });
+    } catch (err) {
+      return handleSimulatorError(err, reply);
+    }
+  });
 
   // POST /simulators/investment
-  fastify.post(
-    '/simulators/investment',
-    rateLimitConfig,
-    async (request, reply) => {
-      try {
-        const result = calculate('investment', request.body);
-        return reply.send({ data: result });
-      } catch (err) {
-        return handleSimulatorError(err, reply);
-      }
-    },
-  );
+  fastify.post('/simulators/investment', rateLimitConfig, async (request, reply) => {
+    try {
+      const result = calculate('investment', request.body);
+      return reply.send({ data: result });
+    } catch (err) {
+      return handleSimulatorError(err, reply);
+    }
+  });
 
   // POST /simulators/early-repayment
-  fastify.post(
-    '/simulators/early-repayment',
-    rateLimitConfig,
-    async (request, reply) => {
-      try {
-        const result = calculate('early_repayment', request.body);
-        return reply.send({ data: result });
-      } catch (err) {
-        return handleSimulatorError(err, reply);
-      }
-    },
-  );
+  fastify.post('/simulators/early-repayment', rateLimitConfig, async (request, reply) => {
+    try {
+      const result = calculate('early_repayment', request.body);
+      return reply.send({ data: result });
+    } catch (err) {
+      return handleSimulatorError(err, reply);
+    }
+  });
 
   // POST /simulators/retirement
-  fastify.post(
-    '/simulators/retirement',
-    rateLimitConfig,
-    async (request, reply) => {
-      try {
-        const result = calculate('retirement', request.body);
-        return reply.send({ data: result });
-      } catch (err) {
-        return handleSimulatorError(err, reply);
-      }
-    },
-  );
+  fastify.post('/simulators/retirement', rateLimitConfig, async (request, reply) => {
+    try {
+      const result = calculate('retirement', request.body);
+      return reply.send({ data: result });
+    } catch (err) {
+      return handleSimulatorError(err, reply);
+    }
+  });
 
   // --------------------------------------------------------------------------
   // Saved simulations — require auth
@@ -145,26 +118,22 @@ export async function registerSimulatorRoutes(
   fastify.get('/simulators/saved', { preHandler: requireAuth }, listHandler);
 
   // POST /simulations
-  fastify.post(
-    '/simulations',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const body = SaveSimulationBodySchema.parse(request.body);
+  fastify.post('/simulations', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const body = SaveSimulationBodySchema.parse(request.body);
 
-      try {
-        const simulation = await saveSimulation(
-          userId,
-          body.type as SimulationType,
-          body.name,
-          body.inputs,
-        );
-        return reply.status(201).send({ data: simulation });
-      } catch (err) {
-        return handleSimulatorError(err, reply);
-      }
-    },
-  );
+    try {
+      const simulation = await saveSimulation(
+        userId,
+        body.type as SimulationType,
+        body.name,
+        body.inputs,
+      );
+      return reply.status(201).send({ data: simulation });
+    } catch (err) {
+      return handleSimulatorError(err, reply);
+    }
+  });
 
   // GET /simulations/:id
   fastify.get(

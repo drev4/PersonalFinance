@@ -1,9 +1,9 @@
+import { Coins, TrendingUp, Users, BarChart3 } from 'lucide-react';
 import { useState } from 'react';
 import type React from 'react';
-import { Coins, TrendingUp, Users, BarChart3 } from 'lucide-react';
-import IntegrationCard from '../../components/integrations/IntegrationCard';
 import BinanceConnectDialog from '../../components/integrations/BinanceConnectDialog';
 import DisconnectConfirmDialog from '../../components/integrations/DisconnectConfirmDialog';
+import IntegrationCard from '../../components/integrations/IntegrationCard';
 import {
   useIntegrations,
   useTriggerSync,
@@ -123,9 +123,7 @@ export default function IntegrationsPage(): React.ReactElement {
               icon={icon}
               comingSoon={comingSoon}
               status={provider ? getStatus(provider) : undefined}
-              onConnect={
-                provider === 'binance' ? () => setBinanceDialogOpen(true) : undefined
-              }
+              onConnect={provider === 'binance' ? () => setBinanceDialogOpen(true) : undefined}
               onSync={provider ? () => handleSync(provider) : undefined}
               onDisconnect={provider ? () => setDisconnectProvider(provider) : undefined}
               isSyncPending={
@@ -142,10 +140,7 @@ export default function IntegrationsPage(): React.ReactElement {
       )}
 
       {/* Binance connect dialog */}
-      <BinanceConnectDialog
-        open={binanceDialogOpen}
-        onOpenChange={setBinanceDialogOpen}
-      />
+      <BinanceConnectDialog open={binanceDialogOpen} onOpenChange={setBinanceDialogOpen} />
 
       {/* Disconnect confirm dialog */}
       {disconnectProvider && (

@@ -48,13 +48,15 @@ beforeEach(async () => {
 
 // ---- Helpers ----------------------------------------------------------------
 
-async function makeGoal(overrides: {
-  name?: string;
-  targetAmount?: number;
-  currentAmount?: number;
-  deadline?: Date;
-  color?: string;
-} = {}) {
+async function makeGoal(
+  overrides: {
+    name?: string;
+    targetAmount?: number;
+    currentAmount?: number;
+    deadline?: Date;
+    color?: string;
+  } = {},
+) {
   return createGoal(FAKE_USER_ID, {
     userId: FAKE_USER_ID,
     name: overrides.name ?? 'Emergency Fund',
@@ -118,7 +120,7 @@ describe('getUserGoals()', () => {
 
     const goals = await getUserGoals(FAKE_USER_ID);
     expect(goals).toHaveLength(1);
-    expect(goals[0].isCompleted).toBe(true);
+    expect(goals[0]!.isCompleted).toBe(true);
   });
 
   it('excludes goals completed more than 30 days ago', async () => {
@@ -126,10 +128,12 @@ describe('getUserGoals()', () => {
     const oldDate = new Date();
     oldDate.setDate(oldDate.getDate() - 31);
 
-    await GoalModel.findByIdAndUpdate(goal._id, {
-      isCompleted: true,
-      updatedAt: oldDate,
-    }).exec();
+    // Mongoose's `timestamps: true` always overwrites `updatedAt` on
+    // findByIdAndUpdate, so the native driver is used to force an old date.
+    await GoalModel.collection.updateOne(
+      { _id: goal._id },
+      { $set: { isCompleted: true, updatedAt: oldDate } },
+    );
 
     const goals = await getUserGoals(FAKE_USER_ID);
     // The goal was completed > 30 days ago so should not appear
@@ -219,9 +223,7 @@ describe('updateGoal() — auto-completion', () => {
 
   it('throws GOAL_NOT_FOUND for a non-existent goal', async () => {
     const fakeId = new mongoose.Types.ObjectId().toHexString();
-    const error = await updateGoal(FAKE_USER_ID, fakeId, { name: 'X' }).catch(
-      (e: unknown) => e,
-    );
+    const error = await updateGoal(FAKE_USER_ID, fakeId, { name: 'X' }).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(GoalError);
     expect((error as GoalError).code).toBe('GOAL_NOT_FOUND');
   });
@@ -253,9 +255,7 @@ describe('deleteGoal()', () => {
     const goal = await makeGoal();
     await deleteGoal(FAKE_USER_ID, goal._id.toHexString());
 
-    const error = await getGoal(FAKE_USER_ID, goal._id.toHexString()).catch(
-      (e: unknown) => e,
-    );
+    const error = await getGoal(FAKE_USER_ID, goal._id.toHexString()).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(GoalError);
     expect((error as GoalError).code).toBe('GOAL_NOT_FOUND');
   });

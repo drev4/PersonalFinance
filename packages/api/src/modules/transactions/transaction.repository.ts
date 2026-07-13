@@ -34,6 +34,7 @@ export interface CreateTransactionDTO {
   categoryId?: string;
   tags?: string[];
   transferToAccountId?: string;
+  exchangeRate?: number;
   attachments?: string[];
   source?: TransactionSource;
   externalId?: string;
@@ -116,10 +117,7 @@ export async function findMany(
   return { data, total };
 }
 
-export async function findById(
-  id: string,
-  userId: string,
-): Promise<ITransaction | null> {
+export async function findById(id: string, userId: string): Promise<ITransaction | null> {
   return TransactionModel.findOne({
     _id: new mongoose.Types.ObjectId(id),
     userId: new mongoose.Types.ObjectId(userId),
@@ -141,9 +139,7 @@ export async function create(
     date: data.date,
     description: data.description,
     categoryId:
-      data.categoryId !== undefined
-        ? new mongoose.Types.ObjectId(data.categoryId)
-        : undefined,
+      data.categoryId !== undefined ? new mongoose.Types.ObjectId(data.categoryId) : undefined,
     tags: data.tags ?? [],
     transferToAccountId:
       data.transferToAccountId !== undefined
@@ -156,9 +152,7 @@ export async function create(
   return tx.save({ session: session ?? undefined } as any);
 }
 
-export async function createMany(
-  data: CreateTransactionDTO[],
-): Promise<ITransaction[]> {
+export async function createMany(data: CreateTransactionDTO[]): Promise<ITransaction[]> {
   const docs = data.map((d) => ({
     userId: new mongoose.Types.ObjectId(d.userId),
     accountId: new mongoose.Types.ObjectId(d.accountId),
@@ -167,10 +161,7 @@ export async function createMany(
     currency: d.currency,
     date: d.date,
     description: d.description,
-    categoryId:
-      d.categoryId !== undefined
-        ? new mongoose.Types.ObjectId(d.categoryId)
-        : undefined,
+    categoryId: d.categoryId !== undefined ? new mongoose.Types.ObjectId(d.categoryId) : undefined,
     tags: d.tags ?? [],
     transferToAccountId:
       d.transferToAccountId !== undefined
@@ -210,10 +201,7 @@ export async function update(
   ).exec();
 }
 
-export async function hardDelete(
-  id: string,
-  userId: string,
-): Promise<boolean> {
+export async function hardDelete(id: string, userId: string): Promise<boolean> {
   const result = await TransactionModel.findOneAndDelete({
     _id: new mongoose.Types.ObjectId(id),
     userId: new mongoose.Types.ObjectId(userId),
@@ -253,6 +241,56 @@ export async function getSpendingByCategory(
   return TransactionModel.aggregate<CategorySpending>(pipeline).exec();
 }
 
+export interface CreateRecurringTemplateDTO {
+  userId: string;
+  accountId: string;
+  type: TransactionType;
+  amount: number;
+  currency: string;
+  description: string;
+  categoryId?: string;
+  tags?: string[];
+  frequency: RecurringFrequency;
+  interval: number;
+  nextDate: Date;
+  endDate?: Date;
+}
+
+export async function createRecurringTemplate(
+  data: CreateRecurringTemplateDTO,
+): Promise<ITransaction> {
+  const tx = new TransactionModel({
+    userId: new mongoose.Types.ObjectId(data.userId),
+    accountId: new mongoose.Types.ObjectId(data.accountId),
+    type: data.type,
+    amount: data.amount,
+    currency: data.currency,
+    date: data.nextDate,
+    description: data.description,
+    categoryId:
+      data.categoryId !== undefined ? new mongoose.Types.ObjectId(data.categoryId) : undefined,
+    tags: data.tags ?? [],
+    source: 'manual',
+    recurring: {
+      frequency: data.frequency,
+      interval: data.interval,
+      nextDate: data.nextDate,
+      endDate: data.endDate,
+    },
+  });
+  return tx.save();
+}
+
+export async function findDistinctTags(userId: string): Promise<string[]> {
+  const result = await TransactionModel.distinct('tags', {
+    userId: new mongoose.Types.ObjectId(userId),
+    tags: { $exists: true, $ne: [] },
+  });
+  return (result as unknown[])
+    .filter((t): t is string => typeof t === 'string' && t.length > 0)
+    .sort();
+}
+
 export async function findRecurring(userId: string): Promise<ITransaction[]> {
   return TransactionModel.find({
     userId: new mongoose.Types.ObjectId(userId),
@@ -263,10 +301,7 @@ export async function findRecurring(userId: string): Promise<ITransaction[]> {
     .exec();
 }
 
-export async function removeRecurring(
-  id: string,
-  userId: string,
-): Promise<boolean> {
+export async function removeRecurring(id: string, userId: string): Promise<boolean> {
   const result = await TransactionModel.findOneAndUpdate(
     {
       _id: new mongoose.Types.ObjectId(id),
@@ -306,10 +341,7 @@ export async function updateRecurring(
   ).exec();
 }
 
-export async function getCashflow(
-  userId: string,
-  months: number,
-): Promise<CashflowData[]> {
+export async function getCashflow(userId: string, months: number): Promise<CashflowData[]> {
   const from = new Date();
   from.setMonth(from.getMonth() - months + 1);
   from.setDate(1);

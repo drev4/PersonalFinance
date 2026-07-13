@@ -4,6 +4,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
+    // Replica-set-enabled mongodb-memory-server instances take longer to
+    // start/stop than the 10s default, especially in beforeAll/afterAll.
+    hookTimeout: 60000,
     // Ensure CJS packages are properly transformed
     server: {
       deps: {

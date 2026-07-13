@@ -1,4 +1,5 @@
 import type React from 'react';
+import { Button } from '../ui/button';
 import {
   Dialog,
   DialogContent,
@@ -8,7 +9,6 @@ import {
   DialogFooter,
   DialogClose,
 } from '../ui/dialog';
-import { Button } from '../ui/button';
 
 interface DeleteConfirmDialogProps {
   open: boolean;
@@ -41,12 +41,7 @@ export function DeleteConfirmDialog({
               Cancelar
             </Button>
           </DialogClose>
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={onConfirm}
-            disabled={isLoading}
-          >
+          <Button type="button" variant="destructive" onClick={onConfirm} disabled={isLoading}>
             {isLoading ? (
               <span className="flex items-center gap-2">
                 <span

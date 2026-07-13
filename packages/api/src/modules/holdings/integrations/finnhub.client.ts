@@ -1,12 +1,12 @@
 import axios, { type AxiosInstance } from 'axios';
-import pino from 'pino';
+import { pino } from 'pino';
 import env from '../../../config/env.js';
 import { getRedisClient } from '../../../config/redis.js';
 
 const logger = pino({ name: 'finnhub.client' });
 
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
-const QUOTE_CACHE_TTL_SECONDS = 15 * 60;       // 15 minutes
+const QUOTE_CACHE_TTL_SECONDS = 15 * 60; // 15 minutes
 const EXCHANGES_CACHE_TTL_SECONDS = 24 * 60 * 60; // 24 hours
 
 // Rate limit: max 60 calls/min. We track with a Redis sliding window counter.
@@ -15,12 +15,12 @@ const RATE_LIMIT_MAX_CALLS = 55; // leave a buffer below the 60 hard limit
 const RATE_LIMIT_KEY = 'finnhub:rate_limit:calls';
 
 export interface FinnhubQuote {
-  c: number;  // current price
-  h: number;  // high
-  l: number;  // low
-  o: number;  // open
+  c: number; // current price
+  h: number; // high
+  l: number; // low
+  o: number; // open
   pc: number; // previous close
-  t: number;  // timestamp (unix)
+  t: number; // timestamp (unix)
 }
 
 export interface FinnhubSearchResult {
@@ -42,7 +42,7 @@ function createFinnhubAxios(): AxiosInstance {
     baseURL: FINNHUB_BASE_URL,
     timeout: 10_000,
     params: { token: env.FINNHUB_API_KEY ?? '' },
-    headers: { 'Accept': 'application/json' },
+    headers: { Accept: 'application/json' },
   });
 }
 

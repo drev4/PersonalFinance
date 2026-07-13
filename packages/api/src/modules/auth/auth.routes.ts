@@ -1,8 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
+import env from '../../config/env.js';
 import {
   registerHandler,
   loginHandler,
+  twoFactorLoginHandler,
   refreshHandler,
   logoutHandler,
   forgotPasswordHandler,
@@ -11,12 +13,12 @@ import {
 } from './auth.controller.js';
 
 export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void> {
-  // Scoped sub-router with a stricter rate limit: 10 requests per 15 minutes
+  // Scoped sub-router with a stricter rate limit
   await fastify.register(async (authScope: FastifyInstance) => {
     await authScope.register(rateLimit, {
-      max: 10,
+      max: env.NODE_ENV === 'development' ? 100 : 10,
       timeWindow: '15 minutes',
-      skip(request) {
+      allowList(request) {
         return request.method === 'OPTIONS';
       },
       keyGenerator(request) {
@@ -34,6 +36,7 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
 
     authScope.post('/auth/register', registerHandler);
     authScope.post('/auth/login', loginHandler);
+    authScope.post('/auth/2fa-login', twoFactorLoginHandler);
     authScope.post('/auth/refresh', refreshHandler);
     authScope.post('/auth/logout', logoutHandler);
     authScope.post('/auth/forgot-password', forgotPasswordHandler);

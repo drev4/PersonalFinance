@@ -59,8 +59,8 @@ describe('calculateRetirement() — reference case', () => {
     // To accumulate ~500k€ over 30 years at 6%, PMT should be around 500-1000€/month
     // (200k€/month income for 20 years requires a large nest egg due to inflation)
     // Let's verify it's between 50€ and 5000€ per month
-    expect(result.monthlySavingsNeeded).toBeGreaterThan(5_000);   // > 50 €
-    expect(result.monthlySavingsNeeded).toBeLessThan(500_000);    // < 5000 €
+    expect(result.monthlySavingsNeeded).toBeGreaterThan(5_000); // > 50 €
+    expect(result.monthlySavingsNeeded).toBeLessThan(500_000); // < 5000 €
   });
 });
 
@@ -69,8 +69,8 @@ describe('calculateRetirement() — savings already sufficient', () => {
     const result = calculateRetirement({
       currentAge: 60,
       retirementAge: 65,
-      targetMonthlyIncome: 50_000,  // 500€/month
-      currentSavings: 50_000_000,   // 500.000€ — more than enough
+      targetMonthlyIncome: 50_000, // 500€/month
+      currentSavings: 50_000_000, // 500.000€ — more than enough
       expectedReturn: 4,
       inflationRate: 2,
       lifeExpectancy: 85,
@@ -119,7 +119,9 @@ describe('calculateRetirement() — annual projection', () => {
   it('total grows each year', () => {
     const result = calculateRetirement(INPUTS);
     for (let i = 1; i < result.annualProjection.length; i++) {
-      expect(result.annualProjection[i].total).toBeGreaterThan(result.annualProjection[i - 1].total);
+      expect(result.annualProjection[i]!.total).toBeGreaterThan(
+        result.annualProjection[i - 1]!.total,
+      );
     }
   });
 
@@ -133,7 +135,7 @@ describe('calculateRetirement() — annual projection', () => {
   it('final year total ≈ requiredNestEgg (within 2%) when starting from 0', () => {
     const zeroSavings = { ...INPUTS, currentSavings: 0 };
     const result = calculateRetirement(zeroSavings);
-    const lastYear = result.annualProjection[result.annualProjection.length - 1];
+    const lastYear = result.annualProjection[result.annualProjection.length - 1]!;
     expect(withinPct(lastYear.total, result.requiredNestEgg, 3)).toBe(true);
   });
 });

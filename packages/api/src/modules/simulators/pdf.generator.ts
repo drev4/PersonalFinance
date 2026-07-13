@@ -38,9 +38,7 @@ const SUBTITLE_FONT_SIZE = 13;
 // ---- Shared page layout helpers ---------------------------------------------
 
 function addHeader(doc: PDFKit.PDFDocument, title: string): void {
-  doc
-    .rect(0, 0, PAGE_WIDTH, 60)
-    .fill(PRIMARY_COLOR);
+  doc.rect(0, 0, PAGE_WIDTH, 60).fill(PRIMARY_COLOR);
 
   doc
     .fillColor('#ffffff')
@@ -100,10 +98,7 @@ function keyValue(doc: PDFKit.PDFDocument, label: string, value: string, x?: num
 
 // ---- Amortization table -----------------------------------------------------
 
-function amortizationTable(
-  doc: PDFKit.PDFDocument,
-  rows: AmortizationRow[],
-): void {
+function amortizationTable(doc: PDFKit.PDFDocument, rows: AmortizationRow[]): void {
   const headers = ['Mes', 'Cuota', 'Interés', 'Capital', 'Pendiente'];
   const colWidths = [40, 90, 90, 90, 100];
   const colX: number[] = [];
@@ -113,11 +108,7 @@ function amortizationTable(
     cx += w;
   }
 
-  function drawTableRow(
-    items: string[],
-    y: number,
-    isHeader: boolean,
-  ): void {
+  function drawTableRow(items: string[], y: number, isHeader: boolean): void {
     if (isHeader) {
       doc.rect(MARGIN, y - 3, CONTENT_WIDTH, ROW_HEIGHT).fill(PRIMARY_COLOR);
       doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(TABLE_FONT_SIZE);
@@ -126,7 +117,10 @@ function amortizationTable(
     }
 
     for (let i = 0; i < items.length; i++) {
-      doc.text(items[i], colX[i] + 3, y, { width: colWidths[i] - 6, align: i === 0 ? 'center' : 'right' });
+      doc.text(items[i]!, colX[i]! + 3, y, {
+        width: colWidths[i]! - 6,
+        align: i === 0 ? 'center' : 'right',
+      });
     }
     if (!isHeader) doc.fillColor('#000000');
   }
@@ -137,7 +131,7 @@ function amortizationTable(
   y += ROW_HEIGHT;
 
   for (let idx = 0; idx < rows.length; idx++) {
-    const row = rows[idx];
+    const row = rows[idx]!;
     // Shade alternating rows
     if (idx % 2 === 1) {
       doc.rect(MARGIN, y - 3, CONTENT_WIDTH, ROW_HEIGHT).fill(LIGHT_GRAY);
@@ -193,7 +187,10 @@ function projectionTable(doc: PDFKit.PDFDocument, rows: YearlyProjection[]): voi
       doc.fillColor('#000000').font('Helvetica').fontSize(TABLE_FONT_SIZE);
     }
     for (let i = 0; i < items.length; i++) {
-      doc.text(items[i], colX[i] + 3, y, { width: colWidths[i] - 6, align: i === 0 ? 'center' : 'right' });
+      doc.text(items[i]!, colX[i]! + 3, y, {
+        width: colWidths[i]! - 6,
+        align: i === 0 ? 'center' : 'right',
+      });
     }
     if (!isHeader) doc.fillColor('#000000');
   }
@@ -204,16 +201,11 @@ function projectionTable(doc: PDFKit.PDFDocument, rows: YearlyProjection[]): voi
   y += ROW_HEIGHT;
 
   for (let idx = 0; idx < rows.length; idx++) {
-    const row = rows[idx];
+    const row = rows[idx]!;
     if (idx % 2 === 1) {
       doc.rect(MARGIN, y - 3, CONTENT_WIDTH, ROW_HEIGHT).fill(LIGHT_GRAY);
     }
-    const cells = [
-      String(row.year),
-      euros(row.contributed),
-      euros(row.returns),
-      euros(row.total),
-    ];
+    const cells = [String(row.year), euros(row.contributed), euros(row.returns), euros(row.total)];
     if (hasReal) cells.push(row.realValue !== undefined ? euros(row.realValue) : '-');
 
     drawRow(cells, y, false);
@@ -235,10 +227,7 @@ function projectionTable(doc: PDFKit.PDFDocument, rows: YearlyProjection[]): voi
 
 // ---- Per-type generators ----------------------------------------------------
 
-function generateMortgagePdf(
-  doc: PDFKit.PDFDocument,
-  simulation: ISimulation,
-): void {
+function generateMortgagePdf(doc: PDFKit.PDFDocument, simulation: ISimulation): void {
   const results = simulation.results as unknown as MortgageResult;
   const inputs = simulation.inputs as Record<string, unknown>;
 
@@ -275,16 +264,13 @@ function generateMortgagePdf(
   const schedule = results.schedule;
   const displayRows: AmortizationRow[] = [
     ...schedule.slice(0, 24),
-    ...(schedule.length > 24 ? [schedule[schedule.length - 1]] : []),
+    ...(schedule.length > 24 ? [schedule[schedule.length - 1]!] : []),
   ];
 
   amortizationTable(doc, displayRows);
 }
 
-function generateLoanPdf(
-  doc: PDFKit.PDFDocument,
-  simulation: ISimulation,
-): void {
+function generateLoanPdf(doc: PDFKit.PDFDocument, simulation: ISimulation): void {
   const results = simulation.results as unknown as LoanResult;
   const inputs = simulation.inputs as Record<string, unknown>;
 
@@ -317,16 +303,13 @@ function generateLoanPdf(
   const schedule = results.schedule;
   const displayRows: AmortizationRow[] = [
     ...schedule.slice(0, 24),
-    ...(schedule.length > 24 ? [schedule[schedule.length - 1]] : []),
+    ...(schedule.length > 24 ? [schedule[schedule.length - 1]!] : []),
   ];
 
   amortizationTable(doc, displayRows);
 }
 
-function generateInvestmentPdf(
-  doc: PDFKit.PDFDocument,
-  simulation: ISimulation,
-): void {
+function generateInvestmentPdf(doc: PDFKit.PDFDocument, simulation: ISimulation): void {
   const results = simulation.results as unknown as InvestmentResult;
   const inputs = simulation.inputs as Record<string, unknown>;
 
@@ -361,9 +344,7 @@ function generateInvestmentPdf(
 
   if (results.scenarios !== null) {
     sectionTitle(doc, 'Escenarios');
-    doc
-      .fontSize(BODY_FONT_SIZE)
-      .font('Helvetica');
+    doc.fontSize(BODY_FONT_SIZE).font('Helvetica');
 
     const sc = results.scenarios;
     const scenarioData = [
@@ -379,7 +360,11 @@ function generateInvestmentPdf(
     doc.rect(MARGIN, doc.y - 3, CONTENT_WIDTH, ROW_HEIGHT).fill(PRIMARY_COLOR);
     doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(TABLE_FONT_SIZE);
     ['Escenario', 'Valor Final', 'Rendimientos'].forEach((h, i) => {
-      doc.text(h, colX[i] + 3, doc.y, { width: colWidths[i] - 6, continued: i < 2, lineBreak: i === 2 });
+      doc.text(h, colX[i]! + 3, doc.y, {
+        width: colWidths[i]! - 6,
+        continued: i < 2,
+        lineBreak: i === 2,
+      });
     });
     doc.fillColor('#000000');
 
@@ -390,17 +375,18 @@ function generateInvestmentPdf(
       }
       doc.font('Helvetica').fontSize(TABLE_FONT_SIZE).fillColor('#000000');
       row.forEach((cell, i) => {
-        doc.text(cell, colX[i] + 3, doc.y, { width: colWidths[i] - 6, continued: i < 2, lineBreak: i === 2 });
+        doc.text(cell, colX[i]! + 3, doc.y, {
+          width: colWidths[i]! - 6,
+          continued: i < 2,
+          lineBreak: i === 2,
+        });
       });
     }
     doc.moveDown(0.5);
   }
 }
 
-function generateRetirementPdf(
-  doc: PDFKit.PDFDocument,
-  simulation: ISimulation,
-): void {
+function generateRetirementPdf(doc: PDFKit.PDFDocument, simulation: ISimulation): void {
   const results = simulation.results as unknown as RetirementResult;
   const inputs = simulation.inputs as Record<string, unknown>;
 
@@ -433,10 +419,7 @@ function generateRetirementPdf(
   projectionTable(doc, results.annualProjection);
 }
 
-function generateEarlyRepaymentPdf(
-  doc: PDFKit.PDFDocument,
-  simulation: ISimulation,
-): void {
+function generateEarlyRepaymentPdf(doc: PDFKit.PDFDocument, simulation: ISimulation): void {
   const results = simulation.results as unknown as EarlyRepaymentResult;
   const inputs = simulation.inputs as Record<string, unknown>;
 
@@ -454,7 +437,11 @@ function generateEarlyRepaymentPdf(
   keyValue(doc, 'Tipo de interés', `${inputs['currentRate']}%`);
   keyValue(doc, 'Meses restantes', `${inputs['remainingMonths']}`);
   keyValue(doc, 'Pago extra', euros(inputs['extraPayment'] as number));
-  keyValue(doc, 'Estrategia', inputs['strategy'] === 'reduce_quota' ? 'Reducir cuota' : 'Reducir plazo');
+  keyValue(
+    doc,
+    'Estrategia',
+    inputs['strategy'] === 'reduce_quota' ? 'Reducir cuota' : 'Reducir plazo',
+  );
 
   sectionTitle(doc, 'Plan original');
   keyValue(doc, 'Cuota mensual', euros(results.originalSchedule.monthlyPayment));

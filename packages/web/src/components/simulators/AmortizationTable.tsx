@@ -1,8 +1,8 @@
+import { ChevronLeft, ChevronRight, Download, Maximize2 } from 'lucide-react';
 import { useState } from 'react';
 import type React from 'react';
-import { ChevronLeft, ChevronRight, Download, Maximize2 } from 'lucide-react';
-import { Button } from '../ui/button';
 import type { AmortizationRow } from '../../types/api';
+import { Button } from '../ui/button';
 
 const PAGE_SIZE = 24;
 
@@ -43,16 +43,16 @@ export default function AmortizationTable({
   const [expanded, setExpanded] = useState(false);
 
   const totalPages = Math.ceil(schedule.length / PAGE_SIZE);
-  const displayedSchedule = expanded ? schedule : schedule.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const displayedSchedule = expanded
+    ? schedule
+    : schedule.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
         <h3 className="text-sm font-semibold text-gray-900">
           Tabla de amortización
-          <span className="ml-2 text-xs font-normal text-gray-400">
-            ({schedule.length} cuotas)
-          </span>
+          <span className="ml-2 text-xs font-normal text-gray-400">({schedule.length} cuotas)</span>
         </h3>
         <div className="flex items-center gap-2">
           <Button
@@ -107,15 +107,9 @@ export default function AmortizationTable({
                 <td className="px-4 py-2 text-right font-medium text-gray-900">
                   {formatEur(row.payment)}
                 </td>
-                <td className="px-4 py-2 text-right text-red-600">
-                  {formatEur(row.interest)}
-                </td>
-                <td className="px-4 py-2 text-right text-green-600">
-                  {formatEur(row.principal)}
-                </td>
-                <td className="px-4 py-2 text-right text-gray-700">
-                  {formatEur(row.balance)}
-                </td>
+                <td className="px-4 py-2 text-right text-red-600">{formatEur(row.interest)}</td>
+                <td className="px-4 py-2 text-right text-green-600">{formatEur(row.principal)}</td>
+                <td className="px-4 py-2 text-right text-gray-700">{formatEur(row.balance)}</td>
               </tr>
             ))}
           </tbody>

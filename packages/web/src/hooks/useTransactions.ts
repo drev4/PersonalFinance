@@ -8,6 +8,7 @@ import {
   deleteTransaction,
   getSpendingByCategory,
   getCashflow,
+  getTransactionTags,
 } from '../api/transactions.api';
 import type {
   Transaction,
@@ -29,6 +30,7 @@ export const transactionKeys = {
   all: ['transactions'] as const,
   lists: () => [...transactionKeys.all, 'list'] as const,
   list: (filters: TransactionFilters) => [...transactionKeys.lists(), filters] as const,
+  tags: () => [...transactionKeys.all, 'tags'] as const,
   spendingByCategory: (from: string, to: string) =>
     [...transactionKeys.all, 'spending', from, to] as const,
   cashflow: (months: number) => [...transactionKeys.all, 'cashflow', months] as const,
@@ -117,6 +119,14 @@ export function useSpendingByCategory(
     queryFn: () => getSpendingByCategory(from, to),
     staleTime: STALE_TIME,
     enabled: Boolean(from) && Boolean(to),
+  });
+}
+
+export function useTransactionTags(): UseQueryResult<string[]> {
+  return useQuery({
+    queryKey: transactionKeys.tags(),
+    queryFn: getTransactionTags,
+    staleTime: 1000 * 60 * 10,
   });
 }
 

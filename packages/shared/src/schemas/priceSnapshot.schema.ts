@@ -13,7 +13,7 @@ export const PriceSnapshotSchema = z.object({
   lowPrice: z.number().optional(),
   volume: z.number().optional(),
   marketCap: z.number().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type PriceSnapshot = z.infer<typeof PriceSnapshotSchema>;

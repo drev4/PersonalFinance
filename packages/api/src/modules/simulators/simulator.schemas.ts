@@ -18,10 +18,10 @@ export const MortgageSchema = z.object({
 export const MixedMortgageSchema = MortgageSchema.extend({
   fixedYears: positiveInt,
   variableRate: annualRate,
-}).refine(
-  (d) => d.fixedYears < d.years,
-  { message: 'fixedYears must be less than total years', path: ['fixedYears'] },
-);
+}).refine((d) => d.fixedYears < d.years, {
+  message: 'fixedYears must be less than total years',
+  path: ['fixedYears'],
+});
 
 export type MortgageInput = z.infer<typeof MortgageSchema>;
 export type MixedMortgageInput = z.infer<typeof MixedMortgageSchema>;
@@ -64,21 +64,24 @@ export type EarlyRepaymentInput = z.infer<typeof EarlyRepaymentSchema>;
 
 // ---- Retirement -------------------------------------------------------------
 
-export const RetirementSchema = z.object({
-  currentAge: z.number().int().min(18).max(80),
-  retirementAge: z.number().int().min(40).max(90).default(65),
-  targetMonthlyIncome: positiveCents,
-  currentSavings: cents,
-  expectedReturn: annualRate,
-  inflationRate: z.number().min(0).max(20),
-  lifeExpectancy: z.number().int().min(50).max(120).default(85),
-}).refine(
-  (d) => d.retirementAge > d.currentAge,
-  { message: 'retirementAge must be greater than currentAge', path: ['retirementAge'] },
-).refine(
-  (d) => d.lifeExpectancy > d.retirementAge,
-  { message: 'lifeExpectancy must be greater than retirementAge', path: ['lifeExpectancy'] },
-);
+export const RetirementSchema = z
+  .object({
+    currentAge: z.number().int().min(18).max(80),
+    retirementAge: z.number().int().min(40).max(90).default(65),
+    targetMonthlyIncome: positiveCents,
+    currentSavings: cents,
+    expectedReturn: annualRate,
+    inflationRate: z.number().min(0).max(20),
+    lifeExpectancy: z.number().int().min(50).max(120).default(85),
+  })
+  .refine((d) => d.retirementAge > d.currentAge, {
+    message: 'retirementAge must be greater than currentAge',
+    path: ['retirementAge'],
+  })
+  .refine((d) => d.lifeExpectancy > d.retirementAge, {
+    message: 'lifeExpectancy must be greater than retirementAge',
+    path: ['lifeExpectancy'],
+  });
 
 export type RetirementInput = z.infer<typeof RetirementSchema>;
 
@@ -87,7 +90,7 @@ export type RetirementInput = z.infer<typeof RetirementSchema>;
 export const SaveSimulationSchema = z.object({
   type: z.enum(['mortgage', 'loan', 'investment', 'early_repayment', 'retirement']),
   name: z.string().min(1, 'Name is required').max(150),
-  inputs: z.record(z.unknown()),
+  inputs: z.record(z.string(), z.unknown()),
 });
 
 export type SaveSimulationInput = z.infer<typeof SaveSimulationSchema>;

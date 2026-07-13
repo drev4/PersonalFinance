@@ -1,10 +1,10 @@
 import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
-import esCommon from '../locales/es/common.json';
-import esAuth from '../locales/es/auth.json';
-import enCommon from '../locales/en/common.json';
+import { initReactI18next } from 'react-i18next';
 import enAuth from '../locales/en/auth.json';
+import enCommon from '../locales/en/common.json';
+import esAuth from '../locales/es/auth.json';
+import esCommon from '../locales/es/common.json';
 
 i18n
   .use(LanguageDetector)

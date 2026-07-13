@@ -1,9 +1,13 @@
 import mongoose from 'mongoose';
+import { pino } from 'pino';
 import {
   NotificationModel,
   type INotification,
   type NotificationType,
 } from './notification.model.js';
+import { sendPushToUser } from './push.service.js';
+
+const logger = pino({ name: 'notification.service' });
 
 // ---- DTOs -------------------------------------------------------------------
 
@@ -54,7 +58,14 @@ export async function createNotification(
     createdAt: new Date(),
   });
 
-  return notification.save();
+  const saved = await notification.save();
+
+  // Fire push notification asynchronously — best-effort, never blocks the caller
+  sendPushToUser(userId, data.title, data.message, data.data).catch((err) => {
+    logger.error({ err, userId }, 'Push notification delivery failed');
+  });
+
+  return saved;
 }
 
 /**
@@ -78,11 +89,7 @@ export async function getUserNotifications(
   }
 
   const [data, total] = await Promise.all([
-    NotificationModel.find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .exec(),
+    NotificationModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).exec(),
     NotificationModel.countDocuments(query).exec(),
   ]);
 
@@ -99,15 +106,10 @@ export async function getUserNotifications(
  * Marks specific notifications as read.
  * Only updates notifications that belong to the given user.
  */
-export async function markAsRead(
-  userId: string,
-  notificationIds: string[],
-): Promise<void> {
+export async function markAsRead(userId: string, notificationIds: string[]): Promise<void> {
   if (notificationIds.length === 0) return;
 
-  const objectIds = notificationIds.map(
-    (id) => new mongoose.Types.ObjectId(id),
-  );
+  const objectIds = notificationIds.map((id) => new mongoose.Types.ObjectId(id));
 
   await NotificationModel.updateMany(
     {

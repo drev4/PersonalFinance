@@ -50,7 +50,14 @@ beforeEach(async () => {
 async function makeNotification(
   userId = FAKE_USER_ID,
   overrides: {
-    type?: 'budget_warning' | 'budget_exceeded' | 'recurring_due' | 'sync_error' | 'price_alert' | 'goal_reached' | 'report_ready';
+    type?:
+      | 'budget_warning'
+      | 'budget_exceeded'
+      | 'recurring_due'
+      | 'sync_error'
+      | 'price_alert'
+      | 'goal_reached'
+      | 'report_ready';
     isRead?: boolean;
     title?: string;
   } = {},
@@ -114,7 +121,15 @@ describe('createNotification()', () => {
   });
 
   it('stores all supported notification types', async () => {
-    const types: Array<'budget_warning' | 'budget_exceeded' | 'recurring_due' | 'sync_error' | 'price_alert' | 'goal_reached' | 'report_ready'> = [
+    const types: Array<
+      | 'budget_warning'
+      | 'budget_exceeded'
+      | 'recurring_due'
+      | 'sync_error'
+      | 'price_alert'
+      | 'goal_reached'
+      | 'report_ready'
+    > = [
       'budget_warning',
       'budget_exceeded',
       'recurring_due',
@@ -161,8 +176,8 @@ describe('getUserNotifications()', () => {
     expect(result.data).toHaveLength(3);
 
     // n3 (most recent) should come first
-    expect(result.data[0]._id.toHexString()).toBe(n3._id.toHexString());
-    expect(result.data[2]._id.toHexString()).toBe(n1._id.toHexString());
+    expect(result.data[0]!._id.toHexString()).toBe(n3._id.toHexString());
+    expect(result.data[2]!._id.toHexString()).toBe(n1._id.toHexString());
   });
 
   it('paginates correctly', async () => {
@@ -208,7 +223,7 @@ describe('getUserNotifications()', () => {
 
     const result = await getUserNotifications(FAKE_USER_ID);
     expect(result.total).toBe(1);
-    expect(result.data[0].userId.toHexString()).toBe(FAKE_USER_ID);
+    expect(result.data[0]!.userId.toHexString()).toBe(FAKE_USER_ID);
   });
 
   it('returns empty result when user has no notifications', async () => {
@@ -239,10 +254,7 @@ describe('markAsRead()', () => {
     const n2 = await makeNotification(FAKE_USER_ID, { isRead: false });
     const n3 = await makeNotification(FAKE_USER_ID, { isRead: false });
 
-    await markAsRead(FAKE_USER_ID, [
-      n1._id.toHexString(),
-      n2._id.toHexString(),
-    ]);
+    await markAsRead(FAKE_USER_ID, [n1._id.toHexString(), n2._id.toHexString()]);
 
     const updated1 = await NotificationModel.findById(n1._id).exec();
     const updated2 = await NotificationModel.findById(n2._id).exec();

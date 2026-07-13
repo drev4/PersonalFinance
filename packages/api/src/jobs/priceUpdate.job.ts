@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import pino from 'pino';
+import { pino } from 'pino';
 import { getUniqueSymbolsByType } from '../modules/holdings/holding.repository.js';
 import { updatePriceForSymbol } from '../modules/holdings/holding.service.js';
 import { PriceSnapshotModel } from '../modules/holdings/priceSnapshot.model.js';

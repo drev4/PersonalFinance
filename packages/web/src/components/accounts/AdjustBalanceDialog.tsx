@@ -1,8 +1,12 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
 import type React from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useAdjustBalance } from '../../hooks/useAccounts';
+import { formatCurrency } from '../../lib/formatters';
+import type { Account } from '../../types/api';
+import { Button } from '../ui/button';
 import {
   Dialog,
   DialogContent,
@@ -11,23 +15,12 @@ import {
   DialogFooter,
   DialogClose,
 } from '../ui/dialog';
-import { Button } from '../ui/button';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '../ui/form';
 import { Input } from '../ui/input';
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from '../ui/form';
-import { useAdjustBalance } from '../../hooks/useAccounts';
-import type { Account } from '../../types/api';
-import { formatCurrency } from '../../lib/formatters';
 
 const adjustSchema = z.object({
   newBalance: z
-    .number({ invalid_type_error: 'Ingresa un numero valido' })
+    .number({ error: 'Ingresa un numero valido' })
     .min(-999_999_999, 'Valor demasiado bajo'),
   note: z.string().optional(),
 });

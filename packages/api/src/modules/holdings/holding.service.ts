@@ -1,11 +1,12 @@
 import { parse } from 'csv-parse/sync';
 import axios from 'axios';
-import pino from 'pino';
+import { pino } from 'pino';
 import mongoose from 'mongoose';
 import { AccountModel } from '../accounts/account.model.js';
 import * as holdingRepository from './holding.repository.js';
 import type { CreateHoldingDTO, UpdateHoldingDTO } from './holding.repository.js';
 import { HoldingModel, type IHolding, type AssetType } from './holding.model.js';
+import { HoldingIncomeModel, type IHoldingIncome, type IncomeType } from './holdingIncome.model.js';
 import { getLatestQuotes, searchCrypto } from './integrations/coinmarketcap.client.js';
 import { getQuote, searchSymbol } from './integrations/finnhub.client.js';
 import { getRates, convertWithRates, type ExchangeRates } from '../../services/currency.service.js';
@@ -42,8 +43,22 @@ export interface PortfolioSummary {
   totalCost: number;
   totalPnl: number;
   totalPnlPercentage: number;
+  totalDividendsYtd: number;
   byAssetType: Array<{ type: string; value: number; percentage: number }>;
   topHoldings: HoldingWithValue[];
+}
+
+export interface AddIncomeDTO {
+  type: IncomeType;
+  amount: number;
+  currency: string;
+  date: Date;
+  notes?: string;
+}
+
+export interface IncomeHistory {
+  records: IHoldingIncome[];
+  totalYtd: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -72,10 +87,7 @@ function quantityToNumber(quantity: string): number {
 }
 
 /** Enriches a holding document with computed financial fields. */
-function enrichHolding(
-  holding: IHolding,
-  portfolioTotalValue: number,
-): HoldingWithValue {
+function enrichHolding(holding: IHolding, portfolioTotalValue: number): HoldingWithValue {
   const qty = quantityToNumber(holding.quantity);
   const currentPrice = holding.currentPrice ?? 0;
   const avgBuy = holding.averageBuyPrice;
@@ -99,10 +111,7 @@ function enrichHolding(
 }
 
 /** Validates that an accountId belongs to the given userId. */
-async function validateAccountOwnership(
-  userId: string,
-  accountId: string,
-): Promise<void> {
+async function validateAccountOwnership(userId: string, accountId: string): Promise<void> {
   const account = await AccountModel.findOne({
     _id: new mongoose.Types.ObjectId(accountId),
     userId: new mongoose.Types.ObjectId(userId),
@@ -235,8 +244,7 @@ function detectFormat(headers: string[]): CsvFormat {
   if (hasDegiro) return 'degiro';
 
   const hasEtoro =
-    lower.some((h) => h === 'ticker') &&
-    lower.some((h) => h === 'unidades' || h === 'units');
+    lower.some((h) => h === 'ticker') && lower.some((h) => h === 'unidades' || h === 'units');
 
   if (hasEtoro) return 'etoro';
 
@@ -287,7 +295,10 @@ function parseRows(
         symbol = (row['ticker'] ?? '').toUpperCase();
         quantity = parseFloat((row['unidades'] ?? row['units'] ?? '0').replace(',', '.'));
         priceRaw = parseFloat(
-          (row['precio de compra'] ?? row['purchase price'] ?? row['precio'] ?? '0').replace(',', '.'),
+          (row['precio de compra'] ?? row['purchase price'] ?? row['precio'] ?? '0').replace(
+            ',',
+            '.',
+          ),
         );
         currency = (row['divisa'] ?? row['currency'] ?? 'USD').toUpperCase();
       } else {
@@ -295,7 +306,10 @@ function parseRows(
         symbol = (row['symbol'] ?? row['ticker'] ?? '').toUpperCase();
         quantity = parseFloat((row['quantity'] ?? row['qty'] ?? '0').replace(',', '.'));
         priceRaw = parseFloat(
-          (row['averagebuyprice'] ?? row['average_buy_price'] ?? row['price'] ?? '0').replace(',', '.'),
+          (row['averagebuyprice'] ?? row['average_buy_price'] ?? row['price'] ?? '0').replace(
+            ',',
+            '.',
+          ),
         );
         currency = (row['currency'] ?? 'USD').toUpperCase();
         exchange = row['exchange'];
@@ -346,10 +360,7 @@ export async function getUserHoldings(userId: string): Promise<HoldingWithValue[
   return holdings.map((h) => enrichHolding(h, totalValue));
 }
 
-export async function createHolding(
-  userId: string,
-  dto: CreateHoldingDTO,
-): Promise<IHolding> {
+export async function createHolding(userId: string, dto: CreateHoldingDTO): Promise<IHolding> {
   // Validate account ownership
   await validateAccountOwnership(userId, dto.accountId);
 
@@ -373,7 +384,10 @@ export async function createHolding(
 
   // Convert price from source currency to holding currency if needed
   let priceInHoldingCurrency = currentPrice;
-  if (currentPrice !== undefined && priceSourceCurrency.toUpperCase() !== dto.currency.toUpperCase()) {
+  if (
+    currentPrice !== undefined &&
+    priceSourceCurrency.toUpperCase() !== dto.currency.toUpperCase()
+  ) {
     try {
       const rates = await getRates(priceSourceCurrency.toUpperCase());
       priceInHoldingCurrency = convertWithRates(
@@ -400,7 +414,9 @@ export async function createHolding(
   });
 
   // Invalidate dashboard cache
-  import('../dashboard/dashboard.service.js').then(m => m.invalidateNetWorthCache(userId)).catch(() => { });
+  import('../dashboard/dashboard.service.js')
+    .then((m) => m.invalidateNetWorthCache(userId))
+    .catch(() => {});
 
   return holding;
 }
@@ -426,22 +442,23 @@ export async function updateHolding(
   }
 
   // Invalidate dashboard cache
-  import('../dashboard/dashboard.service.js').then(m => m.invalidateNetWorthCache(userId)).catch(() => { });
+  import('../dashboard/dashboard.service.js')
+    .then((m) => m.invalidateNetWorthCache(userId))
+    .catch(() => {});
 
   return updated;
 }
 
-export async function deleteHolding(
-  userId: string,
-  holdingId: string,
-): Promise<void> {
+export async function deleteHolding(userId: string, holdingId: string): Promise<void> {
   const deleted = await holdingRepository.deleteHolding(holdingId, userId);
   if (!deleted) {
     throw new HoldingError('HOLDING_NOT_FOUND', 'Holding not found', 404);
   }
 
   // Invalidate dashboard cache
-  import('../dashboard/dashboard.service.js').then(m => m.invalidateNetWorthCache(userId)).catch(() => { });
+  import('../dashboard/dashboard.service.js')
+    .then((m) => m.invalidateNetWorthCache(userId))
+    .catch(() => {});
 }
 
 export async function searchTicker(
@@ -462,9 +479,7 @@ export async function searchTicker(
     symbol: r.symbol,
     name: r.description,
     type: r.type.toLowerCase(),
-    exchange: r.displaySymbol.includes(':')
-      ? r.displaySymbol.split(':')[0]
-      : undefined,
+    exchange: r.displaySymbol.includes(':') ? r.displaySymbol.split(':')[0] : undefined,
   }));
 }
 
@@ -543,7 +558,9 @@ export async function importFromCsv(
   }
 
   if (created > 0 || updated > 0) {
-    import('../dashboard/dashboard.service.js').then(m => m.invalidateNetWorthCache(userId)).catch(() => { });
+    import('../dashboard/dashboard.service.js')
+      .then((m) => m.invalidateNetWorthCache(userId))
+      .catch(() => {});
   }
 
   return { created, updated, errors };
@@ -552,8 +569,24 @@ export async function importFromCsv(
 /** Heuristic to infer assetType from a symbol string. */
 function inferAssetType(symbol: string): AssetType {
   const cryptoSymbols = new Set([
-    'BTC', 'ETH', 'BNB', 'XRP', 'ADA', 'SOL', 'DOT', 'DOGE', 'AVAX',
-    'MATIC', 'LTC', 'LINK', 'UNI', 'ATOM', 'XLM', 'TRX', 'ALGO', 'VET',
+    'BTC',
+    'ETH',
+    'BNB',
+    'XRP',
+    'ADA',
+    'SOL',
+    'DOT',
+    'DOGE',
+    'AVAX',
+    'MATIC',
+    'LTC',
+    'LINK',
+    'UNI',
+    'ATOM',
+    'XLM',
+    'TRX',
+    'ALGO',
+    'VET',
   ]);
   if (cryptoSymbols.has(symbol.toUpperCase())) return 'crypto';
 
@@ -626,6 +659,19 @@ export async function getPortfolioSummary(userId: string): Promise<PortfolioSumm
   const totalPnl = totalValue - totalCost;
   const totalPnlPercentage = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
 
+  // YTD dividends/staking
+  const startOfYear = new Date(new Date().getFullYear(), 0, 1);
+  const [ytdResult] = await HoldingIncomeModel.aggregate<{ total: number }>([
+    {
+      $match: {
+        userId: new mongoose.Types.ObjectId(userId),
+        date: { $gte: startOfYear },
+      },
+    },
+    { $group: { _id: null, total: { $sum: '$amount' } } },
+  ]);
+  const totalDividendsYtd = ytdResult?.total ?? 0;
+
   // Group by assetType
   const byTypeMap = new Map<string, number>();
   for (const h of holdings) {
@@ -640,16 +686,62 @@ export async function getPortfolioSummary(userId: string): Promise<PortfolioSumm
   }));
 
   // Top 5 holdings by current value
-  const topHoldings = [...holdings]
-    .sort((a, b) => b.currentValue - a.currentValue)
-    .slice(0, 5);
+  const topHoldings = [...holdings].sort((a, b) => b.currentValue - a.currentValue).slice(0, 5);
 
   return {
     totalValue,
     totalCost,
     totalPnl,
     totalPnlPercentage: Math.round(totalPnlPercentage * 100) / 100,
+    totalDividendsYtd,
     byAssetType,
     topHoldings,
   };
+}
+
+export async function addHoldingIncome(
+  userId: string,
+  holdingId: string,
+  dto: AddIncomeDTO,
+): Promise<IHoldingIncome> {
+  const holding = await holdingRepository.findById(holdingId, userId);
+  if (holding === null) {
+    throw new HoldingError('HOLDING_NOT_FOUND', 'Holding not found', 404);
+  }
+
+  const income = new HoldingIncomeModel({
+    holdingId: new mongoose.Types.ObjectId(holdingId),
+    userId: new mongoose.Types.ObjectId(userId),
+    type: dto.type,
+    amount: dto.amount,
+    currency: dto.currency,
+    date: dto.date,
+    notes: dto.notes,
+  });
+
+  return income.save();
+}
+
+export async function getHoldingIncomeHistory(
+  userId: string,
+  holdingId: string,
+): Promise<IncomeHistory> {
+  const holding = await holdingRepository.findById(holdingId, userId);
+  if (holding === null) {
+    throw new HoldingError('HOLDING_NOT_FOUND', 'Holding not found', 404);
+  }
+
+  const records = await HoldingIncomeModel.find({
+    holdingId: new mongoose.Types.ObjectId(holdingId),
+    userId: new mongoose.Types.ObjectId(userId),
+  })
+    .sort({ date: -1 })
+    .exec();
+
+  const startOfYear = new Date(new Date().getFullYear(), 0, 1);
+  const totalYtd = records
+    .filter((r) => r.date >= startOfYear)
+    .reduce((sum, r) => sum + r.amount, 0);
+
+  return { records, totalYtd };
 }

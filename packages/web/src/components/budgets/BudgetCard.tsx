@@ -1,17 +1,17 @@
+import { MoreVertical, Eye, Pencil, Trash2, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import type React from 'react';
-import { MoreVertical, Eye, Pencil, Trash2, RefreshCw } from 'lucide-react';
-import { Card, CardContent } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Progress } from '../ui/progress';
-import { Skeleton } from '../ui/skeleton';
-import { Button } from '../ui/button';
-import { BudgetDetailDialog } from './BudgetDetailDialog';
-import { BudgetFormDialog } from './BudgetFormDialog';
 import { useBudgetProgress, useDeleteBudget } from '../../hooks/useBudgets';
-import type { Budget } from '../../types/api';
 import { formatCurrency } from '../../lib/formatters';
 import { cn } from '../../lib/utils';
+import type { Budget } from '../../types/api';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Card, CardContent } from '../ui/card';
+import { Progress } from '../ui/progress';
+import { Skeleton } from '../ui/skeleton';
+import { BudgetDetailDialog } from './BudgetDetailDialog';
+import { BudgetFormDialog } from './BudgetFormDialog';
 
 interface BudgetCardProps {
   budget: Budget;
@@ -97,9 +97,7 @@ export function BudgetCard({ budget }: BudgetCardProps): React.ReactElement {
           <div className="pr-8">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-base font-semibold text-gray-900">{budget.name}</h3>
-              <Badge variant="outline">
-                {budget.period === 'monthly' ? 'Mensual' : 'Anual'}
-              </Badge>
+              <Badge variant="outline">{budget.period === 'monthly' ? 'Mensual' : 'Anual'}</Badge>
               {budget.rollover && (
                 <Badge variant="default" className="gap-1">
                   <RefreshCw className="h-3 w-3" aria-hidden="true" />
@@ -121,9 +119,7 @@ export function BudgetCard({ budget }: BudgetCardProps): React.ReactElement {
                 <span className="text-xs text-gray-500">
                   {formatCurrency(progress.totalSpent, 'EUR')} gastados
                 </span>
-                <span
-                  className={cn('text-sm font-bold', percentageColor(progress.percentageUsed))}
-                >
+                <span className={cn('text-sm font-bold', percentageColor(progress.percentageUsed))}>
                   {progress.percentageUsed.toFixed(1)}%
                 </span>
               </div>
@@ -151,16 +147,8 @@ export function BudgetCard({ budget }: BudgetCardProps): React.ReactElement {
         </CardContent>
       </Card>
 
-      <BudgetDetailDialog
-        budget={budget}
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
-      />
-      <BudgetFormDialog
-        budget={budget}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-      />
+      <BudgetDetailDialog budget={budget} open={detailOpen} onOpenChange={setDetailOpen} />
+      <BudgetFormDialog budget={budget} open={editOpen} onOpenChange={setEditOpen} />
     </>
   );
 }

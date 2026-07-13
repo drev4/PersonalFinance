@@ -1,3 +1,4 @@
+import { BarChart2 } from 'lucide-react';
 import { useState } from 'react';
 import type React from 'react';
 import {
@@ -11,12 +12,11 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { BarChart2 } from 'lucide-react';
+import { useDashboardCashflow } from '../../hooks/useDashboard';
+import { cn } from '../../lib/utils';
+import type { CashflowMonth } from '../../types/api';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
-import { cn } from '../../lib/utils';
-import { useDashboardCashflow } from '../../hooks/useDashboard';
-import type { CashflowMonth } from '../../types/api';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

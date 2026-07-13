@@ -134,7 +134,7 @@ describe('createBudget() — category validation', () => {
 
     expect(budget.name).toBe('Test Budget');
     expect(budget.items).toHaveLength(1);
-    expect(budget.items[0].amount).toBe(50000);
+    expect(budget.items[0]!.amount).toBe(50000);
     expect(budget.isActive).toBe(true);
   });
 
@@ -153,9 +153,9 @@ describe('createBudget() — category validation', () => {
   it('throws INVALID_CATEGORY when categoryId does not exist', async () => {
     const fakeId = new mongoose.Types.ObjectId().toHexString();
 
-    const error = await makeBudget(FAKE_USER_ID, [
-      { categoryId: fakeId, amount: 10000 },
-    ]).catch((e: unknown) => e);
+    const error = await makeBudget(FAKE_USER_ID, [{ categoryId: fakeId, amount: 10000 }]).catch(
+      (e: unknown) => e,
+    );
 
     expect(error).toBeInstanceOf(BudgetError);
     expect((error as BudgetError).code).toBe('INVALID_CATEGORY');
@@ -185,16 +185,18 @@ describe('getUserBudgets()', () => {
     await makeBudget(FAKE_USER_ID, [{ categoryId: cat._id.toHexString(), amount: 10000 }], {
       name: 'Budget A',
     });
-    const budgetB = await makeBudget(FAKE_USER_ID, [
-      { categoryId: cat._id.toHexString(), amount: 20000 },
-    ], { name: 'Budget B' });
+    const budgetB = await makeBudget(
+      FAKE_USER_ID,
+      [{ categoryId: cat._id.toHexString(), amount: 20000 }],
+      { name: 'Budget B' },
+    );
 
     // Soft-delete B
     await deleteBudget(FAKE_USER_ID, budgetB._id.toHexString());
 
     const budgets = await getUserBudgets(FAKE_USER_ID);
     expect(budgets).toHaveLength(1);
-    expect(budgets[0].name).toBe('Budget A');
+    expect(budgets[0]!.name).toBe('Budget A');
   });
 });
 
@@ -239,7 +241,7 @@ describe('getBudgetProgress() — monthly period', () => {
     const referenceDate = new Date('2026-04-15T12:00:00.000Z');
     const progress = await getBudgetProgress(FAKE_USER_ID, budget._id.toHexString(), referenceDate);
 
-    expect(progress.periodStart).toEqual(new Date(2026, 3, 1, 0, 0, 0, 0));  // April 1
+    expect(progress.periodStart).toEqual(new Date(2026, 3, 1, 0, 0, 0, 0)); // April 1
     expect(progress.periodEnd).toEqual(new Date(2026, 3, 30, 23, 59, 59, 999)); // April 30
   });
 
@@ -251,10 +253,28 @@ describe('getBudgetProgress() — monthly period', () => {
     ]);
 
     // Two expenses in April 2026
-    await makeExpense(FAKE_USER_ID, account._id.toHexString(), cat._id.toHexString(), 30000, new Date('2026-04-10'));
-    await makeExpense(FAKE_USER_ID, account._id.toHexString(), cat._id.toHexString(), 20000, new Date('2026-04-20'));
+    await makeExpense(
+      FAKE_USER_ID,
+      account._id.toHexString(),
+      cat._id.toHexString(),
+      30000,
+      new Date('2026-04-10'),
+    );
+    await makeExpense(
+      FAKE_USER_ID,
+      account._id.toHexString(),
+      cat._id.toHexString(),
+      20000,
+      new Date('2026-04-20'),
+    );
     // One expense outside the period (March 2026) — should be excluded
-    await makeExpense(FAKE_USER_ID, account._id.toHexString(), cat._id.toHexString(), 5000, new Date('2026-03-15'));
+    await makeExpense(
+      FAKE_USER_ID,
+      account._id.toHexString(),
+      cat._id.toHexString(),
+      5000,
+      new Date('2026-03-15'),
+    );
 
     const progress = await getBudgetProgress(
       FAKE_USER_ID,
@@ -276,7 +296,13 @@ describe('getBudgetProgress() — monthly period', () => {
     ]);
 
     // 50% used
-    await makeExpense(FAKE_USER_ID, account._id.toHexString(), cat._id.toHexString(), 50000, new Date('2026-04-01'));
+    await makeExpense(
+      FAKE_USER_ID,
+      account._id.toHexString(),
+      cat._id.toHexString(),
+      50000,
+      new Date('2026-04-01'),
+    );
 
     const progress = await getBudgetProgress(
       FAKE_USER_ID,
@@ -284,7 +310,7 @@ describe('getBudgetProgress() — monthly period', () => {
       new Date('2026-04-22'),
     );
 
-    expect(progress.items[0].status).toBe('ok');
+    expect(progress.items[0]!.status).toBe('ok');
   });
 
   it('returns status "warning" when percentageUsed is between 80 and 100', async () => {
@@ -295,7 +321,13 @@ describe('getBudgetProgress() — monthly period', () => {
     ]);
 
     // 85% used
-    await makeExpense(FAKE_USER_ID, account._id.toHexString(), cat._id.toHexString(), 85000, new Date('2026-04-01'));
+    await makeExpense(
+      FAKE_USER_ID,
+      account._id.toHexString(),
+      cat._id.toHexString(),
+      85000,
+      new Date('2026-04-01'),
+    );
 
     const progress = await getBudgetProgress(
       FAKE_USER_ID,
@@ -303,8 +335,8 @@ describe('getBudgetProgress() — monthly period', () => {
       new Date('2026-04-22'),
     );
 
-    expect(progress.items[0].status).toBe('warning');
-    expect(progress.items[0].percentageUsed).toBe(85);
+    expect(progress.items[0]!.status).toBe('warning');
+    expect(progress.items[0]!.percentageUsed).toBe(85);
   });
 
   it('returns status "exceeded" when percentageUsed > 100', async () => {
@@ -315,7 +347,13 @@ describe('getBudgetProgress() — monthly period', () => {
     ]);
 
     // 110% used
-    await makeExpense(FAKE_USER_ID, account._id.toHexString(), cat._id.toHexString(), 110000, new Date('2026-04-01'));
+    await makeExpense(
+      FAKE_USER_ID,
+      account._id.toHexString(),
+      cat._id.toHexString(),
+      110000,
+      new Date('2026-04-01'),
+    );
 
     const progress = await getBudgetProgress(
       FAKE_USER_ID,
@@ -323,8 +361,8 @@ describe('getBudgetProgress() — monthly period', () => {
       new Date('2026-04-22'),
     );
 
-    expect(progress.items[0].status).toBe('exceeded');
-    expect(progress.items[0].remaining).toBe(-10000);
+    expect(progress.items[0]!.status).toBe('exceeded');
+    expect(progress.items[0]!.remaining).toBe(-10000);
   });
 
   it('enriches items with category name and color', async () => {
@@ -339,8 +377,8 @@ describe('getBudgetProgress() — monthly period', () => {
       new Date('2026-04-22'),
     );
 
-    expect(progress.items[0].categoryName).toBe('Groceries');
-    expect(progress.items[0].categoryColor).toBe('#aabbcc');
+    expect(progress.items[0]!.categoryName).toBe('Groceries');
+    expect(progress.items[0]!.categoryColor).toBe('#aabbcc');
   });
 
   it('throws BUDGET_NOT_FOUND for an inactive budget', async () => {
@@ -424,9 +462,9 @@ describe('getBudgetProgress() — rollover', () => {
     );
 
     // Budgeted for April = 100000 (base) + 40000 (rollover from March) = 140000
-    expect(progress.items[0].budgeted).toBe(140000);
-    expect(progress.items[0].spent).toBe(50000);
-    expect(progress.items[0].remaining).toBe(90000);
+    expect(progress.items[0]!.budgeted).toBe(140000);
+    expect(progress.items[0]!.spent).toBe(50000);
+    expect(progress.items[0]!.remaining).toBe(90000);
   });
 
   it('does not carry over a deficit from the previous period', async () => {
@@ -454,7 +492,7 @@ describe('getBudgetProgress() — rollover', () => {
     );
 
     // Base budget only — no deficit carry-over
-    expect(progress.items[0].budgeted).toBe(100000);
+    expect(progress.items[0]!.budgeted).toBe(100000);
   });
 });
 
@@ -465,9 +503,7 @@ describe('getBudgetProgress() — rollover', () => {
 describe('checkBudgetAlerts()', () => {
   it('returns empty array when no budget item has reached 80%', async () => {
     const cat = await makeCategory(FAKE_USER_ID);
-    await makeBudget(FAKE_USER_ID, [
-      { categoryId: cat._id.toHexString(), amount: 100000 },
-    ]);
+    await makeBudget(FAKE_USER_ID, [{ categoryId: cat._id.toHexString(), amount: 100000 }]);
 
     const alerts = await checkBudgetAlerts(FAKE_USER_ID);
     expect(alerts).toHaveLength(0);
@@ -483,48 +519,68 @@ describe('checkBudgetAlerts()', () => {
       { categoryId: cat2._id.toHexString(), amount: 100000 }, // will be at 30%
     ]);
 
-    await makeExpense(FAKE_USER_ID, account._id.toHexString(), cat1._id.toHexString(), 85000, new Date());
-    await makeExpense(FAKE_USER_ID, account._id.toHexString(), cat2._id.toHexString(), 30000, new Date());
+    await makeExpense(
+      FAKE_USER_ID,
+      account._id.toHexString(),
+      cat1._id.toHexString(),
+      85000,
+      new Date(),
+    );
+    await makeExpense(
+      FAKE_USER_ID,
+      account._id.toHexString(),
+      cat2._id.toHexString(),
+      30000,
+      new Date(),
+    );
 
     const alerts = await checkBudgetAlerts(FAKE_USER_ID);
 
     expect(alerts).toHaveLength(1);
-    expect(alerts[0].budgetId).toBe(budget._id.toHexString());
-    expect(alerts[0].categoryName).toBe('Food');
-    expect(alerts[0].status).toBe('warning');
-    expect(alerts[0].percentageUsed).toBe(85);
+    expect(alerts[0]!.budgetId).toBe(budget._id.toHexString());
+    expect(alerts[0]!.categoryName).toBe('Food');
+    expect(alerts[0]!.status).toBe('warning');
+    expect(alerts[0]!.percentageUsed).toBe(85);
   });
 
   it('marks exceeded items with status "exceeded"', async () => {
     const cat = await makeCategory(FAKE_USER_ID, { name: 'Entertainment' });
     const account = await makeAccount(FAKE_USER_ID);
 
-    await makeBudget(FAKE_USER_ID, [
-      { categoryId: cat._id.toHexString(), amount: 50000 },
-    ]);
+    await makeBudget(FAKE_USER_ID, [{ categoryId: cat._id.toHexString(), amount: 50000 }]);
 
-    await makeExpense(FAKE_USER_ID, account._id.toHexString(), cat._id.toHexString(), 60000, new Date());
+    await makeExpense(
+      FAKE_USER_ID,
+      account._id.toHexString(),
+      cat._id.toHexString(),
+      60000,
+      new Date(),
+    );
 
     const alerts = await checkBudgetAlerts(FAKE_USER_ID);
 
     expect(alerts).toHaveLength(1);
-    expect(alerts[0].status).toBe('exceeded');
+    expect(alerts[0]!.status).toBe('exceeded');
   });
 
   it('includes budget name in the alert', async () => {
     const cat = await makeCategory(FAKE_USER_ID);
     const account = await makeAccount(FAKE_USER_ID);
 
-    await makeBudget(
+    await makeBudget(FAKE_USER_ID, [{ categoryId: cat._id.toHexString(), amount: 10000 }], {
+      name: 'Monthly Household',
+    });
+
+    await makeExpense(
       FAKE_USER_ID,
-      [{ categoryId: cat._id.toHexString(), amount: 10000 }],
-      { name: 'Monthly Household' },
+      account._id.toHexString(),
+      cat._id.toHexString(),
+      9000,
+      new Date(),
     );
 
-    await makeExpense(FAKE_USER_ID, account._id.toHexString(), cat._id.toHexString(), 9000, new Date());
-
     const alerts = await checkBudgetAlerts(FAKE_USER_ID);
-    expect(alerts[0].budgetName).toBe('Monthly Household');
+    expect(alerts[0]!.budgetName).toBe('Monthly Household');
   });
 
   it('returns alerts from multiple budgets', async () => {
@@ -532,16 +588,28 @@ describe('checkBudgetAlerts()', () => {
     const cat2 = await makeCategory(FAKE_USER_ID, { name: 'Cat B' });
     const account = await makeAccount(FAKE_USER_ID);
 
-    await makeBudget(FAKE_USER_ID, [
-      { categoryId: cat1._id.toHexString(), amount: 10000 },
-    ], { name: 'Budget 1' });
+    await makeBudget(FAKE_USER_ID, [{ categoryId: cat1._id.toHexString(), amount: 10000 }], {
+      name: 'Budget 1',
+    });
 
-    await makeBudget(FAKE_USER_ID, [
-      { categoryId: cat2._id.toHexString(), amount: 10000 },
-    ], { name: 'Budget 2' });
+    await makeBudget(FAKE_USER_ID, [{ categoryId: cat2._id.toHexString(), amount: 10000 }], {
+      name: 'Budget 2',
+    });
 
-    await makeExpense(FAKE_USER_ID, account._id.toHexString(), cat1._id.toHexString(), 9000, new Date());
-    await makeExpense(FAKE_USER_ID, account._id.toHexString(), cat2._id.toHexString(), 9500, new Date());
+    await makeExpense(
+      FAKE_USER_ID,
+      account._id.toHexString(),
+      cat1._id.toHexString(),
+      9000,
+      new Date(),
+    );
+    await makeExpense(
+      FAKE_USER_ID,
+      account._id.toHexString(),
+      cat2._id.toHexString(),
+      9500,
+      new Date(),
+    );
 
     const alerts = await checkBudgetAlerts(FAKE_USER_ID);
     expect(alerts).toHaveLength(2);

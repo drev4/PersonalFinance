@@ -1,27 +1,21 @@
+import { CURRENCIES } from '@finanzas/shared';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Bitcoin, BarChart2, TrendingUp, Landmark, ArrowLeft } from 'lucide-react';
 import * as React from 'react';
 import { useForm, Controller, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Bitcoin, BarChart2, TrendingUp, Landmark, ArrowLeft } from 'lucide-react';
-import { CURRENCIES } from '@finanzas/shared';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '../ui/dialog';
+import { useAccounts } from '../../hooks/useAccounts';
+import { useCurrencyConverter } from '../../hooks/useCurrency';
+import { useCreateHolding, useUpdateHolding, useSearchTicker } from '../../hooks/useHoldings';
+import { cn } from '../../lib/utils';
+import type { HoldingWithValue, AssetType } from '../../types/api';
 import { Button } from '../ui/button';
+import { Combobox } from '../ui/combobox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select } from '../ui/select';
-import { Combobox } from '../ui/combobox';
 import { Skeleton } from '../ui/skeleton';
-import { useAccounts } from '../../hooks/useAccounts';
-import { useCreateHolding, useUpdateHolding, useSearchTicker } from '../../hooks/useHoldings';
-import { useCurrencyConverter } from '../../hooks/useCurrency';
-import type { HoldingWithValue, AssetType } from '../../types/api';
-import { cn } from '../../lib/utils';
 
 // ─── Zod schema ───────────────────────────────────────────────────────────────
 
@@ -36,10 +30,13 @@ const holdingSchema = z.object({
       return !isNaN(n) && n > 0;
     }, 'La cantidad debe ser un número positivo'),
   averageBuyPrice: z
-    .number({ invalid_type_error: 'El precio debe ser un número' })
+    .number({ error: 'El precio debe ser un número' })
     .positive('El precio debe ser mayor que 0'),
   currentPrice: z.preprocess(
-    (val) => (val === '' || val === null || (typeof val === 'number' && isNaN(val)) ? undefined : Number(val)),
+    (val) =>
+      val === '' || val === null || (typeof val === 'number' && isNaN(val))
+        ? undefined
+        : Number(val),
     z.number().min(0, 'El precio no puede ser negativo').optional(),
   ),
 });
@@ -211,7 +208,9 @@ export default function HoldingFormDialog({
         currency: editing?.currency ?? baseCurrency ?? 'EUR',
         quantity: editing?.quantity ?? '',
         averageBuyPrice: editing ? editing.averageBuyPrice / 100 : ('' as unknown as number),
-        currentPrice: editing?.currentPrice ? editing.currentPrice / 100 : ('' as unknown as number),
+        currentPrice: editing?.currentPrice
+          ? editing.currentPrice / 100
+          : ('' as unknown as number),
       });
       setStep(1);
       setSelectedSymbol(editing?.symbol ?? '');
@@ -344,7 +343,9 @@ export default function HoldingFormDialog({
                 aria-invalid={Boolean(errors.quantity)}
               />
               {errors.quantity && (
-                <p className="text-xs text-red-600" role="alert">{errors.quantity.message}</p>
+                <p className="text-xs text-red-600" role="alert">
+                  {errors.quantity.message}
+                </p>
               )}
             </div>
 
@@ -357,7 +358,9 @@ export default function HoldingFormDialog({
                 render={({ field }) => (
                   <Select id="currency" {...field}>
                     {CURRENCIES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
                     ))}
                   </Select>
                 )}
@@ -423,11 +426,7 @@ export default function HoldingFormDialog({
                   control={control}
                   name="accountId"
                   render={({ field }) => (
-                    <Select
-                      id="accountId"
-                      {...field}
-                      aria-invalid={Boolean(errors.accountId)}
-                    >
+                    <Select id="accountId" {...field} aria-invalid={Boolean(errors.accountId)}>
                       <option value="">Selecciona una cuenta</option>
                       {investmentAccounts.map((acc) => (
                         <option key={acc._id} value={acc._id}>
@@ -439,7 +438,9 @@ export default function HoldingFormDialog({
                 />
               )}
               {errors.accountId && (
-                <p className="text-xs text-red-600" role="alert">{errors.accountId.message}</p>
+                <p className="text-xs text-red-600" role="alert">
+                  {errors.accountId.message}
+                </p>
               )}
               {!accountsLoading && investmentAccounts.length === 0 && (
                 <p className="text-xs text-amber-600">
@@ -463,10 +464,7 @@ export default function HoldingFormDialog({
               >
                 Cancelar
               </Button>
-              <Button
-                type="submit"
-                disabled={isPending || !selectedSymbol}
-              >
+              <Button type="submit" disabled={isPending || !selectedSymbol}>
                 {isPending ? 'Guardando...' : 'Anadir posicion'}
               </Button>
             </DialogFooter>
@@ -503,7 +501,9 @@ export default function HoldingFormDialog({
                 aria-invalid={Boolean(errors.quantity)}
               />
               {errors.quantity && (
-                <p className="text-xs text-red-600" role="alert">{errors.quantity.message}</p>
+                <p className="text-xs text-red-600" role="alert">
+                  {errors.quantity.message}
+                </p>
               )}
             </div>
 
@@ -516,7 +516,9 @@ export default function HoldingFormDialog({
                 render={({ field }) => (
                   <Select id="currency-edit" {...field}>
                     {CURRENCIES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
                     ))}
                   </Select>
                 )}
@@ -581,11 +583,7 @@ export default function HoldingFormDialog({
                   control={control}
                   name="accountId"
                   render={({ field }) => (
-                    <Select
-                      id="accountId"
-                      {...field}
-                      aria-invalid={Boolean(errors.accountId)}
-                    >
+                    <Select id="accountId" {...field} aria-invalid={Boolean(errors.accountId)}>
                       <option value="">Selecciona una cuenta</option>
                       {investmentAccounts.map((acc) => (
                         <option key={acc._id} value={acc._id}>
@@ -597,7 +595,9 @@ export default function HoldingFormDialog({
                 />
               )}
               {errors.accountId && (
-                <p className="text-xs text-red-600" role="alert">{errors.accountId.message}</p>
+                <p className="text-xs text-red-600" role="alert">
+                  {errors.accountId.message}
+                </p>
               )}
             </div>
 

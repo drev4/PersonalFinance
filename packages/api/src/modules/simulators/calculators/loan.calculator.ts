@@ -3,11 +3,11 @@ import type { AmortizationRow } from './mortgage.calculator.js';
 // ---- Types ------------------------------------------------------------------
 
 export interface LoanInputs {
-  principal: number;      // céntimos
-  annualRate: number;     // TIN %
+  principal: number; // céntimos
+  annualRate: number; // TIN %
   months: number;
-  openingFee?: number;    // céntimos (comisión de apertura)
-  otherFees?: number;     // céntimos (otros gastos)
+  openingFee?: number; // céntimos (comisión de apertura)
+  otherFees?: number; // céntimos (otros gastos)
 }
 
 export interface LoanResult {
@@ -15,7 +15,7 @@ export interface LoanResult {
   totalPayment: number;
   totalInterest: number;
   tin: number;
-  tae: number;            // calculada incluyendo comisiones
+  tae: number; // calculada incluyendo comisiones
   schedule: AmortizationRow[];
 }
 
@@ -32,7 +32,7 @@ function frenchPayment(principalCents: number, annualRate: number, months: numbe
   }
   const i = annualRate / 12 / 100;
   const factor = Math.pow(1 + i, months);
-  return Math.round(principalCents * (i * factor) / (factor - 1));
+  return Math.round((principalCents * (i * factor)) / (factor - 1));
 }
 
 /**
@@ -85,11 +85,7 @@ function buildSchedule(
  * @param payment       monthly payment in cents
  * @param months        loan term in months
  */
-function newtonRaphsonTae(
-  netPrincipal: number,
-  payment: number,
-  months: number,
-): number {
+function newtonRaphsonTae(netPrincipal: number, payment: number, months: number): number {
   // Initial guess: TIN monthly rate
   let r = payment / netPrincipal / months;
   const MAX_ITER = 200;
@@ -105,8 +101,7 @@ function newtonRaphsonTae(
     const f = netPrincipal - payment * annuityFactor;
 
     // Derivative
-    const dAnnuity =
-      (months / (onePlusR * onePlusRPowN * r)) - annuityFactor / r;
+    const dAnnuity = months / (onePlusR * onePlusRPowN * r) - annuityFactor / r;
     const fp = -payment * dAnnuity;
 
     const delta = f / fp;
@@ -127,16 +122,10 @@ function newtonRaphsonTae(
  * TAE includes opening fee and other fees.
  */
 export function calculateLoan(inputs: LoanInputs): LoanResult {
-  const {
-    principal,
-    annualRate,
-    months,
-    openingFee = 0,
-    otherFees = 0,
-  } = inputs;
+  const { principal, annualRate, months, openingFee = 0, otherFees = 0 } = inputs;
 
   const schedule = buildSchedule(principal, annualRate, months);
-  const monthlyPayment = schedule[0].payment;
+  const monthlyPayment = schedule[0]!.payment;
   const totalPayment = schedule.reduce((s, r) => s + r.payment, 0);
   const totalInterest = totalPayment - principal;
 

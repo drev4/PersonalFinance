@@ -1,13 +1,14 @@
-import type React from 'react';
-import { Link } from 'react-router-dom';
-import { CalendarClock, ArrowRight } from 'lucide-react';
 import { formatDistanceToNow, parseISO, format, isToday, isTomorrow } from 'date-fns';
 import { es } from 'date-fns/locale';
+
+import { CalendarClock, ArrowRight } from 'lucide-react';
+import type React from 'react';
+import { Link } from 'react-router-dom';
+import { useUpcomingRecurring } from '../../hooks/useDashboard';
+import { formatCurrency } from '../../lib/formatters';
+import type { Transaction } from '../../types/api';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
-import { formatCurrency } from '../../lib/formatters';
-import { useUpcomingRecurring } from '../../hooks/useDashboard';
-import type { Transaction } from '../../types/api';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -18,7 +19,7 @@ function formatNextDate(dateStr: string): string {
     if (isTomorrow(date)) return 'Manana';
 
     const distance = formatDistanceToNow(date, { addSuffix: false, locale: es });
-    const formatted = format(date, "d MMM", { locale: es });
+    const formatted = format(date, 'd MMM', { locale: es });
 
     // Show "en X dias" for near dates, otherwise "15 abr"
     const diffMs = date.getTime() - Date.now();
@@ -62,10 +63,7 @@ export default function UpcomingRecurringWidget(): React.ReactElement {
   // Sort by nextDate ascending, take first 5
   const sorted: Transaction[] = data
     ? [...data]
-        .sort(
-          (a, b) =>
-            new Date(getNextDate(a)).getTime() - new Date(getNextDate(b)).getTime(),
-        )
+        .sort((a, b) => new Date(getNextDate(a)).getTime() - new Date(getNextDate(b)).getTime())
         .slice(0, MAX_ITEMS)
     : [];
 
@@ -100,17 +98,11 @@ export default function UpcomingRecurringWidget(): React.ReactElement {
         {/* List */}
         {!isLoading && sorted.length > 0 && (
           <>
-            <ul
-              className="divide-y divide-gray-100"
-              aria-label="Proximos pagos recurrentes"
-            >
+            <ul className="divide-y divide-gray-100" aria-label="Proximos pagos recurrentes">
               {sorted.map((tx) => {
                 const nextDate = getNextDate(tx);
                 return (
-                  <li
-                    key={tx._id}
-                    className="flex items-center gap-3 py-2.5"
-                  >
+                  <li key={tx._id} className="flex items-center gap-3 py-2.5">
                     {/* Category icon placeholder */}
                     <div
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-500"
@@ -123,9 +115,7 @@ export default function UpcomingRecurringWidget(): React.ReactElement {
 
                     {/* Description + date */}
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-gray-800">
-                        {tx.description}
-                      </p>
+                      <p className="truncate text-sm font-medium text-gray-800">{tx.description}</p>
                       <p className="text-xs text-gray-400">{formatNextDate(nextDate)}</p>
                     </div>
 

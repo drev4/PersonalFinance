@@ -1,4 +1,4 @@
-import pino, { type Logger } from 'pino';
+import { pino, type Logger } from 'pino';
 import env from '../config/env.js';
 
 /**

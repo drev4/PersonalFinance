@@ -40,3 +40,14 @@ coverage/
 # Cache
 .eslintcache
 .turbo/
+
+# Expo auto-generated
+packages/mobile/.expo/
+
+# Local project/agent notes (not part of the public repo)
+.claude/
+CLAUDE.md
+ROADMAP.md
+TAREAS.md
+changes/
+design/

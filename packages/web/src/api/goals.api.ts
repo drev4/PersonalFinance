@@ -21,6 +21,11 @@ export async function updateGoal(id: string, data: UpdateGoalDTO): Promise<Goal>
   return response.data.data;
 }
 
+export async function depositGoal(id: string, amount: number): Promise<Goal> {
+  const response = await apiClient.post<{ data: Goal }>(`/goals/${id}/deposit`, { amount });
+  return response.data.data;
+}
+
 export async function deleteGoal(id: string): Promise<void> {
   await apiClient.delete(`/goals/${id}`);
 }

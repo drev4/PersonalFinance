@@ -2,7 +2,12 @@
 export { UserSchema, type User } from './schemas/user.schema';
 
 // Account schemas and types
-export { AccountSchema, AccountTypeEnum, type Account, type AccountType } from './schemas/account.schema';
+export {
+  AccountSchema,
+  AccountTypeEnum,
+  type Account,
+  type AccountType,
+} from './schemas/account.schema';
 
 // Transaction schemas and types
 export {
@@ -72,10 +77,7 @@ export {
 } from './schemas/simulation.schema';
 
 // Price snapshot schemas and types
-export {
-  PriceSnapshotSchema,
-  type PriceSnapshot,
-} from './schemas/priceSnapshot.schema';
+export { PriceSnapshotSchema, type PriceSnapshot } from './schemas/priceSnapshot.schema';
 
 // Net worth snapshot schemas and types
 export {
@@ -85,9 +87,18 @@ export {
   type NetWorthComponent,
 } from './schemas/netWorthSnapshot.schema';
 
-// Constants
+// Debt schemas and types
 export {
-  CURRENCIES,
-  SUPPORTED_EXCHANGES,
-  DEFAULT_CATEGORIES,
-} from './constants';
+  DebtSchema,
+  DebtTypeEnum,
+  DebtInfoSchema,
+  type Debt,
+  type DebtType,
+  type DebtInfo,
+} from './schemas/debt.schema';
+
+// Receipt OCR schemas and types
+export { ScanReceiptResponseSchema, type ScanReceiptResponse } from './schemas/receipt.schema';
+
+// Constants
+export { CURRENCIES, SUPPORTED_EXCHANGES, DEFAULT_CATEGORIES } from './constants';

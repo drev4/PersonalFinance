@@ -9,6 +9,8 @@ import {
   searchTicker,
   importFromCsv,
   getPortfolioSummary,
+  addHoldingIncome,
+  getHoldingIncomeHistory,
   HoldingError,
 } from './holding.service.js';
 import { findById } from './holding.repository.js';
@@ -38,7 +40,10 @@ const UpdateHoldingSchema = z.object({
   assetType: AssetTypeEnum.optional(),
   symbol: z.string().min(1).max(20).toUpperCase().optional(),
   exchange: z.string().max(20).optional(),
-  quantity: z.string().regex(/^\d+(\.\d+)?$/).optional(),
+  quantity: z
+    .string()
+    .regex(/^\d+(\.\d+)?$/)
+    .optional(),
   averageBuyPrice: z.number().int().min(0).optional(),
   currency: z.string().length(3).toUpperCase().optional(),
   currentPrice: z.number().int().min(0).optional(),
@@ -56,14 +61,19 @@ const SearchQuerySchema = z.object({
   type: z.enum(['crypto', 'stock']),
 });
 
+const DividendBodySchema = z.object({
+  type: z.enum(['dividend', 'staking']).default('dividend'),
+  amount: z.number().int().positive('amount must be a positive integer (cents)'),
+  currency: z.string().length(3, 'currency must be a 3-letter code').toUpperCase(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD'),
+  notes: z.string().max(200).optional(),
+});
+
 // ---------------------------------------------------------------------------
 // Error handler
 // ---------------------------------------------------------------------------
 
-function handleHoldingError(
-  error: unknown,
-  reply: FastifyReply,
-): void | FastifyReply {
+function handleHoldingError(error: unknown, reply: FastifyReply): void | FastifyReply {
   if (error instanceof HoldingError) {
     return reply.status(error.statusCode).send({
       error: { code: error.code, message: error.message },
@@ -76,31 +86,20 @@ function handleHoldingError(
 // Route registration
 // ---------------------------------------------------------------------------
 
-export async function registerHoldingsRoutes(
-  fastify: FastifyInstance,
-): Promise<void> {
+export async function registerHoldingsRoutes(fastify: FastifyInstance): Promise<void> {
   // GET /holdings/search
   // Alias for /holdings/search-ticker
-  fastify.get(
-    '/holdings/search',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const query = SearchQuerySchema.parse(request.query);
-      const results = await searchTicker(query.q, query.type);
-      return reply.send({ data: results });
-    },
-  );
+  fastify.get('/holdings/search', { preHandler: requireAuth }, async (request, reply) => {
+    const query = SearchQuerySchema.parse(request.query);
+    const results = await searchTicker(query.q, query.type);
+    return reply.send({ data: results });
+  });
 
-  fastify.get(
-    '/holdings/search-ticker',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const query = SearchQuerySchema.parse(request.query);
-      const results = await searchTicker(query.q, query.type);
-      return reply.send({ data: results });
-    },
-  );
-
+  fastify.get('/holdings/search-ticker', { preHandler: requireAuth }, async (request, reply) => {
+    const query = SearchQuerySchema.parse(request.query);
+    const results = await searchTicker(query.q, query.type);
+    return reply.send({ data: results });
+  });
 
   // GET /holdings/portfolio/summary
   // Alias for /holdings/portfolio-summary
@@ -124,63 +123,50 @@ export async function registerHoldingsRoutes(
     },
   );
 
-
   // POST /holdings/import-csv  — must be before /:id
-  fastify.post(
-    '/holdings/import-csv',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const body = ImportCsvSchema.parse(request.body);
+  fastify.post('/holdings/import-csv', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const body = ImportCsvSchema.parse(request.body);
 
-      try {
-        const result = await importFromCsv(userId, body.accountId, body.csvContent);
-        return reply.status(201).send({ data: result });
-      } catch (err) {
-        return handleHoldingError(err, reply);
-      }
-    },
-  );
+    try {
+      const result = await importFromCsv(userId, body.accountId, body.csvContent);
+      return reply.status(201).send({ data: result });
+    } catch (err) {
+      return handleHoldingError(err, reply);
+    }
+  });
 
   // GET /holdings
-  fastify.get(
-    '/holdings',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const holdings = await getUserHoldings(userId);
-      return reply.send({ data: holdings });
-    },
-  );
+  fastify.get('/holdings', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const holdings = await getUserHoldings(userId);
+    return reply.send({ data: holdings });
+  });
 
   // POST /holdings
-  fastify.post(
-    '/holdings',
-    { preHandler: requireAuth },
-    async (request, reply) => {
-      const { userId } = request.user;
-      const body = CreateHoldingSchema.parse(request.body);
+  fastify.post('/holdings', { preHandler: requireAuth }, async (request, reply) => {
+    const { userId } = request.user;
+    const body = CreateHoldingSchema.parse(request.body);
 
-      try {
-        const holding = await createHolding(userId, {
-          userId,
-          accountId: body.accountId,
-          assetType: body.assetType,
-          symbol: body.symbol,
-          exchange: body.exchange ?? '',
-          quantity: body.quantity,
-          averageBuyPrice: body.averageBuyPrice,
-          currency: body.currency,
-          source: body.source,
-          ...(body.currentPrice !== undefined ? { currentPrice: body.currentPrice } : {}),
-          ...(body.externalId !== undefined ? { externalId: body.externalId } : {}),
-        });
-        return reply.status(201).send({ data: holding });
-      } catch (err) {
-        return handleHoldingError(err, reply);
-      }
-    },
-  );
+    try {
+      const holding = await createHolding(userId, {
+        userId,
+        accountId: body.accountId,
+        assetType: body.assetType,
+        symbol: body.symbol,
+        exchange: body.exchange ?? '',
+        quantity: body.quantity,
+        averageBuyPrice: body.averageBuyPrice,
+        currency: body.currency,
+        source: body.source,
+        ...(body.currentPrice !== undefined ? { currentPrice: body.currentPrice } : {}),
+        ...(body.externalId !== undefined ? { externalId: body.externalId } : {}),
+      });
+      return reply.status(201).send({ data: holding });
+    } catch (err) {
+      return handleHoldingError(err, reply);
+    }
+  });
 
   // GET /holdings/:id
   fastify.get(
@@ -211,7 +197,7 @@ export async function registerHoldingsRoutes(
 
       try {
         const updateData = { ...body };
-        // Remove undefined fields to satisfy exactOptionalPropertyTypes if needed, 
+        // Remove undefined fields to satisfy exactOptionalPropertyTypes if needed,
         // though Zod .parse() usually handles this if configured.
         const holding = await updateHolding(userId, id, updateData as any);
         return reply.send({ data: holding });
@@ -232,6 +218,47 @@ export async function registerHoldingsRoutes(
       try {
         await deleteHolding(userId, id);
         return reply.status(204).send();
+      } catch (err) {
+        return handleHoldingError(err, reply);
+      }
+    },
+  );
+
+  // POST /holdings/:id/dividend
+  fastify.post(
+    '/holdings/:id([0-9a-fA-F]{24})/dividend',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { userId } = request.user;
+      const { id } = request.params as { id: string };
+      const body = DividendBodySchema.parse(request.body);
+
+      try {
+        const income = await addHoldingIncome(userId, id, {
+          type: body.type,
+          amount: body.amount,
+          currency: body.currency,
+          date: new Date(body.date),
+          notes: body.notes,
+        });
+        return reply.status(201).send({ data: income });
+      } catch (err) {
+        return handleHoldingError(err, reply);
+      }
+    },
+  );
+
+  // GET /holdings/:id/income
+  fastify.get(
+    '/holdings/:id([0-9a-fA-F]{24})/income',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { userId } = request.user;
+      const { id } = request.params as { id: string };
+
+      try {
+        const history = await getHoldingIncomeHistory(userId, id);
+        return reply.send({ data: history });
       } catch (err) {
         return handleHoldingError(err, reply);
       }
